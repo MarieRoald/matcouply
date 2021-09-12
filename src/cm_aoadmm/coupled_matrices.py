@@ -8,7 +8,7 @@ class CoupledMatrixFactorization(FactorizedTensor):
         super().__init__()
 
         shape, rank = _validate_cmf(cmf_matrices)
-        self.A, self.Bk, self.C = cmf_matrices
+        self.weights, self.factors = cmf_matrices
 
         self.shape = shape
         self.rank = rank
@@ -22,9 +22,9 @@ class CoupledMatrixFactorization(FactorizedTensor):
         pass
 
     def __getitem__(self, item):
-        if index == 0:
+        if item == 0:
             return self.weights
-        elif index == 1:
+        elif item == 1:
             return self.factors
         else:
             raise IndexError(
@@ -125,12 +125,12 @@ def cmf_to_matrix(cmf, matrix_idx, validate=True):
     if validate:
         pass  # TODO: what to do here?
     weights, (A, B_is, C) = cmf
-    a = A[slice_idx]
+    a = A[matrix_idx]
     if weights is not None:
         a = a * weights
 
     Ct = tl.transpose(C)
-    B_i = B_is[slice_idx]
+    B_i = B_is[matrix_idx]
     return tl.dot(B_i * a, Ct)
 
 
@@ -138,12 +138,15 @@ def cmf_to_slice(cmf, slice_idx, validate=True):
     return cmf_to_matrix(cmf, slice_idx, validate=validate)
 
 
-def cmf_to_matrices(cmf):
+def cmf_to_matrices(cmf, validate=True):
     # Construct matrices and return list
     # TODO: docstring
     # TODO: validate?
     # TODO: B or B_i
     # TODO: Unit test
+    if validate:
+        pass  # TODO: what to do here?
+
     weights, (A, B_is, C) = cmf
     if weights is not None:
         A = A * weights
@@ -151,7 +154,7 @@ def cmf_to_matrices(cmf):
 
     decomposition = weights, (A, B_is, C)
     I, _ = A.shape
-    return [cmf_to_matrices(decomposition, i, validate=False) for i in range(I)]
+    return [cmf_to_matrix(decomposition, i, validate=False) for i in range(I)]
 
 
 def cmf_to_slices(cmf, validate=True):
