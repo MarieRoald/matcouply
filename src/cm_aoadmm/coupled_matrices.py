@@ -30,7 +30,7 @@ class CoupledMatrixFactorization(FactorizedTensor):
             raise IndexError(
                 "You tried to access index {} of a coupled matrix factorization.\n"
                 "You can only access index 0 and 1 of a coupled matrix factorization"
-                "(corresponding respectively to the weights and factors)".format(index)
+                "(corresponding respectively to the weights and factors)".format(item)
             )
 
     def __iter__(self):
@@ -175,13 +175,13 @@ def cmf_to_tensor(cmf, validate=True):
     return tensor
 
 
-def cmf_to_unfolded(cmf, validate=True):
+def cmf_to_unfolded(cmf, mode, validate=True):
     # TODO: docstring
     # TODO: Unit test
-    return unfold(cmf_to_tensor(cmf), mode)
+    return tl.unfold(cmf_to_tensor(cmf), mode)
 
 
 def cmf_to_vec(cmf, validate=True):
     # TODO: docstring
     # TODO: Unit test
-    return tensor_to_vec(cmf_to_tensor(cmf), mode)
+    return tl.tensor_to_vec(cmf_to_tensor(cmf))
