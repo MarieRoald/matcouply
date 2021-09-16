@@ -1,8 +1,10 @@
 import numpy as np
 import tensorly as tl
 from .coupled_matrices import CoupledMatrixFactorization, cmf_to_matrices
+from ._utils import is_iterable
 
 # TODO: Document all update steps, they might be slightly different from paper (e.g. new transposes)
+# TODO: Document l2_penalty as 0.5||A||^2, etc. Not ||A||^2
 
 
 # TODO: fast
@@ -59,6 +61,7 @@ def admm_update_A(
     cmf,
     A_aux_list,
     A_dual_list,
+    l2_penalty,
     inner_n_iter_max,
     inner_tol,
     feasibility_penalty_scale,
@@ -82,7 +85,7 @@ def admm_update_A(
         feasibility_penalties = [max_feasibility_penalty for _ in feasibility_penalties]
 
     lhses = [
-        lhs + tl.eye(tl.shape(A)[1]) * 0.5 * feasibility_penalty * len(reg)
+        lhs + tl.eye(tl.shape(A)[1]) * 0.5 * (feasibility_penalty * len(reg) + l2_penalty)
         for lhs, feasibility_penalty in zip(lhses, feasibility_penalties)
     ]
     svds = [svd_fun(lhs) for lhs in lhses]
@@ -92,7 +95,7 @@ def admm_update_A(
         old_A, A = A, old_A
 
         shifted_A_auxes = [
-            single_reg.shift_aux(A_aux, A_dual)
+            single_reg.subtract_from_aux(A_aux, A_dual)
             for single_reg, A_aux, A_dual in zip(reg, A_aux_list, A_dual_list)
         ]
 
@@ -120,14 +123,14 @@ def admm_update_A(
                     tl.index_update(
                         A_aux, tl.index[i, :], single_reg.factor_matrix_row_update(shifted_A[i], feasibility_penalty, A_aux[i])
                     )
-            shifted_A_auxes[reg_num] = single_reg.shift_aux(A_aux_list[reg_num], A_dual)
+            shifted_A_auxes[reg_num] = single_reg.subtract_from_aux(A_aux_list[reg_num], A_dual)
             A_dual_list[reg_num] = A - shifted_A_auxes[reg_num]  # A - (A_aux - A_dual) = A - A_aux + A_dual
 
         if inner_tol:
             A_norm = tl.norm(A)
             A_change = tl.norm(A - old_A)
-            A_gaps, _, _ = compute_feasibility_gaps(cmf, A_aux_list, [], [])
-            A_gaps = [A_gap / tl.norm(A_aux) for A_gap, A_aux in zip(A_gaps, A_aux_list)]
+            A_gaps, _, _ = compute_feasibility_gaps(cmf, [reg, [], []], A_aux_list, [], [])
+            A_gaps = [A_gap / tl.norm(single_reg.aux_as_matrix(A_aux)) for single_reg, A_gap, A_aux in zip(reg, A_gaps, A_aux_list)]
 
             dual_residual_criterion = max(A_gaps) < inner_tol
             primal_residual_criterion = A_change < inner_tol * A_norm
@@ -144,6 +147,7 @@ def admm_update_B(
     cmf,
     B_is_aux_list,
     B_is_dual_list,
+    l2_penalty,
     inner_n_iter_max,
     inner_tol,
     feasibility_penalty_scale,
@@ -168,7 +172,7 @@ def admm_update_B(
         feasibility_penalties = [max_feasibility_penalty for _ in feasibility_penalties]
 
     lhses = [
-        lhs + tl.eye(tl.shape(A)[1]) * 0.5 * feasibility_penalty * len(reg)
+        lhs + tl.eye(tl.shape(A)[1]) * 0.5 * (feasibility_penalty * len(reg) + l2_penalty)
         for lhs, feasibility_penalty in zip(lhses, feasibility_penalties)
     ]
     svds = [svd_fun(lhs) for lhs in lhses]
@@ -178,7 +182,7 @@ def admm_update_B(
 
         old_B_is, B_is = B_is, old_B_is
         shifted_auxes_B_is = [
-            single_reg.shift_auxes(B_is_aux, B_is_dual)
+            single_reg.subtract_from_auxes(B_is_aux, B_is_dual)
             for single_reg, B_is_aux, B_is_dual in zip(reg, B_is_aux_list, B_is_dual_list)
         ]
 
@@ -198,25 +202,26 @@ def admm_update_B(
             
             B_is_aux_list[reg_num] = single_reg.factor_matrices_update(shifted_B_is, feasibility_penalties, B_is_aux)
             
-            shifted_auxes_B_is[reg_num] = single_reg.shift_auxes(B_is_aux_list[reg_num], B_is_dual)
+            shifted_auxes_B_is[reg_num] = single_reg.subtract_from_auxes(B_is_aux_list[reg_num], B_is_dual)
             B_is_dual_list[reg_num] = [
                 B_i - shifted_aux_B_i for B_i, shifted_aux_B_i in zip(B_is, shifted_auxes_B_is[reg_num])
             ]
 
         if inner_tol:
-            pass
-            # TODO: Change below to use B_is, where the condition must be satisfied for each B_i.
-            # TODO: Maybe a loop for that?
-            #A_norm = tl.norm(A)
-            #A_change = tl.norm(A - prev_A)
-            #A_gaps, _, _ = compute_feasibility_gaps(cmf, A_aux_list, [], [])
-            #A_gaps = [A_gap / tl.norm(A_aux) for A_gap, A_aux in zip(A_gaps, A_aux_list)]
+            # TODO: How to deal with feasibility gaps for all B_is? Currently we "stack" each B_is and compute their norm
+            B_is_norm = _root_sum_squared_list(B_is)
+            B_is_change = _root_sum_squared_list([B_i - prev_B_i for B_i, prev_B_i in zip(B_is, old_B_is)])
+            _, B_gaps, _ = compute_feasibility_gaps(cmf, [[], reg, []], [], B_is_aux_list, [])
+            B_gaps = [
+                B_gap / _root_sum_squared_list(single_reg.auxes_as_matrices(B_is_aux))
+                for single_reg, B_gap, B_is_aux in zip(reg, B_gaps, B_is_aux_list)
+            ]
 
-            #dual_residual_criterion = max(A_gaps) < inner_tol
-            #primal_residual_criterion = A_change < inner_tol * A_norm
+            dual_residual_criterion = max(B_gaps) < inner_tol
+            primal_residual_criterion = B_is_change < inner_tol * B_is_norm
 
-            #if primal_residual_criterion and dual_residual_criterion:
-            #    break
+            if primal_residual_criterion and dual_residual_criterion:
+                break
 
     return (None, [A, B_is, C]), B_is_aux_list, B_is_dual_list
 
@@ -227,6 +232,7 @@ def admm_update_C(
     cmf,
     C_aux_list,
     C_dual_list,
+    l2_penalty,
     inner_n_iter_max,
     inner_tol,
     feasibility_penalty_scale,
@@ -244,7 +250,7 @@ def admm_update_C(
 
     # TODO: trace in backends?
     feasibility_penalty = np.trace(lhs) * feasibility_penalty_scale
-    lhs += tl.eye(tl.shape(C)[1]) * 0.5 * feasibility_penalty * len(reg)
+    lhs += tl.eye(tl.shape(C)[1]) * 0.5 * (feasibility_penalty * len(reg) + l2_penalty)
     U, s, Uh = svd_fun(lhs)
 
     old_C = tl.copy(C)
@@ -254,7 +260,7 @@ def admm_update_C(
 
         sum_shifted_aux_C = 0
         for single_reg, C_aux, C_dual in zip(reg, C_aux_list, C_dual_list):
-            sum_shifted_aux_C += single_reg.shift_aux(C_aux, C_dual)
+            sum_shifted_aux_C += single_reg.subtract_from_aux(C_aux, C_dual)
         C = tl.dot(tl.dot(sum_shifted_aux_C * 0.5 * feasibility_penalty + rhs, U / s), Uh)
 
         for reg_num, single_reg in enumerate(reg):
@@ -262,7 +268,7 @@ def admm_update_C(
             C_dual = C_dual_list[reg_num]
 
             C_aux_list[reg_num] = single_reg.factor_matrix_update(C + C_dual, feasibility_penalty, C_aux)
-            C_dual_list[reg_num] = C - single_reg.shift_aux(C_aux_list[reg_num], C_dual)
+            C_dual_list[reg_num] = C - single_reg.subtract_from_aux(C_aux_list[reg_num], C_dual)
 
         # print("Inner iteration:", inner_it)
         # print("Feasibility penalty", feasibility_penalty)
@@ -273,8 +279,8 @@ def admm_update_C(
         if inner_tol:
             C_norm = tl.norm(C)
             C_change = tl.norm(C - old_C)
-            _, _, C_gaps = compute_feasibility_gaps(cmf, [], [], C_aux_list)
-            C_gaps = [C_gap / tl.norm(C_aux) for C_gap, C_aux in zip(C_gaps, C_aux_list)]
+            _, _, C_gaps = compute_feasibility_gaps(cmf, [[], [], reg], [], [], C_aux_list)
+            C_gaps = [C_gap / tl.norm(single_reg.aux_as_matrix(C_aux)) for single_reg, C_gap, C_aux in zip(reg, C_gaps, C_aux_list)]
 
             dual_residual_criterion = max(C_gaps) < inner_tol
             primal_residual_criterion = C_change < inner_tol * C_norm
@@ -292,12 +298,14 @@ def _root_sum_squared_list(x_list):
 def compute_feasibility_gaps(cmf, reg, A_aux_list, B_aux_list, C_aux_list):
     # TODO: Docstring for compute_feasibility_gaps
     weights, (A, B_is, C) = cmf
-    A_gaps = [A_reg.compute_feasibility_gap(A, A_aux) for A_reg, A_aux in zip(reg[0], A_aux_list)]
+    A_gaps = [tl.norm(A_reg.subtract_from_aux(A_aux, A)) for A_reg, A_aux in zip(reg[0], A_aux_list)]
     B_gaps = [
-        B_reg.compute_feasibility_gaps(B_is, B_is_aux)
+        _root_sum_squared_list(B_reg.subtract_from_auxes(B_is_aux, B_is))
         for B_reg, B_is_aux in zip(reg[1], B_aux_list)
     ]
-    C_gaps = [C_reg.compute_feasibility_gap(C, C_aux) for C_reg, C_aux in zip(reg[2], C_aux_list)]
+    C_gaps = [tl.norm(C_reg.subtract_from_aux(C_aux, C)) for C_reg, C_aux in zip(reg[2], C_aux_list)]
+
+    #C_gaps = [C_reg.compute_feasibility_gap(C, C_aux) for C_reg, C_aux in zip(reg[2], C_aux_list)]
     return A_gaps, B_gaps, C_gaps
 
 
@@ -355,7 +363,12 @@ def cmf_aoadmm(
     svd_fun = _get_svd(svd)
     cmf = initialize_cmf(matrices, rank, init, svd_fun=svd_fun, random_state=random_state, init_params=init_params)
 
+    # Parse constraints
+    if not is_iterable(l2_penalty):
+        l2_penalty = [l2_penalty]*3
+    l2_penalty = [p if not p is None else 0 for p in l2_penalty]
     # TODO: Parse constraints to generate appropriate proxes
+
     A_aux_list, B_is_aux_list, C_aux_list, = initialize_aux(
         matrices, rank, reg, random_state=random_state
     )  # TODO: Include cmf?
@@ -384,6 +397,7 @@ def cmf_aoadmm(
             cmf=cmf,
             B_is_aux_list=B_is_aux_list,
             B_is_dual_list=B_is_dual_list,
+            l2_penalty=l2_penalty[1],
             inner_n_iter_max=inner_n_iter_max,
             inner_tol=inner_tol,
             feasibility_penalty_scale=feasibility_penalty_scale,
@@ -396,6 +410,7 @@ def cmf_aoadmm(
             cmf=cmf,
             A_aux_list=A_aux_list,
             A_dual_list=A_dual_list,
+            l2_penalty=l2_penalty[0],
             inner_n_iter_max=inner_n_iter_max,
             inner_tol=inner_tol,
             feasibility_penalty_scale=feasibility_penalty_scale,
@@ -408,6 +423,7 @@ def cmf_aoadmm(
             cmf=cmf,
             C_aux_list=C_aux_list,
             C_dual_list=C_dual_list,
+            l2_penalty=l2_penalty[2],
             inner_n_iter_max=inner_n_iter_max,
             inner_tol=inner_tol,
             feasibility_penalty_scale=feasibility_penalty_scale,

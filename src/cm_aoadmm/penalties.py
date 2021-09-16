@@ -3,9 +3,12 @@ import tensorly as tl
 # TODO: Maybe rename shift_aux to subtract_from_aux
 # TODO: Maybe add mixin classes for some of the functionality
 
+TensorType = type(tl.zeros(2))  # TODO: Add TensorType to tensorly
+
+
 class ADMMPenalty:
     def __init__(self, aux_init="random_uniform", dual_init="random_uniform"):
-        self.aux_init = aux_init
+        self.aux_init = aux_init    
         self.dual_init = dual_init
 
     def init_aux(self, matrices, rank, mode, random_state=None):
@@ -19,9 +22,17 @@ class ADMMPenalty:
                 return random_state.uniform(size=(matrices[0].shape[1], rank))
             else:
                 raise ValueError("Mode must be 0, 1, or 2.")
+        elif self.aux_init == "random_standard_normal": # TODO: test
+            if mode == 0:
+                return random_state.standard_normal(size=(len(matrices), rank))
+            elif mode == 1:
+                return [random_state.standard_normal(size=(matrix.shape[0], rank)) for matrix in matrices]
+            elif mode == 2:
+                return random_state.standard_normal(size=(matrices[0].shape[1], rank))
+            else:
+                raise ValueError("Mode must be 0, 1, or 2.")
         else:
             raise ValueError(f"Unknown aux init: {self.aux_init}")
-        # TODO: fast: Standard normal init
         
     def init_dual(self, matrices, rank, mode, random_state=None):
         # TODO: Not provided random state
@@ -34,45 +45,76 @@ class ADMMPenalty:
                 return random_state.uniform(size=(matrices[0].shape[1], rank))
             else:
                 raise ValueError("Mode must be 0, 1, or 2.")
+        elif self.dual_init == "random_standard_normal": # TODO: test
+            if mode == 0:
+                return random_state.standard_normal(size=(len(matrices), rank))
+            elif mode == 1:
+                return [random_state.standard_normal(size=(matrix.shape[0], rank)) for matrix in matrices]
+            elif mode == 2:
+                return random_state.standard_normal(size=(matrices[0].shape[1], rank))
+            else:
+                raise ValueError("Mode must be 0, 1, or 2.")
+        elif self.dual_init == "zeros": # TODO: test
+            if mode == 0:
+                return tl.zeros(size=(len(matrices), rank))
+            elif mode == 1:
+                return [tl.zeros(size=(matrix.shape[0], rank)) for matrix in matrices]
+            elif mode == 2:
+                return tl.zeros(size=(matrices[0].shape[1], rank))
+            else:
+                raise ValueError("Mode must be 0, 1, or 2.")
         else:
             raise ValueError(f"Unknown dual init: {self.aux_init}")
-        # TODO: fast: Standard normal init
-        
-    def shift_auxes(self, auxes, duals):
-        return [self.shift_aux(aux, dual) for aux, dual in zip(auxes, duals)]
 
-    def shift_aux(self, aux, dual):
+    def penalty(self, x):
+        raise NotImplementedError
+
+    def subtract_from_auxes(self, auxes, duals):
+        return [self.subtract_from_aux(aux, dual) for aux, dual in zip(auxes, duals)]
+
+    def subtract_from_aux(self, aux, dual):
         """Compute (aux - dual).
         """
         return aux - dual
     
-    def compute_feasibility_gap(self, factor_matrix, aux):
-        return tl.norm(factor_matrix - aux)
+    def aux_as_matrix(self, aux):
+        return aux
     
-    def compute_feasibility_gaps(self, factor_matrices, auxes):
-        return tl.sqrt(sum(
-            self.compute_feasibility_gap(factor_matrix, aux)**2
-            for factor_matrix, aux in zip(factor_matrices, auxes)
-        ))
+    def auxes_as_matrices(self, auxes):
+        return [self.aux_as_matrix(aux) for aux in auxes]
+    
 
-    def factor_matrix_row_update(self, factor_matrix_row, feasibility_penalty, aux_row):
-        raise NotImplementedError
-
-    def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
-        raise NotImplementedError
-
+class RowVectorPenalty(ADMMPenalty):
     def factor_matrices_update(self, factor_matrices, feasibility_penalties, auxes):
         return [
             self.factor_matrix_update(fm, feasibility_penalty, aux)
             for fm, feasibility_penalty, aux in zip(factor_matrices, feasibility_penalties, auxes)
         ]
 
-    def penalty(self, x):
+    def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
+        out = tl.empty(factor_matrix.shape)
+
+        for row, factor_matrix_row in enumerate(factor_matrix):
+            out[row] = self.factor_matrix_row_update(factor_matrix_row, feasibility_penalty, aux[row])
+        
+        return out
+
+    def factor_matrix_row_update(self, factor_matrix_row, feasibility_penalty, aux_row):
         raise NotImplementedError
 
 
+class MatrixPenalty(ADMMPenalty):        
+    def factor_matrices_update(self, factor_matrices, feasibility_penalties, auxes):
+        return [
+            self.factor_matrix_update(fm, feasibility_penalty, aux)
+            for fm, feasibility_penalty, aux in zip(factor_matrices, feasibility_penalties, auxes)
+        ]
 
-class NonNegativity(ADMMPenalty):
+    def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
+        raise NotImplementedError
+
+
+class NonNegativity(RowVectorPenalty):
     def factor_matrix_row_update(self, factor_matrix_row, feasibility_penalty, aux_row):
         return tl.clip(factor_matrix_row, 0)
 
@@ -84,41 +126,48 @@ class NonNegativity(ADMMPenalty):
         return 0
 
 
-# TODO: fast
-class BoxConstraint(ADMMPenalty):
+# TODO: unit tests
+class BoxConstraint(RowVectorPenalty):
     def __init__(self, min_val, max_val):
         self.min_val = min_val
         self.max_val = max_val
     def factor_matrix_row_update(self, factor_matrix_row, feasibility_penalty, aux_row):
-        pass
+        return tl.clip(factor_matrix_row, self.min_val, self.max_val)
 
     def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
-        # Compute elementwise maximum of min_val and factor_matrix to get temp
-        # Return elementwise minimum of temp and max_val
-        pass
+        return tl.clip(factor_matrix, self.min_val, self.max_val)
 
     def penalty(self, x):
         return 0
 
 
-# TODO: fast
-class L1Penalty(ADMMPenalty):
+
+class L1Penalty(RowVectorPenalty):
     # TODO: Different scaling versions
     def __init__(self, reg_strength, non_negativity=False):
         self.reg_strength = reg_strength
         self.non_negativity = non_negativity
 
     def factor_matrix_row_update(self, factor_matrix_row, feasibility_penalty, aux_row):
-        pass
+        if not self.non_negativity:
+            sign = tl.sign(factor_matrix_row)
+            return sign * tl.clip(tl.abs(factor_matrix_row) - self.reg_strength/feasibility_penalty, 0)
+        else:
+            return tl.clip(factor_matrix_row - self.reg_strength/feasibility_penalty, 0)
 
     def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
-        # Element wise: sign(factor_matrix) * max(abs(factor_matrix) - reg_strength/feasibility_penalty, 0)
-        # If non-negativity: max(factor_matrix - reg_strength / feasibility_penalty, 0)
-        pass
+        if not self.non_negativity:
+            sign = tl.sign(factor_matrix)
+            return sign * tl.clip(tl.abs(factor_matrix) - self.reg_strength/feasibility_penalty, 0)
+        else:
+            return tl.clip(factor_matrix - self.reg_strength/feasibility_penalty, 0)
 
     def penalty(self, x):
         # TODO: return reg_strength*l1norm of x
-        pass       
+        if isinstance(x, TensorType):
+            return tl.sum(tl.abs(x))*self.reg_strength
+        else:
+            return sum(tl.sum(tl.abs(xi)) for xi in x)*self.reg_strength
 
 
 class Parafac2(ADMMPenalty):
@@ -160,23 +209,20 @@ class Parafac2(ADMMPenalty):
         return basis_matrices, coordinate_matrix
 
     # TODO: change to mixin class
-    def shift_aux(self, aux, dual):
+    def subtract_from_aux(self, aux, dual):
         raise TypeError("The PARAFAC2 constraint cannot shift a single factor matrix.")
     
-    def shift_auxes(self, auxes, duals):
+    def subtract_from_auxes(self, auxes, duals):
         # TODO: Docstrings
         P_is, coord_mat = auxes
-        return  [tl.dot(P_i, coord_mat) - dual for P_i, dual in zip(P_is, duals)]
+        return [tl.dot(P_i, coord_mat) - dual for P_i, dual in zip(P_is, duals)]
 
-    def compute_feasibility_gap(self, factor_matrix, aux):
-        raise TypeError("The PARAFAC2 constraint cannot compute gap for a single factor matrix.")
+    def aux_as_matrix(self, aux):
+        raise TypeError("The PARAFAC2 constraint cannot convert a single aux to a matrix")
     
-    def compute_feasibility_gaps(self, factor_matrices, auxes):
-        basis_matrices, coord_matrix = auxes
-        return tl.sqrt(sum(
-            tl.sum((factor_matrix - tl.dot(basis_matrix, coord_matrix))**2)
-            for factor_matrix, basis_matrix in zip(factor_matrices, basis_matrices)
-        ))
+    def auxes_as_matrices(self, auxes):
+        P_is, coord_mat = auxes
+        return [tl.dot(P_i, coord_mat) for P_i in P_is]
 
     def penalty(self, x):
         return 0
