@@ -3,8 +3,6 @@ import tensorly as tl
 # TODO: Maybe rename shift_aux to subtract_from_aux
 # TODO: Maybe add mixin classes for some of the functionality
 
-TensorType = type(tl.zeros(2))  # TODO: Add TensorType to tensorly
-
 
 class ADMMPenalty:
     def __init__(self, aux_init="random_uniform", dual_init="random_uniform"):
@@ -164,7 +162,7 @@ class L1Penalty(RowVectorPenalty):
 
     def penalty(self, x):
         # TODO: return reg_strength*l1norm of x
-        if isinstance(x, TensorType):
+        if tl.is_tensor(x):
             return tl.sum(tl.abs(x))*self.reg_strength
         else:
             return sum(tl.sum(tl.abs(xi)) for xi in x)*self.reg_strength
