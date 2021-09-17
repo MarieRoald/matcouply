@@ -22,7 +22,11 @@ def initialize_cmf(matrices, rank, init, svd_fun, random_state=None, init_params
         return CoupledMatrixFactorization((None, [A, B_is, C]))
     elif init == "svd":
         # TODO: SVD init (A: Ones, Bi: singular vectors, C: svd of stacked matrix)
-        pass
+        I = len(matrices)
+        A = tl.ones((I, rank))
+        B_is = [svd_fun(matrix, full_matrices=False)[0][:, :rank] for matrix in matrices]
+        C = tl.transpose(svd_fun(tl.concatenate(matrices, 0), full_matrices=False)[2])[:, :rank]
+        return CoupledMatrixFactorization((None, [A, B_is, C]))
     elif init == "threshold_svd":
         # TODO: Thresholded SVD init - First SVD, then clip at zero
         pass
@@ -79,7 +83,7 @@ def admm_update_A(
         rhses.append(tl.diag(tl.dot(BtX, C)))
         lhses.append(tl.dot(tl.transpose(B_i), B_i) * CtC)
 
-    feasibility_penalties = [np.trace(lhs) * feasibility_penalty_scale for lhs in lhses]
+    feasibility_penalties = [tl.trace(lhs) * feasibility_penalty_scale for lhs in lhses]
     if constant_feasibility_penalty:
         max_feasibility_penalty = max(feasibility_penalties)
         feasibility_penalties = [max_feasibility_penalty for _ in feasibility_penalties]
@@ -166,7 +170,7 @@ def admm_update_B(
         lhses.append(tl.transpose(tl.transpose(CtC*a_row)*a_row))
 
     # TODO: trace in backends?
-    feasibility_penalties = [np.trace(lhs) * feasibility_penalty_scale for lhs in lhses]
+    feasibility_penalties = [tl.trace(lhs) * feasibility_penalty_scale for lhs in lhses]
     if constant_feasibility_penalty:
         max_feasibility_penalty = max(feasibility_penalties)
         feasibility_penalties = [max_feasibility_penalty for _ in feasibility_penalties]
@@ -249,7 +253,7 @@ def admm_update_C(
         rhs += tl.dot(tl.transpose(matrix), B_iA_i)
 
     # TODO: trace in backends?
-    feasibility_penalty = np.trace(lhs) * feasibility_penalty_scale
+    feasibility_penalty = tl.trace(lhs) * feasibility_penalty_scale
     lhs += tl.eye(tl.shape(C)[1]) * 0.5 * (feasibility_penalty * len(reg) + l2_penalty)
     U, s, Uh = svd_fun(lhs)
 
@@ -381,7 +385,15 @@ def cmf_aoadmm(
 
     rec_error = _cmf_reconstruction_error(matrices, cmf)
     rec_error /= norm_matrices
-    rec_errors.append(0.5*rec_error)
+    rec_errors.append(rec_error)
+    losses = []
+    reg_penalty = (
+        + sum(A_reg.penalty(cmf[1][0]) for A_reg in reg[0])
+        + sum(B_reg.penalty(cmf[1][1]) for B_reg in reg[1])
+        + sum(C_reg.penalty(cmf[1][2]) for C_reg in reg[2])
+    )
+    losses.append(0.5*rec_error + reg_penalty)
+
     A_gaps, B_gaps, C_gaps = compute_feasibility_gaps(cmf, reg, A_aux_list, B_is_aux_list, C_aux_list)
     feasibility_gaps.append((A_gaps, B_gaps, C_gaps))
     if verbose:
@@ -436,15 +448,21 @@ def cmf_aoadmm(
             # TODO: Include the regularisation
             rec_error = _cmf_reconstruction_error(matrices, cmf)
             rec_error /= norm_matrices
-            rec_errors.append(0.5*rec_error)
+            rec_errors.append(rec_error)
+            reg_penalty = (
+                + sum(A_reg.penalty(cmf[1][0]) for A_reg in reg[0])
+                + sum(B_reg.penalty(cmf[1][1]) for B_reg in reg[1])
+                + sum(C_reg.penalty(cmf[1][2]) for C_reg in reg[2])
+            )
+            losses.append(0.5*rec_error**2 + reg_penalty)
             A_gaps, B_gaps, C_gaps = compute_feasibility_gaps(cmf, reg, A_aux_list, B_is_aux_list, C_aux_list)
             feasibility_gaps.append((A_gaps, B_gaps, C_gaps))
 
             if it >= 1:
                 if verbose:
                     print(
-                        "Coupled matrix factorization reconstruction error={}, variation={}.".format(
-                            rec_errors[-1], rec_errors[-2] - rec_errors[-1]
+                        "Coupled matrix factorization iteration={}, reconstruction error={}, regularised loss={} squared relative variation={}.".format(
+                            it, rec_errors[-1], losses[-1], abs(losses[-2] - losses[-1])/losses[-2]
                         )
                     )
                     print("Duality gaps for A: {}".format(A_gaps))
@@ -463,8 +481,8 @@ def cmf_aoadmm(
 
                     # Compute stopping criterions
                     feasibility_criterion = max_feasibility_gap < feasibility_tol
-                    rel_loss_criterion = abs(rec_errors[-2] ** 2 - rec_errors[-1] ** 2) < (tol * rec_errors[-2] ** 2)
-                    abs_loss_criterion = rec_errors[-1] ** 2 < absolute_tol
+                    rel_loss_criterion = abs(losses[-2]- losses[-1]) < (tol * losses[-2])
+                    abs_loss_criterion = losses[-1] < absolute_tol
                     if feasibility_criterion and (rel_loss_criterion or abs_loss_criterion):
                         if verbose:
                             print("converged in {} iterations.".format(it))
