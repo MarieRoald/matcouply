@@ -12,4 +12,7 @@ def seed(pytestconfig):
 
 @pytest.fixture
 def rng(seed):
-    return np.random.RandomState(seed=seed)
+    try:
+        return np.random.default_rng(seed=seed)
+    except AttributeError:
+        return np.random.RandomState(seed=seed)
