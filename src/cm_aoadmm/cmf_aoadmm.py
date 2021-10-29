@@ -7,7 +7,6 @@ from ._utils import is_iterable
 # TODO: Document l2_penalty as 0.5||A||^2, etc. Not ||A||^2
 
 
-# TODO: fast
 def initialize_cmf(matrices, rank, init, svd_fun, random_state=None, init_params=None):
     if init_params is None:
         init_params = {}
@@ -21,15 +20,20 @@ def initialize_cmf(matrices, rank, init, svd_fun, random_state=None, init_params
 
         return CoupledMatrixFactorization((None, [A, B_is, C]))
     elif init == "svd":
-        # TODO: SVD init (A: Ones, Bi: singular vectors, C: svd of stacked matrix)
+        # TODO: TEST SVD init
         I = len(matrices)
         A = tl.ones((I, rank))
         B_is = [svd_fun(matrix, full_matrices=False)[0][:, :rank] for matrix in matrices]
         C = tl.transpose(svd_fun(tl.concatenate(matrices, 0), full_matrices=False)[2])[:, :rank]
         return CoupledMatrixFactorization((None, [A, B_is, C]))
     elif init == "threshold_svd":
-        # TODO: Thresholded SVD init - First SVD, then clip at zero
-        pass
+        # TODO: TEST Thresholded SVD init
+
+        I = len(matrices)
+        A = tl.ones((I, rank))
+        B_is = [tl.clip(svd_fun(matrix, full_matrices=False)[0][:, :rank], 0) for matrix in matrices]
+        C = tl.clip(tl.transpose(svd_fun(tl.concatenate(matrices, 0), full_matrices=False)[2])[:, :rank], 0)
+        return CoupledMatrixFactorization((None, [A, B_is, C]))
     elif init == "parafac2_als":
         # TODO: PARAFAC2 init
         pass
@@ -158,7 +162,6 @@ def admm_update_B(
     constant_feasibility_penalty,
     svd_fun,
 ):
-    # TODO: implement B update
     weights, (A, B_is, C) = cmf
 
     # Compute lhs and rhs
@@ -444,6 +447,36 @@ def cmf_aoadmm(
 
         # TODO: Do we want normalisation?
         if tol or return_errors:
+            A_gaps, B_gaps, C_gaps = compute_feasibility_gaps(cmf, reg, A_aux_list, B_is_aux_list, C_aux_list)
+            feasibility_gaps.append((A_gaps, B_gaps, C_gaps))
+
+            if tol:
+                max_feasibility_gap = -np.inf
+                if len(A_gaps):
+                    max_feasibility_gap = max((max(A_gaps), max_feasibility_gap))
+                if len(B_gaps):
+                    max_feasibility_gap = max((max(B_gaps), max_feasibility_gap))
+                if len(C_gaps):
+                    max_feasibility_gap = max((max(C_gaps), max_feasibility_gap))
+                #max_feasibility_gap = max(max(A_gaps), max(B_gaps), max(C_gaps))
+
+                # Compute stopping criterions
+                feasibility_criterion = max_feasibility_gap < feasibility_tol
+
+                if not feasibility_criterion and not return_errors: #TODO: what if tol is False?
+                    if verbose:
+                        print(
+                            "Coupled matrix factorization iteration={}, reconstruction error={}, regularised loss={} squared relative variation={}.".format(
+                                it, "NOT COMPUTED", "NOT COMPUTED", "NOT COMPUTED"
+                            )
+                        )
+                        print("Duality gaps for A: {}".format(A_gaps))
+                        print("Duality gaps for the Bi-matrices: {}".format(B_gaps))
+                        print("Duality gaps for C: {}".format(C_gaps))
+
+                    continue
+
+
             # TODO: Maybe not always compute this (to save computation)?
             # TODO: Include the regularisation
             rec_error = _cmf_reconstruction_error(matrices, cmf)
@@ -455,38 +488,28 @@ def cmf_aoadmm(
                 + sum(C_reg.penalty(cmf[1][2]) for C_reg in reg[2])
             )
             losses.append(0.5*rec_error**2 + reg_penalty)
-            A_gaps, B_gaps, C_gaps = compute_feasibility_gaps(cmf, reg, A_aux_list, B_is_aux_list, C_aux_list)
-            feasibility_gaps.append((A_gaps, B_gaps, C_gaps))
 
-            if it >= 1:
-                if verbose:
-                    print(
-                        "Coupled matrix factorization iteration={}, reconstruction error={}, regularised loss={} squared relative variation={}.".format(
-                            it, rec_errors[-1], losses[-1], abs(losses[-2] - losses[-1])/losses[-2]
-                        )
+            if verbose:
+                print(
+                    "Coupled matrix factorization iteration={}, reconstruction error={}, regularised loss={} squared relative variation={}.".format(
+                        it, rec_errors[-1], losses[-1], abs(losses[-2] - losses[-1])/losses[-2]
                     )
-                    print("Duality gaps for A: {}".format(A_gaps))
-                    print("Duality gaps for the Bi-matrices: {}".format(B_gaps))
-                    print("Duality gaps for C: {}".format(C_gaps))
+                )
+                print("Duality gaps for A: {}".format(A_gaps))
+                print("Duality gaps for the Bi-matrices: {}".format(B_gaps))
+                print("Duality gaps for C: {}".format(C_gaps))
 
-                if tol:
-                    max_feasibility_gap = -np.inf
-                    if len(A_gaps):
-                        max_feasibility_gap = max((max(A_gaps), max_feasibility_gap))
-                    if len(B_gaps):
-                        max_feasibility_gap = max((max(B_gaps), max_feasibility_gap))
-                    if len(C_gaps):
-                        max_feasibility_gap = max((max(C_gaps), max_feasibility_gap))
-                    #max_feasibility_gap = max(max(A_gaps), max(B_gaps), max(C_gaps))
-
-                    # Compute stopping criterions
-                    feasibility_criterion = max_feasibility_gap < feasibility_tol
-                    rel_loss_criterion = abs(losses[-2]- losses[-1]) < (tol * losses[-2])
-                    abs_loss_criterion = losses[-1] < absolute_tol
-                    if feasibility_criterion and (rel_loss_criterion or abs_loss_criterion):
-                        if verbose:
-                            print("converged in {} iterations.".format(it))
-                        break
+            if tol:
+                # Compute rest of stopping criterions
+                rel_loss_criterion = abs(losses[-2]- losses[-1]) < (tol * losses[-2])
+                abs_loss_criterion = losses[-1] < absolute_tol
+                if feasibility_criterion and (rel_loss_criterion or abs_loss_criterion):
+                    if verbose:
+                        print("converged in {} iterations.".format(it))
+                        #TODO: print information about what stopped it?
+                    break
+        elif verbose:
+            print("Coupled matrix factorization iteration={}".format(it))
 
     # Save as validated factorization instead of tuple
     cmf = CoupledMatrixFactorization(cmf)
