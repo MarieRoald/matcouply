@@ -6,7 +6,6 @@ twine
 flake8
 black
 isort
-seed-isort-config
 bump2version
 
 sphinx
