@@ -12,6 +12,6 @@ jobs:
       - name: install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip -e .[all,devel]
+          pip -e .[all,devel]
       - name: run tests
         run: python3 -m pytest
