@@ -28,6 +28,7 @@ def initialize_cmf(matrices, rank, init, svd_fun, random_state=None, init_params
         return CoupledMatrixFactorization((None, [A, B_is, C]))
     elif init == "threshold_svd":
         # TODO: TEST Thresholded SVD init
+        # TODO: Before thresholding: fix SVD sign
         I = len(matrices)
         A = tl.ones((I, rank))
         B_is = [tl.clip(svd_fun(matrix, n_eigenvecs=rank)[0], 0) for matrix in matrices]
