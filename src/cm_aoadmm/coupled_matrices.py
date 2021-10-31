@@ -179,10 +179,12 @@ def cmf_to_tensor(cmf, validate=True):
 def cmf_to_unfolded(cmf, mode, validate=True):
     # TODO: docstring
     # TODO: Unit test
+    # TODO: Option to use stack of matrices instead of tensor padded with zeros
     return tl.unfold(cmf_to_tensor(cmf), mode)
 
 
 def cmf_to_vec(cmf, validate=True):
     # TODO: docstring
     # TODO: Unit test
+    # TODO: Option to use stack of matrices instead of tensor padded with zeros
     return tl.tensor_to_vec(cmf_to_tensor(cmf))
