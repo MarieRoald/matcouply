@@ -15,10 +15,12 @@ class CoupledMatrixFactorization(FactorizedTensor):
 
     @classmethod
     def from_CPTensor(cls, cp_tensor):
+        # TODO: implement creating cmf from cp
         pass
 
     @classmethod
-    def from_Parafac2Tensor(cls, cp_tensor):
+    def from_Parafac2Tensor(cls, parafac2_tensor):
+        # TODO: implement creating cmf from PARAFAC2
         pass
 
     def __getitem__(self, item):
