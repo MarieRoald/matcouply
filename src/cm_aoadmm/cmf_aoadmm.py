@@ -1,7 +1,7 @@
 import numpy as np
 import tensorly as tl
 from .coupled_matrices import CoupledMatrixFactorization, cmf_to_matrices
-from ._utils import is_iterable
+from ._utils import is_iterable, get_svd
 
 # TODO: Document all update steps, they might be slightly different from paper (e.g. new transposes)
 # TODO: Document l2_penalty as 0.5||A||^2, etc. Not ||A||^2
@@ -23,16 +23,15 @@ def initialize_cmf(matrices, rank, init, svd_fun, random_state=None, init_params
         # TODO: TEST SVD init
         I = len(matrices)
         A = tl.ones((I, rank))
-        B_is = [svd_fun(matrix, full_matrices=False)[0][:, :rank] for matrix in matrices]
-        C = tl.transpose(svd_fun(tl.concatenate(matrices, 0), full_matrices=False)[2])[:, :rank]
+        B_is = [svd_fun(matrix, n_eigenvecs=rank)[0] for matrix in matrices]
+        C = tl.transpose(svd_fun(tl.concatenate(matrices, 0), n_eigenvecs=rank)[2])
         return CoupledMatrixFactorization((None, [A, B_is, C]))
     elif init == "threshold_svd":
         # TODO: TEST Thresholded SVD init
-
         I = len(matrices)
         A = tl.ones((I, rank))
-        B_is = [tl.clip(svd_fun(matrix, full_matrices=False)[0][:, :rank], 0) for matrix in matrices]
-        C = tl.clip(tl.transpose(svd_fun(tl.concatenate(matrices, 0), full_matrices=False)[2])[:, :rank], 0)
+        B_is = [tl.clip(svd_fun(matrix, n_eigenvecs=rank)[0], 0) for matrix in matrices]
+        C = tl.clip(tl.transpose(svd_fun(tl.concatenate(matrices, 0), n_eigenvecs=rank)[2]), 0)
         return CoupledMatrixFactorization((None, [A, B_is, C]))
     elif init == "parafac2_als":
         # TODO: PARAFAC2 init
@@ -321,16 +320,6 @@ def _cmf_reconstruction_error(matrices, cmf):
     return _root_sum_squared_list([X - Xhat for X, Xhat in zip(matrices, estimated_matrices)])
 
 
-def _get_svd(svd):
-    if svd in tl.SVD_FUNS:
-        return tl.SVD_FUNS[svd]
-    else:
-        message = "Got svd={}. However, for the current backend ({}), the possible choices are {}".format(
-            svd, tl.get_backend(), tl.SVD_FUNS
-        )
-        raise ValueError(message)
-
-
 def cmf_aoadmm(
     matrices,
     rank,
@@ -354,7 +343,7 @@ def cmf_aoadmm(
     constant_feasibility_penalty=False,
     aux_init=None,
     dual_init=None,
-    svd="numpy_svd",
+    svd="truncated_svd",
     init_params=None,
     random_state=None,
     tol=1e-8,
@@ -367,7 +356,7 @@ def cmf_aoadmm(
 ):
     # TODO: docstring
     random_state = tl.check_random_state(random_state)
-    svd_fun = _get_svd(svd)
+    svd_fun = get_svd(svd)
     cmf = initialize_cmf(matrices, rank, init, svd_fun=svd_fun, random_state=random_state, init_params=init_params)
 
     # Parse constraints

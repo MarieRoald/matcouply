@@ -336,7 +336,7 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
         stationary_matrices = [Pk @deltaB for Pk in Pks]
 
         feasibility_penalties = [10]*len(stationary_matrices)
-        pf2_penalty = penalties.Parafac2(svd_fun=np.linalg.svd ) #FIXME: svd fun
+        pf2_penalty = penalties.Parafac2()
 
         out = pf2_penalty.factor_matrices_update(stationary_matrices, feasibility_penalties, auxes)
         np.testing.assert_allclose(deltaB, out[1])
@@ -349,7 +349,7 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
         auxes = Pks, deltaB
         
         feasibility_penalties = [10]*len(random_matrices)
-        pf2_penalty = penalties.Parafac2(svd_fun=np.linalg.svd) #FIXME: svd fun
+        pf2_penalty = penalties.Parafac2()
 
         initial_penalty = pf2_penalty.penalty(auxes)
         out = pf2_penalty.factor_matrices_update(random_matrices, feasibility_penalties, auxes)
@@ -361,7 +361,7 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
         auxes = Pks, deltaB
         
         feasibility_penalties = [10]*len(random_matrices)
-        pf2_penalty = penalties.Parafac2(svd_fun=np.linalg.svd) #FIXME: svd fun
+        pf2_penalty = penalties.Parafac2()
 
         out = pf2_penalty.factor_matrices_update(random_matrices, feasibility_penalties, auxes)
         constructed_out = [Pk@out[1] for Pk in out[0]]
