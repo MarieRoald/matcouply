@@ -4,7 +4,7 @@ from .coupled_matrices import CoupledMatrixFactorization
 
 def random_coupled_matrices(shapes, rank, full=False, random_state=None,
                             normalise_factors=True, normalise_B=False, **context):
-    """Generate a random coupled matrix decomposition
+    """Generate a random coupled matrix decomposition (with non-negative entries)
 
     Parameters
     ----------
