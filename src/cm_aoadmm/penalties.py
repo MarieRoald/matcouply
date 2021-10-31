@@ -1,4 +1,6 @@
 import tensorly as tl
+
+from ._utils import get_svd
 # TODO: Maybe remove compute_feasibility_gap and only use shift_aux
 # TODO: Maybe rename shift_aux to subtract_from_aux
 # TODO: Maybe add mixin classes for some of the functionality
@@ -64,7 +66,7 @@ class ADMMPenalty:
         else:
             raise ValueError(f"Unknown dual init: {self.aux_init}")
 
-    def penalty(self, x):
+    def penalty(self, x):  # TODO: How to deal with penalties that go across matrices
         raise NotImplementedError
 
     def subtract_from_auxes(self, auxes, duals):
@@ -90,7 +92,7 @@ class RowVectorPenalty(ADMMPenalty):
         ]
 
     def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
-        out = tl.empty(factor_matrix.shape)
+        out = tl.zeros(factor_matrix.shape)
 
         for row, factor_matrix_row in enumerate(factor_matrix):
             out[row] = self.factor_matrix_row_update(factor_matrix_row, feasibility_penalty, aux[row])
@@ -139,7 +141,6 @@ class BoxConstraint(RowVectorPenalty):
         return 0
 
 
-
 class L1Penalty(RowVectorPenalty):
     # TODO: Different scaling versions
     def __init__(self, reg_strength, non_negativity=False):
@@ -169,13 +170,10 @@ class L1Penalty(RowVectorPenalty):
 
 
 class Parafac2(ADMMPenalty):
-    def __init__(self, svd=None, svd_fun=None, aux_init="random_uniform", dual_init="random_uniform"):
-        if svd is None and svd_fun is None:
-            raise ValueError("Either the svd method or a function to compute the svd must be provided")
-        self.svd_fun = svd_fun
+    def __init__(self, svd="truncated_svd", aux_init="random_uniform", dual_init="random_uniform"):
+        self.svd_fun = get_svd(svd)
         self.aux_init = aux_init
         self.dual_init = dual_init
-        # TODO: Parse svd similar to cmf_aoadmm
 
     def init_aux(self, matrices, rank, mode, random_state=None):
         # TODO: Not provided random state
@@ -196,7 +194,7 @@ class Parafac2(ADMMPenalty):
         basis_matrices, coord_mat = auxes
         basis_matrices = []  # To prevent inplace editing of basis matrices
         for fm in factor_matrices:
-            U, s, Vh = self.svd_fun(fm @ coord_mat.T, full_matrices=False)
+            U, s, Vh = self.svd_fun(fm @ coord_mat.T, n_eigenvecs=tl.shape(coord_mat)[0])
             basis_matrices.append(U @ Vh)
 
         coordinate_matrix = 0  # TODO: Project all factor matrices and compute weighted mean
