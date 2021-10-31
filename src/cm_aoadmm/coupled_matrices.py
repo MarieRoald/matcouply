@@ -50,14 +50,14 @@ class CoupledMatrixFactorization(FactorizedTensor):
     def to_vec(self):
         return cmf_to_vec(self)
 
-    def to_unfolded(self):
-        return cmf_to_unfolded(self)
+    def to_unfolded(self, mode):
+        return cmf_to_unfolded(self, mode)
 
     def to_matrices(self):
         return cmf_to_matrices(self)
 
     def to_matrix(self, matrix_idx):
-        return cmf_to_matrix(self)
+        return cmf_to_matrix(self, matrix_idx)
 
 
 def _validate_cmf(cmf):
@@ -123,7 +123,7 @@ def cmf_to_matrix(cmf, matrix_idx, validate=True):
     """
     # TODO: Unit test
     if validate:
-        pass  # TODO: what to do here?
+        cmf = CoupledMatrixFactorization(cmf)
     weights, (A, B_is, C) = cmf
     a = A[matrix_idx]
     if weights is not None:
@@ -141,11 +141,10 @@ def cmf_to_slice(cmf, slice_idx, validate=True):
 def cmf_to_matrices(cmf, validate=True):
     # Construct matrices and return list
     # TODO: docstring
-    # TODO: validate?
     # TODO: B or B_i
     # TODO: Unit test
     if validate:
-        pass  # TODO: what to do here?
+        cmf = CoupledMatrixFactorization(cmf)
 
     weights, (A, B_is, C) = cmf
     if weights is not None:
