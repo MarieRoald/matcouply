@@ -20,6 +20,8 @@ def all_combinations(*args):
     all_combinations([1, 2, 5], ["random", "svd", "threshold_svd"])
 )
 def test_initialize_cmf(rng, rank, init):
+    # TODO: Make this test. 
+    # TESTPLAN:
     # initialize_cmf(matrices, rank, init, svd_fun, random_state=None, init_params=None) -> cmf
     # Set shapes equal to some list of matrix shapes
     # Set matrices equal to [rng.random_sample(shape) for shape in shapes]
@@ -31,6 +33,8 @@ def test_initialize_cmf(rng, rank, init):
 
 
 def test_initialize_aux():
+    # TODO: Make this test. 
+    # TESTPLAN:
     # initialize_aux(matrices, rank, reg, random_state) -> A_aux_list, B_aux_list, C_aux_list
     # Set reg=[[NonNegativity(), NonNegativity(), NonNegativity()], [NonNegativity()], []]
     # assert len(A_aux_list) == 3. osv.
@@ -38,6 +42,8 @@ def test_initialize_aux():
 
 
 def test_initialize_dual():
+    # TODO: Make this test. 
+    # TESTPLAN:
     # initialize_dual(matrices, rank, reg, random_state) -> A_dual_list, B_dual_list, C_dual_list
     # Set reg=[[NonNegativity(), NonNegativity(), NonNegativity()], [NonNegativity()], []]
     # assert len(A_dual_list) == 3. osv.
@@ -45,6 +51,8 @@ def test_initialize_dual():
 
 
 def test_cmf_reconstruction_error(rng):
+    # TODO: Make this test. 
+    # TESTPLAN:
     # Construct random cmf
     # Construct tensor from random cmf
     # Add noise to that tensor
@@ -55,6 +63,8 @@ def test_cmf_reconstruction_error(rng):
 
 
 def test_compute_feasibility_gaps(rng):
+    # TODO: Make this test. 
+    # TESTPLAN:
     # compute_feasibility_gaps(cmf, reg, A_aux_list, B_aux_list, C_aux_list) -> A_gaps, B_gaps, C_gaps
 
     # Create A_noise_list, B_noise_list and C_noise_list
@@ -67,6 +77,8 @@ def test_compute_feasibility_gaps(rng):
 
 
 def test_admm_update_A(rng, feasibility_penalty_scale, constant_feasibility_penalty):
+    # TODO: Make this test. 
+    # TESTPLAN:
     # Construct NN-CMF
     # Create copy with same B & C but where A is some other NN matrix
     # Set matrices=constructed from original NN-CMF
@@ -103,6 +115,8 @@ def test_admm_update_A(rng, feasibility_penalty_scale, constant_feasibility_pena
 
 
 def test_admm_update_B(rng, feasibility_penalty_scale, constant_feasibility_penalty):
+    # TODO: Make this test. 
+    # TESTPLAN:
     # Construct NN-CMF
     # Create copy with same A & C but where B_is is some other list of NN matrices
     # Set matrices=constructed from original NN-CMF
@@ -139,6 +153,8 @@ def test_admm_update_B(rng, feasibility_penalty_scale, constant_feasibility_pena
 
 
 def test_admm_update_C(rng, feasibility_penalty_scale):
+    # TODO: Make this test. 
+    # TESTPLAN:
     # Construct NN-CMF
     # Create copy with same A & B but where C is some other NN matrix
     # Set matrices=constructed from original NN-CMF
@@ -173,6 +189,8 @@ def test_admm_update_C(rng, feasibility_penalty_scale):
 
 
 def test_cmf_aoadmm(rng):
+    # TODO: Make this test. 
+    # TESTPLAN:
     # Create random NN CMF
     # Construct matrices
     # Decompose matrices with cmf_aoadmm with no constraints
