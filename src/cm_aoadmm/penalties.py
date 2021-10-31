@@ -1,12 +1,24 @@
+from abc import ABC, abstractmethod
+
 import tensorly as tl
 
 from ._utils import get_svd
 # TODO: Maybe remove compute_feasibility_gap and only use shift_aux
 # TODO: Maybe rename shift_aux to subtract_from_aux
 # TODO: Maybe add mixin classes for some of the functionality
+# TODO: For all penalties with __init__, make sure they call super().__init__ and have the aux_init and dual_init arguments
+# TODO: For all penalties, add the parameters of the ADMMPenalty superclass to class docstring.
 
+class ADMMPenalty(ABC):
+    """Base class for all regularizers and constraints.
 
-class ADMMPenalty:
+    Parameters
+    ----------
+    aux_init : {"random_uniform", "random_standard_normal"}
+        Initialisation method for the auxiliary variables
+    dual_init : {"random_uniform", "random_standard_normal"}
+        Initialisation method for the auxiliary variables
+    """
     def __init__(self, aux_init="random_uniform", dual_init="random_uniform"):
         self.aux_init = aux_init    
         self.dual_init = dual_init
@@ -33,7 +45,7 @@ class ADMMPenalty:
                 raise ValueError("Mode must be 0, 1, or 2.")
         else:
             raise ValueError(f"Unknown aux init: {self.aux_init}")
-        
+
     def init_dual(self, matrices, rank, mode, random_state=None):
         # TODO: Not provided random state
         if self.dual_init == "random_uniform":
@@ -66,6 +78,7 @@ class ADMMPenalty:
         else:
             raise ValueError(f"Unknown dual init: {self.aux_init}")
 
+    @abstractmethod
     def penalty(self, x):  # TODO: How to deal with penalties that go across matrices
         raise NotImplementedError
 
@@ -86,12 +99,35 @@ class ADMMPenalty:
 
 class RowVectorPenalty(ADMMPenalty):
     def factor_matrices_update(self, factor_matrices, feasibility_penalties, auxes):
+        """Update a all factor matrices in given list.
+
+        Parameters
+        ----------
+        factor_matrices : list of tl.tensor(ndim=2)
+            List of factor matrix to update.
+        feasibility_penalties : list of floats
+            Penalty parameters for the feasibility gap of the different factor matrices.
+        auxes : list of tl.tensor(ndim=2)
+            List of auxiliary matrices, each element corresponds to the auxiliary factor matrix
+            for the same element in ``factor_matrices``.
+        """
         return [
             self.factor_matrix_update(fm, feasibility_penalty, aux)
             for fm, feasibility_penalty, aux in zip(factor_matrices, feasibility_penalties, auxes)
         ]
 
     def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
+        """Update a factor matrix.
+
+        Parameters
+        ----------
+        factor_matrix : tl.tensor(ndim=2)
+            Factor matrix to update.
+        feasibility_penalty : float
+            Penalty parameter for infeasible solutions.
+        aux : tl.tensor(ndim=2)
+            Auxiliary matrix that correspond to the factor matrix supplied to ``factor_matrix``.
+        """
         out = tl.zeros(factor_matrix.shape)
 
         for row, factor_matrix_row in enumerate(factor_matrix):
@@ -99,18 +135,39 @@ class RowVectorPenalty(ADMMPenalty):
         
         return out
 
+    @abstractmethod
     def factor_matrix_row_update(self, factor_matrix_row, feasibility_penalty, aux_row):
+        """Update a single row of a factor matrix.
+
+        Parameters
+        ----------
+        factor_matrix_row : tl.tensor(ndim=1)
+            Vector (first order tensor) that corresponds to the single row in the factor matrix
+            we wish to update.
+        feasibility_penalty : float
+            Penalty parameter for infeasible solutions.
+        aux_row : tl.tensor(ndim=1)
+            Vector (first order tensor) that corresponds to the row in the auxiliary matrix that
+            correspond to the row supplied to ``factor_matrix_row``.
+        """
         raise NotImplementedError
 
 
-class MatrixPenalty(ADMMPenalty):        
+class MatrixPenalty(ADMMPenalty):
     def factor_matrices_update(self, factor_matrices, feasibility_penalties, auxes):
         return [
             self.factor_matrix_update(fm, feasibility_penalty, aux)
             for fm, feasibility_penalty, aux in zip(factor_matrices, feasibility_penalties, auxes)
         ]
 
+    @abstractmethod
     def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
+        raise NotImplementedError
+
+
+class MatricesPenalty(ADMMPenalty):
+    @abstractmethod
+    def factor_matrices_update(self, factor_matrices, feasibility_penalties, auxes):
         raise NotImplementedError
 
 
@@ -128,13 +185,57 @@ class NonNegativity(RowVectorPenalty):
 
 # TODO: unit tests
 class BoxConstraint(RowVectorPenalty):
-    def __init__(self, min_val, max_val):
+    r"""Set minimum and maximum value for the factor.
+
+    A box constraint works element-wise, constraining the elements of a factor
+    to satisfy :math:`l \leq x \leq u`, where :math:`x` represents the element
+    of the factor and :math:`l` and :math:`u` are the lower and upper bound on
+    the factor elements, respectively.
+
+    Parameters
+    ----------
+    min_val : float
+        Lower bound on the factor elements.
+    max_val : float
+        Upper bound on the factor elements
+    aux_init : {"random_uniform", "random_standard_normal"}
+        Initialisation method for the auxiliary variables
+    dual_init : {"random_uniform", "random_standard_normal"}
+        Initialisation method for the auxiliary variables
+    """
+    def __init__(self, min_val, max_val, aux_init="random_uniform", dual_init="random_uniform"):
+        super().__init__(aux_init=aux_init, dual_init=dual_init)
         self.min_val = min_val
         self.max_val = max_val
+
     def factor_matrix_row_update(self, factor_matrix_row, feasibility_penalty, aux_row):
+        """Update a single row of a factor matrix.
+
+        Parameters
+        ----------
+        factor_matrix_row : tl.tensor(ndim=1)
+            Vector (first order tensor) that corresponds to the single row in the factor matrix
+            we wish to update.
+        feasibility_penalty : float
+            Penalty parameter for infeasible solutions.
+        aux_row : tl.tensor(ndim=1)
+            Vector (first order tensor) that corresponds to the row in the auxiliary matrix that
+            correspond to the row supplied to ``factor_matrix_row``.
+        """
         return tl.clip(factor_matrix_row, self.min_val, self.max_val)
 
     def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
+        """Update a factor matrix.
+
+        Parameters
+        ----------
+        factor_matrix : tl.tensor(ndim=2)
+            Factor matrix to update.
+        feasibility_penalty : float
+            Penalty parameter for infeasible solutions.  (Ignored)
+        aux : tl.tensor(ndim=2)
+            Auxiliary matrix that correspond to the factor matrix supplied to ``factor_matrix``.  (Ignored)
+        """
         return tl.clip(factor_matrix, self.min_val, self.max_val)
 
     def penalty(self, x):
@@ -169,7 +270,7 @@ class L1Penalty(RowVectorPenalty):
             return sum(tl.sum(tl.abs(xi)) for xi in x)*self.reg_strength
 
 
-class Parafac2(ADMMPenalty):
+class Parafac2(MatricesPenalty):
     def __init__(self, svd="truncated_svd", aux_init="random_uniform", dual_init="random_uniform"):
         self.svd_fun = get_svd(svd)
         self.aux_init = aux_init
