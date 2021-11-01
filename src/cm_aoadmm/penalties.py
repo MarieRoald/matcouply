@@ -172,6 +172,18 @@ class MatricesPenalty(ADMMPenalty):
 
 
 class NonNegativity(RowVectorPenalty):
+    r"""Impose non-negative values for the factor.
+
+    The non-negativity constraint works element-wise, constraining the elements of a factor
+    to satisfy :math:`0 \leq x, where :math:`x` represents a factor element
+
+    Parameters
+    ----------
+    aux_init : {"random_uniform", "random_standard_normal"}
+        Initialisation method for the auxiliary variables
+    dual_init : {"random_uniform", "random_standard_normal"}
+        Initialisation method for the auxiliary variables
+    """
     def factor_matrix_row_update(self, factor_matrix_row, feasibility_penalty, aux_row):
         return tl.clip(factor_matrix_row, 0)
 
