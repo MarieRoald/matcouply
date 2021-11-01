@@ -255,6 +255,24 @@ class BoxConstraint(RowVectorPenalty):
 
 
 class L1Penalty(RowVectorPenalty):
+    r"""Add L1 (LASSO) regularisation on the factor elements.
+
+    The L1 penalty is frequently used to obtain sparse components. That is,
+    components with many zero-valued elements. To accomplish this, the L1 penalty
+    adds a penalty term on the form :math:`\sum_{i r} \gamma |a_{ir}|`, where
+    :math:`a_{ir}` is the :math:`(i,r)`-th element of the factor matrix.
+
+    Parameters
+    ----------
+    reg_strength : float
+        The regularisation strength, :math:`\gamma` in the equation above
+    non_negativity : bool
+        If ``True``, then non-negativity is also imposed on the factor elements.
+    aux_init : {"random_uniform", "random_standard_normal"}
+        Initialisation method for the auxiliary variables
+    dual_init : {"random_uniform", "random_standard_normal"}
+        Initialisation method for the auxiliary variables
+    """
     # TODO: Different scaling versions
     def __init__(self, reg_strength, non_negativity=False):
         self.reg_strength = reg_strength
