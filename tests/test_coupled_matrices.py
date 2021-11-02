@@ -1,7 +1,7 @@
 
 import numpy as np
 from pytest import approx
-from cm_aoadmm import coupled_matrices
+from cm_aoadmm import coupled_matrices, random
 import pytest
 
 
@@ -13,7 +13,15 @@ def test_validate_cmf(rng, rank):
     # Create rank
     # Generate random valid CMF
     # Check that validate_cmf returns correct shapes and rank
+
+    shapes = [(5, 10), (10, 10), (15, 10), (10, 10)]
     
+    cmf = random.random_coupled_matrices(shapes, rank, random_state=rng)
+    val_shapes, val_rank = coupled_matrices._validate_cmf(cmf)
+    assert val_rank == rank
+    assert shapes == val_shapes
+    
+
     # Check different fail cases (with pytest.raises(<ExceptionType>))
     #   * One of the matrices (A, C or any of B_is) have wrong rank (e.g. rank+1)
     #   * Both A and C have wrong rank (e.g. rank+1)
