@@ -301,6 +301,31 @@ class L1Penalty(RowVectorPenalty):
 
 
 class Parafac2(MatricesPenalty):
+    """Impose the PARAFAC2 constraint on the uncoupled factor matrices.
+
+    The PARAFAC2 constraint can only be imposed on the uncoupled :math:`\mathbf{B}_i`-matrices, and
+    states that
+
+    .. math::
+
+        \mathbf{B}_{i_1}^\mathsf{T}\mathbf{B}_{i_1} = \mathbf{B}_{i_2}^\mathsf{T}\mathbf{B}_{i_2},
+    
+    for any :math:`i_1` and :math:`i_2`. This constraint ensures uniqueness on the components so
+    long as the number of coupled matrices are sufficiently large. A sufficent condition is that
+    there are :math:`R(R+1)(R+2)(R+3)/24` matrices, where :math:`R` is the rank of the 
+    decomposition :cite:p:`harshman1996uniqueness`. However, the true number of datasets required 
+    for uniqueness is typically lower, and it is conjectured that uniquenes for any :math:`R` holds
+    in practice whenever there are four or more matrices :cite:p:`kiers1999parafac2`.
+
+    Parameters
+    ----------
+    svd : str
+        String that specifies which SVD algorithm to use. Valid strings are the keys of ``tensorly.SVD_FUNS``.
+    aux_init : {"random_uniform", "random_standard_normal"}
+        Initialisation method for the auxiliary variables
+    dual_init : {"random_uniform", "random_standard_normal"}
+        Initialisation method for the auxiliary variables
+    """
     def __init__(self, svd="truncated_svd", aux_init="random_uniform", dual_init="random_uniform"):
         self.svd_fun = get_svd(svd)
         self.aux_init = aux_init
