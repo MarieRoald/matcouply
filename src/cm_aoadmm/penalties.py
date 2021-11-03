@@ -24,7 +24,8 @@ class ADMMPenalty(ABC):
         self.dual_init = dual_init
 
     def init_aux(self, matrices, rank, mode, random_state=None):
-        # TODO: Not provided random state
+        random_state = tl.check_random_state(random_state)
+        
         if self.aux_init == "random_uniform":
             if mode == 0:
                 return random_state.uniform(size=(len(matrices), rank))
@@ -47,7 +48,8 @@ class ADMMPenalty(ABC):
             raise ValueError(f"Unknown aux init: {self.aux_init}")
 
     def init_dual(self, matrices, rank, mode, random_state=None):
-        # TODO: Not provided random state
+        random_state = tl.check_random_state(random_state)
+
         if self.dual_init == "random_uniform":
             if mode == 0:
                 return random_state.uniform(size=(len(matrices), rank))

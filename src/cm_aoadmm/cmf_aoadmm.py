@@ -8,6 +8,7 @@ from ._utils import is_iterable, get_svd
 
 
 def initialize_cmf(matrices, rank, init, svd_fun, random_state=None, init_params=None):
+    random_state = tl.check_random_state(random_state)
     if init_params is None:
         init_params = {}
     if init == "random":
