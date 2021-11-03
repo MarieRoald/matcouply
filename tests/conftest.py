@@ -1,5 +1,6 @@
 import pytest
 import numpy as np
+import tensorly as tl
 
 
 @pytest.fixture
@@ -12,7 +13,4 @@ def seed(pytestconfig):
 
 @pytest.fixture
 def rng(seed):
-    try:
-        return np.random.default_rng(seed=seed)
-    except AttributeError:
-        return np.random.RandomState(seed=seed)
+    return tl.check_random_state(seed)
