@@ -64,9 +64,31 @@ class CoupledMatrixFactorization(FactorizedTensor):
 
 def _validate_cmf(cmf):
     # TODO: docstring
-    # TODO: Unit test
     weights, (A, B_is, C) = cmf
-
+    if not (tl.is_tensor(weights) or weights is None):
+        raise TypeError(
+            "Weights should be a first order tensor of length rank, not {}".format(type(weights))
+        )
+    elif weights is not None and len(tl.shape(weights)) != 1:
+        raise ValueError(
+            "Weights should be a first order tensor. However weights has shape {}".format(tl.shape(weights))
+        )
+    if not tl.is_tensor(A):
+        raise TypeError(
+            "The first factor matrix, A, should be a second order tensor of size (I, rank)), not {}".format(type(A))
+        )    
+    elif len(tl.shape(A)) != 2:
+        raise ValueError(
+            "The first factor matrix, A, should be a second order tensor. However A has shape {}".format(tl.shape(A))
+        )
+    if not tl.is_tensor(C):
+        raise TypeError(
+            "The last factor matrix, C, should be a second order tensor of size (K, rank)), not {}".format(type(C))
+        )
+    elif len(tl.shape(C)) != 2:
+        raise ValueError(
+            "The last factor matrix, C, should be a second order tensor. However C has shape {}".format(tl.shape(C))
+        )
     rank = int(tl.shape(A)[1])
     if tl.shape(C)[1] != rank:
         raise ValueError(
@@ -76,10 +98,18 @@ def _validate_cmf(cmf):
 
     shape = []
     for i, B_i in enumerate(B_is):
+        if not tl.is_tensor(B_i):
+            raise TypeError(
+                "The B_is[{}] factor matrix should be second order tensor of size (J_i, rank)), not {}".format(i, type(B_i))
+            )
+        elif len(tl.shape(B_i)) != 2:
+            raise ValueError(
+                "The B_is[{}] factor matrix should be second order tensor. However B_is[{}] has shape {}".format(i, i, tl.shape(B_i))
+            )
         if tl.shape(B_i)[1] != rank:
             raise ValueError(
                 "All the factors of a coupled matrix factorization should have the same number of columns."
-                "However, A.shape[1]={} but B_{}.shape[1]={}.".format(rank, i, tl.shape(B_i)[1])
+                "However, A.shape[1]={} but B_is[{}].shape[1]={}.".format(rank, i, tl.shape(B_i)[1])
             )
         shape.append((tl.shape(B_i)[0], tl.shape(C)[0]))
 
