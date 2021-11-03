@@ -45,6 +45,15 @@ class ADMMPenalty(ABC):
             else:
                 raise ValueError("Mode must be 0, 1, or 2.")
         else:
+            # TODO: Accept given init.
+            # Given init: 
+            #   if (mode = 0 or mode = 2)
+            #   and istensor(aux_init)
+            # Then: if shape of aux_init is correct, return aux_init
+            # Given init: 
+            #   if mode = 1 
+            #   and isinstance(aux_init, list) 
+            # Then: if shape of all elements in aux_init is correct, return aux_init
             raise ValueError(f"Unknown aux init: {self.aux_init}")
 
     def init_dual(self, matrices, rank, mode, random_state=None):
@@ -78,6 +87,16 @@ class ADMMPenalty(ABC):
             else:
                 raise ValueError("Mode must be 0, 1, or 2.")
         else:
+            # TODO: Accept given init.
+            # Given init: 
+            #   if (mode = 0 or mode = 2)
+            #   and istensor(aux_init)
+            # Then: if shape of aux_init is correct, return aux_init
+            # Given init: 
+            #   if mode = 1 
+            #   and isinstance(aux_init, list) 
+            # Then: if shape of all elements in aux_init is correct, return aux_init
+        
             raise ValueError(f"Unknown dual init: {self.aux_init}")
 
     @abstractmethod
@@ -344,6 +363,12 @@ class Parafac2(MatricesPenalty):
 
                 return basis_matrices, coordinate_matrix
         else:
+            # TODO: Accept given init.
+            # Given init: 
+            #   if mode = 1 
+            #   and isinstance(aux_init, tuple) 
+            # Then: if shape of all elements in aux_init is correct, return aux_init
+
             raise ValueError(f"Unknown aux init: {self.aux_init}")
 
     def factor_matrices_update(self, factor_matrices, feasibility_penalties, auxes):
