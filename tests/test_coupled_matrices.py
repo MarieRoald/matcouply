@@ -1,58 +1,128 @@
 
 import numpy as np
+from numpy.core.fromnumeric import shape
 from pytest import approx
 from cm_aoadmm import coupled_matrices, random
 import pytest
+from copy import copy
 
 
 @pytest.mark.parametrize("rank", [1, 2, 5])
 def test_validate_cmf(rng, rank):
-    # TODO: Make this test. 
-    # TESTPLAN:
-    # Create list of shapes
-    # Create rank
-    # Generate random valid CMF
-    # Check that validate_cmf returns correct shapes and rank
-
-    shapes = [(5, 10), (10, 10), (15, 10), (10, 10)]
-    
+    shapes = ((5, 10), (10, 10), (15, 10), (10, 10))
     cmf = random.random_coupled_matrices(shapes, rank, random_state=rng)
     val_shapes, val_rank = coupled_matrices._validate_cmf(cmf)
     assert val_rank == rank
     assert shapes == val_shapes
-    
 
-    # Check different fail cases (with pytest.raises(<ExceptionType>))
-    #   * One of the matrices (A, C or any of B_is) have wrong rank (e.g. rank+1)
-    #   * Both A and C have wrong rank (e.g. rank+1)
-    #   * One of the B_is have wrong number of columns (second element in shape)
-    #   * One of the matrices is a third order tensor
-    #   * One of the matrices is a vector
-    #   * The weights is a matrix
-    #   * The weights is a scalar
-    #   * The wrong number of weights
-    pass
+    weights, (A, B_is, C) = cmf
+
+    #####
+    # Check that non-tensor inputs result in TypeErrors
+    # The weights is a scalar
+    with pytest.raises(TypeError):
+        coupled_matrices._validate_cmf((3, (A, B_is, C)))
+    with pytest.raises(TypeError):
+        coupled_matrices._validate_cmf((weights, (1, B_is, C)))
+    with pytest.raises(TypeError):
+        coupled_matrices._validate_cmf((weights, (None, B_is, C)))
+    with pytest.raises(TypeError):
+        coupled_matrices._validate_cmf((weights, (A, 1, C)))
+    with pytest.raises(TypeError):
+        coupled_matrices._validate_cmf((weights, (A, None, C)))
+    with pytest.raises(TypeError):
+        B_is_copy = copy(B_is)
+        B_is_copy[1] = 1
+        coupled_matrices._validate_cmf((weights, (A, B_is_copy, C)))
+    with pytest.raises(TypeError):
+        B_is_copy = copy(B_is)
+        B_is_copy[1] = None
+        coupled_matrices._validate_cmf((weights, (A, B_is_copy, C)))
+    with pytest.raises(TypeError):
+        coupled_matrices._validate_cmf((weights, (A, B_is, 1)))
+    with pytest.raises(TypeError):
+        coupled_matrices._validate_cmf((weights, (A, B_is, None)))
+    
+    #####
+    # Check that None-valued weights do not raise any errors
+    coupled_matrices._validate_cmf((None, (A, B_is, C)))
+    
+    #####
+    # Check that wrongly shaped inputs result in ValueErrors
+
+    ### Weights
+    # The weights is a matrix
+    with pytest.raises(ValueError):
+        coupled_matrices._validate_cmf((np.ones(shape=(rank, rank)), (A, B_is, C)))
+    # Wrong number of weights
+    with pytest.raises(ValueError):
+        coupled_matrices._validate_cmf((np.ones(shape=(rank+1, )), (A, B_is, C)))
+    
+    ### Factor matrices
+    # One of the matrices is a third order tensor
+    with pytest.raises(ValueError):
+        coupled_matrices._validate_cmf((weights, (rng.random(size=(4, rank, rank)), B_is, C)))
+    with pytest.raises(ValueError):
+        coupled_matrices._validate_cmf((weights, (A, B_is, rng.random(size=(4, rank, rank)))))
+    with pytest.raises(ValueError):
+        B_is_copy = copy(B_is)
+        B_is_copy[1] = rng.random(size=(4, rank, rank))
+        coupled_matrices._validate_cmf((weights, (A, B_is_copy, C)))
+
+
+    # One of the matrices is a vector
+    with pytest.raises(ValueError):
+        coupled_matrices._validate_cmf((weights, (rng.random(size=(rank,)), B_is, C)))
+    with pytest.raises(ValueError):
+        coupled_matrices._validate_cmf((weights, (A, B_is, rng.random(size=(rank,)))))
+    with pytest.raises(ValueError):
+        B_is_copy = copy(B_is)
+        B_is_copy[1] = rng.random(size=(rank,))
+        coupled_matrices._validate_cmf((weights, (A, B_is_copy, C)))
+
+    ### Check wrong rank
+    # Check with incorrect rank for one of the factors
+    invalid_A = rng.random((len(shapes), rank+1))
+    invalid_C = rng.random((shapes[0][1], rank+1))
+    invalid_B_is_2 = [rng.random((j_i, rank)) for j_i, k in shapes]
+    invalid_B_is_2[0] = rng.random((shapes[0][0], rank+1))
+
+    # Both A and C have the wrong rank:
+    with pytest.raises(ValueError): 
+        coupled_matrices._validate_cmf((weights, (invalid_A, B_is, invalid_C)))
+
+    # One of the matrices (A, C or any of B_is) have wrong rank
+    with pytest.raises(ValueError):
+        coupled_matrices._validate_cmf((weights, (invalid_A, B_is, C)))
+    with pytest.raises(ValueError):
+        coupled_matrices._validate_cmf((weights, (A, B_is, invalid_C)))
+    with pytest.raises(ValueError):
+        coupled_matrices._validate_cmf((weights, (A, invalid_B_is_2, C)))
 
 
 def test_cmf_to_matrix(rng):
     # TODO: Make this test. 
     # TESTPLAN:
     # Generate random cmf
-    # Construct single matrix manually
+    # Construct single matrix manually # TODO: normalise?
     # Check that matrix is computed correctly
-    # Set the wrong number of columns for one of the matrices B_is[0] = rng.random_sample((tl.shape(B_is[0])[0], tl.shape(B_is[0])[1]+1))
+    # Set the wrong number of columns for one of the matrices B_is[0] = rng.random((tl.shape(B_is[0])[0], tl.shape(B_is[0])[1]+1))
     # Check that it fails when validate=True and not when validate=False
     # Check that we get same result as with cmf_to_slice
-    pass
+    shapes = ((5, 10), (10, 10), (15, 10), (10, 10))
+    rank = 5
+    cmf = random.random_coupled_matrices(shapes, rank, random_state=rng)
+    weights, (A, B_is, C) = cmf
+
 
 
 def test_cmf_to_matrices(rng):
     # TODO: Make this test. 
     # TESTPLAN:
     # Generate random cmf
-    # Construct each matrix manually
+    # Construct each matrix manually TODO: CHECK
     # Check that each matrix is computed correctly
-    # Set the wrong number of columns for one of the matrices B_is[0] = rng.random_sample((tl.shape(B_is[0])[0], tl.shape(B_is[0])[1]+1))
+    # Set the wrong number of columns for one of the matrices B_is[0] = rng.random((tl.shape(B_is[0])[0], tl.shape(B_is[0])[1]+1))
     # Check that it fails when validate=True and not when validate=False
     # Check that we get same result as with cmf_to_slices
     pass
