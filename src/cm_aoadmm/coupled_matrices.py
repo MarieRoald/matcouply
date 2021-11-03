@@ -15,13 +15,47 @@ class CoupledMatrixFactorization(FactorizedTensor):
 
     @classmethod
     def from_CPTensor(cls, cp_tensor):
-        # TODO: implement creating cmf from cp
-        pass
+        """Convert a CP tensor into a coupled matrix factorization.
+        
+        Arguments
+        ---------
+        cp_tensor : tl.cp_tensor.CPTensor
+            CP tensor to convert into a coupled matrix factorization
+        
+        Returns
+        -------
+        CoupledMatrixFactorization
+            A coupled matrix factorization that represents the same tensor
+            as ``cp_tensor``.
+        """
+        cp_tensor = tl.cp_tensor.CPTensor(cp_tensor)
+        weights, factors = cp_tensor
+        if len(factors) != 3:
+            raise ValueError("Must be a third order CP tensor to convert into a coupled matrix factorization")
+        A, B, C = factors
+        B_is = [tl.copy(B) for i in range(tl.shape(A)[0])]
+        return cls((tl.copy(weights), [tl.copy(A), B_is, tl.copy(C)]))
 
     @classmethod
     def from_Parafac2Tensor(cls, parafac2_tensor):
-        # TODO: implement creating cmf from PARAFAC2
-        pass
+        """Convert a PARAFAC2 tensor into a coupled matrix factorization.
+        
+        Arguments
+        ---------
+        parafac2_tensor : tl.parafac2_tensor.Parafac2Tensor
+            PARAFAC2 tensor to convert into a coupled matrix factorization
+        
+        Returns
+        -------
+        CoupledMatrixFactorization
+            A coupled matrix factorization that represents the same tensor
+            as ``parafac2_tensor``.
+        """
+        parafac2_tensor = tl.parafac2_tensor.Parafac2Tensor(parafac2_tensor)
+        weights, factors, projection_matrices = parafac2_tensor
+        A, B, C = factors
+        B_is = [tl.dot(Pi, B) for Pi in projection_matrices]
+        return cls((tl.copy(weights), [tl.copy(A), B_is, tl.copy(C)]))
 
     def __getitem__(self, item):
         if item == 0:
@@ -42,7 +76,7 @@ class CoupledMatrixFactorization(FactorizedTensor):
     def __len__(self):
         return 2
 
-    def __repr__(self):
+    def __repr__(self):  # pragma: nocover
         message = "(weights, factors) : rank-{} CoupledMatrixFactorization of shape {} ".format(self.rank, self.shape)
         return message
 
@@ -196,7 +230,7 @@ def cmf_to_tensor(cmf, validate=True):
     # TODO: docstring
     # TODO: Unit test
     _, (A, B_is, C) = cmf
-    matrices = cmf_to_matrices(cmf)
+    matrices = cmf_to_matrices(cmf, validate=validate)
     lengths = [B_i.shape[0] for B_i in B_is]
 
     tensor = tl.zeros((A.shape[0], max(lengths), C.shape[0]), **tl.context(matrices[0]))
@@ -210,11 +244,11 @@ def cmf_to_unfolded(cmf, mode, validate=True):
     # TODO: docstring
     # TODO: Unit test
     # TODO: Option to use stack of matrices instead of tensor padded with zeros
-    return tl.unfold(cmf_to_tensor(cmf), mode)
+    return tl.unfold(cmf_to_tensor(cmf, validate=validate), mode)
 
 
 def cmf_to_vec(cmf, validate=True):
     # TODO: docstring
     # TODO: Unit test
     # TODO: Option to use stack of matrices instead of tensor padded with zeros
-    return tl.tensor_to_vec(cmf_to_tensor(cmf))
+    return tl.tensor_to_vec(cmf_to_tensor(cmf, validate=validate))
