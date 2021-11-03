@@ -1,5 +1,11 @@
 import itertools
+from numpy.core.fromnumeric import shape
 import pytest
+from cm_aoadmm import cmf_aoadmm, coupled_matrices, random
+from cm_aoadmm.penalties import NonNegativity
+import numpy as np
+from cm_aoadmm._utils import get_svd
+import tensorly as tl
 
 
 def all_combinations(*args):
@@ -20,46 +26,79 @@ def all_combinations(*args):
     all_combinations([1, 2, 5], ["random", "svd", "threshold_svd"])
 )
 def test_initialize_cmf(rng, rank, init):
-    # TODO: Make this test. 
-    # TESTPLAN:
-    # initialize_cmf(matrices, rank, init, svd_fun, random_state=None, init_params=None) -> cmf
-    # Set shapes equal to some list of matrix shapes
-    # Set matrices equal to [rng.random_sample(shape) for shape in shapes]
-    # Set rank=1, 2 and 5
-    # 
-    # Set init="random", "svd" and "threshold_svd"
-    # Construct matrices from CMF, check that shape of each constructed matrix is equal to the input matrices
-    pass
+    shapes = ((5, 10), (10, 10), (15, 10))
+    matrices =  [rng.random_sample(shape) for shape in shapes]
 
+    svd_fun = get_svd("truncated_svd")
+    cmf = cmf_aoadmm.initialize_cmf(matrices, rank, init, svd_fun, random_state=None, init_params=None)
+    init_matrices = coupled_matrices.cmf_to_matrices(cmf)
+    for matrix, init_matrix in zip(matrices, init_matrices):
+        assert matrix.shape == init_matrix.shape 
 
-def test_initialize_aux():
+    
+
+@pytest.mark.parametrize(
+    "rank",
+    [1, 2, 5],
+)
+def test_initialize_aux(rng, rank):
     # TODO: Make this test. 
     # TESTPLAN:
     # initialize_aux(matrices, rank, reg, random_state) -> A_aux_list, B_aux_list, C_aux_list
     # Set reg=[[NonNegativity(), NonNegativity(), NonNegativity()], [NonNegativity()], []]
     # assert len(A_aux_list) == 3. osv.
-    pass
+    shapes = ((5, 10), (10, 10), (15, 10)) # TODO CHECK
+    matrices =  [rng.random(shape) for shape in shapes]
 
+    reg = [[NonNegativity(), NonNegativity(), NonNegativity()], [NonNegativity()], []]
+    A_aux_list, B_aux_list, C_aux_list = cmf_aoadmm.initialize_aux(matrices, rank, reg, rng)
+    assert len(A_aux_list) == 3
+    assert len(B_aux_list) == 1
+    assert len(C_aux_list) == 0
 
-def test_initialize_dual():
-    # TODO: Make this test. 
-    # TESTPLAN:
-    # initialize_dual(matrices, rank, reg, random_state) -> A_dual_list, B_dual_list, C_dual_list
-    # Set reg=[[NonNegativity(), NonNegativity(), NonNegativity()], [NonNegativity()], []]
-    # assert len(A_dual_list) == 3. osv.
-    pass
+    for A_aux in A_aux_list:
+        assert tl.shape(A_aux) == (len(shapes), rank)
+    for B_is_aux in B_aux_list:
+        for B_i_aux, shape in zip(B_is_aux, shapes):
+            assert tl.shape(B_i_aux) == (shape[0], rank)
+        assert len(B_is_aux) == len(shapes)
+    for C_aux in C_aux_list:
+        assert tl.shape(C_aux) == (shapes[0][1], rank)
+
+@pytest.mark.parametrize(
+    "rank",
+    [1, 2, 5],
+)
+def test_initialize_dual(rng, rank):
+    shapes = ((5, 10), (10, 10), (15, 10)) # TODO CHECK
+    matrices =  [rng.random(shape) for shape in shapes]
+
+    reg = [[NonNegativity(), NonNegativity(), NonNegativity()], [NonNegativity()], []]
+    A_dual_list, B_dual_list, C_dual_list = cmf_aoadmm.initialize_dual(matrices, rank, reg, rng)
+    assert len(A_dual_list) == 3
+    assert len(B_dual_list) == 1
+    assert len(C_dual_list) == 0
+
+    for A_dual in A_dual_list:
+        assert tl.shape(A_dual) == (len(shapes), rank)
+    for B_is_dual in B_dual_list:
+        for B_i_dual, shape in zip(B_is_dual, shapes):
+            assert tl.shape(B_i_dual) == (shape[0], rank)
+        assert len(B_is_dual) == len(shapes)
+    for C_dual in C_dual_list:
+        assert tl.shape(C_dual) == (shapes[0][1], rank)
 
 
 def test_cmf_reconstruction_error(rng):
-    # TODO: Make this test. 
-    # TESTPLAN:
-    # Construct random cmf
-    # Construct tensor from random cmf
-    # Add noise to that tensor
-    # Compute reconstruction error
-    # Ravel noise tensor and compute norm
-    # Reconstruction error should be equal to noise norm
-    pass
+    shapes = ((11, 10), (11, 10), (11, 10), (11, 10))
+    rank = 3
+    cmf = random.random_coupled_matrices(shapes, rank, random_state=rng)
+    matrices = cmf.to_matrices()
+    noise = [rng.standard_normal(size=shape) for shape in shapes]
+    noisy_matrices = [matrix + n for matrix, n in zip(matrices, noise)]
+
+    error = cmf_aoadmm._cmf_reconstruction_error(noisy_matrices, cmf)
+    assert error == pytest.approx(np.linalg.norm(noise))
 
 
 def test_compute_feasibility_gaps(rng):
