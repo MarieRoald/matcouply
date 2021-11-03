@@ -1,10 +1,74 @@
-
 import numpy as np
-from numpy.core.fromnumeric import shape
 from pytest import approx
 from cm_aoadmm import coupled_matrices, random
 import pytest
 from copy import copy
+from tensorly.testing import assert_array_almost_equal, assert_array_equal
+import tensorly as tl
+import tensorly.random
+from cm_aoadmm.coupled_matrices import CoupledMatrixFactorization, cmf_to_matrix, cmf_to_matrices
+from unittest.mock import patch
+
+
+def test_from_cp_tensor(rng):
+    # Test that cp_tensor converted to coupled matrix factorization constructs same dense tensor 
+    cp_tensor = tl.random.random_cp((10, 15, 20), 3)
+    cmf = CoupledMatrixFactorization.from_CPTensor(cp_tensor)
+
+    dense_tensor_cp = cp_tensor.to_tensor()
+    dense_tensor_cmf = cmf.to_tensor()
+    assert_array_almost_equal(dense_tensor_cmf, dense_tensor_cp)
+
+    # Test that it fails when given CP tensor of order other than 3
+    cp_tensor = tl.random.random_cp((10, 15, 20, 25), 3)
+    with pytest.raises(ValueError):
+        cmf = CoupledMatrixFactorization.from_CPTensor(cp_tensor)
+
+    cp_tensor = tl.random.random_cp((10, 15), 3)
+    with pytest.raises(ValueError):
+        cmf = CoupledMatrixFactorization.from_CPTensor(cp_tensor)
+    
+    # Test that the B_is created from the cp tensor are copies, not the same view
+    weights, (A, B_is, C) = cmf 
+    B_0 = tl.copy(B_is[0])
+    B_is[1][0] += 5
+    assert_array_equal(B_0, B_is[0])
+
+
+def test_from_parafac2_tensor(rng):
+    # Test that parafac2 tensor converted to coupled matrix factorization constructs same dense tensor 
+    shapes = ((10, 11), (11, 11), (12, 11), (13, 11))
+    parafac2_tensor = tl.random.random_parafac2(shapes, 3)
+    cmf = CoupledMatrixFactorization.from_Parafac2Tensor(parafac2_tensor)
+
+    dense_tensor_pf2 = parafac2_tensor.to_tensor()
+    dense_tensor_cmf = cmf.to_tensor()
+    assert_array_almost_equal(dense_tensor_cmf, dense_tensor_pf2)
+
+    
+
+def test_coupled_matrix_factorization(rng):
+    shapes = ((5, 10), (10, 10), (15, 10), (10, 10))
+    rank = 4
+    cmf = random.random_coupled_matrices(shapes, rank, random_state=rng)
+
+    # Check that the length is equal to 2 (weights and factor matrices)
+    assert len(cmf) == 2
+    with pytest.raises(IndexError):
+        cmf[2]
+
+    # Check that the first element is the weight array
+    assert_array_equal(cmf[0], cmf.weights)
+
+    # Check that the second element is the factor matrices
+    A1, B_is1, C1 = cmf.factors
+    A2, B_is2, C2 = cmf[1]
+
+    assert_array_equal(A1, A2)
+    assert_array_equal(C1, C2)
+
+    for B_i1, B_i2 in zip(B_is1, B_is2):
+        assert_array_equal(B_i1, B_i2)
 
 
 @pytest.mark.parametrize("rank", [1, 2, 5])
@@ -101,67 +165,165 @@ def test_validate_cmf(rng, rank):
 
 
 def test_cmf_to_matrix(rng):
-    # TODO: Make this test. 
-    # TESTPLAN:
-    # Generate random cmf
-    # Construct single matrix manually # TODO: normalise?
-    # Check that matrix is computed correctly
-    # Set the wrong number of columns for one of the matrices B_is[0] = rng.random((tl.shape(B_is[0])[0], tl.shape(B_is[0])[1]+1))
-    # Check that it fails when validate=True and not when validate=False
-    # Check that we get same result as with cmf_to_slice
     shapes = ((5, 10), (10, 10), (15, 10), (10, 10))
     rank = 5
     cmf = random.random_coupled_matrices(shapes, rank, random_state=rng)
     weights, (A, B_is, C) = cmf
 
+    # Compare cm_aoadmm implementation with our own implementation
+    for i, B_i in enumerate(B_is):
+        matrix = cmf.to_matrix(i)
+        manually_assembled_matrix = (weights * A[i] * B_i) @ C.T
+        assert_array_almost_equal(matrix, manually_assembled_matrix)
+
+    # Test that it always fails when a single B_i is invalid and validate=True
+    invalid_B_is = copy(B_is)
+    invalid_B_is[0] = rng.random((tl.shape(B_is[0])[0], tl.shape(B_is[0])[1]+1))
+    invalid_cmf = (weights, (A, invalid_B_is, C))
+
+    for i, _ in enumerate(invalid_B_is):
+        with pytest.raises(ValueError):
+            cmf_to_matrix(invalid_cmf, i, validate=True)
+
+    # Test that it doesn't fail when a single B_i is invalid and validate=False.
+    for i, _ in enumerate(invalid_B_is):
+        if i == 0: # invalid B_i for i = 0
+            continue
+        cmf_to_matrix(invalid_cmf, i, validate=False)
+
+    # Check that validate is called only when validate=True
+    with patch("cm_aoadmm.coupled_matrices._validate_cmf", return_value=(shapes, rank)) as mock:
+        coupled_matrices.cmf_to_matrix(cmf, 0, validate=False)
+        mock.assert_not_called()
+        coupled_matrices.cmf_to_matrix(cmf, 0, validate=True)
+        mock.assert_called()
 
 
 def test_cmf_to_matrices(rng):
-    # TODO: Make this test. 
-    # TESTPLAN:
-    # Generate random cmf
-    # Construct each matrix manually TODO: CHECK
-    # Check that each matrix is computed correctly
-    # Set the wrong number of columns for one of the matrices B_is[0] = rng.random((tl.shape(B_is[0])[0], tl.shape(B_is[0])[1]+1))
-    # Check that it fails when validate=True and not when validate=False
-    # Check that we get same result as with cmf_to_slices
-    pass
+    shapes = ((15, 10), (10, 10), (15, 10), (10, 10))
+    rank = 5
+    cmf = random.random_coupled_matrices(shapes, rank, random_state=rng)
+    weights, (A, B_is, C) = cmf
+
+    # Compare cm_aoadmm implementation with our own implementation
+    matrices = cmf.to_matrices()
+    for i, matrix in enumerate(matrices):
+        manually_assembled_matrix = (weights * A[i] * B_is[i]) @ C.T
+        assert_array_almost_equal(matrix, manually_assembled_matrix)
+
+    invalid_B_is = copy(B_is)
+    invalid_B_is[0] = rng.random((tl.shape(B_is[0])[0], tl.shape(B_is[0])[1]+1))
+    invalid_cmf = (weights, (A, invalid_B_is, C))
+
+    # Test that it always fails when a single B_i is invalid and validate=True
+    with pytest.raises(ValueError):
+        cmf_to_matrices(invalid_cmf, validate=True)
+    
+    # Check that validate is called only when validate=True
+    with patch("cm_aoadmm.coupled_matrices._validate_cmf", return_value=(shapes, rank)) as mock:
+        coupled_matrices.cmf_to_matrices(cmf, validate=False)
+        mock.assert_not_called()
+        coupled_matrices.cmf_to_matrices(cmf, validate=True)
+        mock.assert_called()
+
+
+def test_cmf_to_slice(rng):
+    shapes = ((5, 10), (10, 10), (15, 10), (10, 10))
+    rank = 5
+    cmf = random.random_coupled_matrices(shapes, rank, random_state=rng)
+    weights, (A, B_is, C) = cmf
+
+    # Compare cm_aoadmm implementation with our own implementation
+    for i, B_i in enumerate(B_is):
+        matrix = cmf.to_matrix(i)
+        slice_ = coupled_matrices.cmf_to_slice(cmf, i)
+        assert_array_almost_equal(matrix, slice_)
+
+    # Check that to_slice is an alias for to_matrix
+    with patch("cm_aoadmm.coupled_matrices.cmf_to_matrix") as mock:
+        coupled_matrices.cmf_to_slice(cmf, 0)
+        mock.assert_called()
+
+
+def test_cmf_to_slices(rng):
+    shapes = ((15, 10), (10, 10), (15, 10), (10, 10))
+    rank = 5
+    cmf = random.random_coupled_matrices(shapes, rank, random_state=rng)
+
+    # Compare cm_aoadmm implementation with our own implementation
+    matrices = cmf.to_matrices()
+    slices = coupled_matrices.cmf_to_slices(cmf)
+    for slice_, matrix in zip(slices, matrices):
+        assert_array_almost_equal(matrix, slice_)
+
+    # Check that to_slices is an alias for to_matrices
+    with patch("cm_aoadmm.coupled_matrices.cmf_to_matrices", return_value=matrices) as mock:
+        coupled_matrices.cmf_to_slices(cmf)
+        mock.assert_called()
 
 
 def test_cmf_to_tensor(rng):
-    # TODO: Make this test. 
-    # TESTPLAN:
-    # Generate random tensor represented by a cmf
-    # Construct the tensor manually
-    # Construct tensor and check that it is the same
-    # Generate random cmf with different number of rows (J_is)
-    # Construct matrices manually
-    # Construct tensor and check that it is the same as the matrices, but padded with zeros
-    #   -> Iterate over matrices and tensor slabs.
-    #   -> Slice out relevant part of tensor slab and compare with matrix
-    #   -> Slice out irrelevant part of tensor slab and check that it is equal to zero
+    shapes = ((10, 11), (10, 11), (10, 11), (10, 11))
+    rank = 5
+    cmf = random.random_coupled_matrices(shapes, rank, random_state=rng)
+    weights, (A, B_is, C) = cmf
 
-    # TODO: How to check validate? Mocking maybe?
-    pass
+    # Check that the tensor slices are equal to the manually assembled matrices
+    tensor = cmf.to_tensor()
+    for i, matrix in enumerate(tensor):
+        manually_assembled_matrix = (weights * A[i] * B_is[i]) @ C.T
+        assert_array_almost_equal(matrix, manually_assembled_matrix)
+
+    # Check that the tensor slices when the matrices have different number of rows are equal to the manually assembled matrices padded by zeros
+    ragged_shapes = ((15, 10), (10, 10), (15, 10), (10, 10))
+    max_length = max(length for length, _ in ragged_shapes)
+    ragged_cmf = random.random_coupled_matrices(ragged_shapes, rank, random_state=rng)
+    weights, (A, B_is, C) = ragged_cmf
+
+    ragged_tensor = ragged_cmf.to_tensor()
+    for i, matrix in enumerate(ragged_tensor):
+        manually_assembled_matrix = (weights * A[i] * B_is[i]) @ C.T
+
+        shape = ragged_shapes[i]
+        assert_array_almost_equal(matrix[:shape[0]], manually_assembled_matrix)
+        assert_array_almost_equal(matrix[shape[0]:], 0)
+        assert matrix.shape[0] == max_length
+    
+    with patch("cm_aoadmm.coupled_matrices._validate_cmf", return_value=(ragged_shapes, rank)) as mock:
+        coupled_matrices.cmf_to_tensor(ragged_cmf, validate=False)
+        mock.assert_not_called()
+        coupled_matrices.cmf_to_tensor(ragged_cmf, validate=True)
+        mock.assert_called()
 
 
 def test_cmf_to_unfolded(rng):
-    # TODO: Make this test. 
-    # TESTPLAN:
-    # Generate random tensor represented by a cmf
-    # Construct the tensor manually and unfold it in the correct mode
-    # Construct unfolded tensor and check that it is the same
-    
-    # TODO: How to check validate? Mocking maybe?
-    pass
+    shapes = ((10, 11), (15, 11), (20, 11), (25, 11))
+    rank = 5
+    cmf = random.random_coupled_matrices(shapes, rank, random_state=rng)
+
+    tensor = cmf.to_tensor()
+    for mode in range(3):
+        unfolded_tensor = cmf.to_unfolded(mode)
+        assert_array_almost_equal(unfolded_tensor, tl.unfold(tensor, mode))
+
+        with patch("cm_aoadmm.coupled_matrices._validate_cmf", return_value=(shapes, rank)) as mock:
+            coupled_matrices.cmf_to_unfolded(cmf, mode, validate=False)
+            mock.assert_not_called()
+            coupled_matrices.cmf_to_unfolded(cmf, mode, validate=True)
+            mock.assert_called()
 
 
-def test_cmf_to_unfolded(rng):
-    # TODO: Make this test. 
-    # TESTPLAN:
-    # Generate random tensor represented by a cmf
-    # Construct the tensor manually and ravel it to get a vector
-    # Construct vector and check that it is the same
-    
-    # TODO: How to check validate? Mocking maybe?
-    pass
+def test_cmf_to_vec(rng):
+    shapes = ((10, 11), (15, 11), (20, 11), (25, 11))
+    rank = 5
+    cmf = random.random_coupled_matrices(shapes, rank, random_state=rng)
+
+    tensor = cmf.to_tensor()
+    vector = tl.reshape(tensor, -1)
+    assert_array_almost_equal(cmf.to_vec(), vector)
+
+    with patch("cm_aoadmm.coupled_matrices._validate_cmf", return_value=(shapes, rank)) as mock:
+        coupled_matrices.cmf_to_vec(cmf, validate=False)
+        mock.assert_not_called()
+        coupled_matrices.cmf_to_vec(cmf, validate=True)
+        mock.assert_called()
