@@ -7,13 +7,36 @@
 #   * PARAFAC2: A PARAFAC2 component (May not be fulfilled since prox is only approximate)
 #   * Non-negative: Non-negative components
 # Test that nonstationary points move
+import pytest
 from cm_aoadmm import penalties
 import numpy as np
 import scipy.stats as stats
 from pytest import approx, fixture
+from tensorly.testing import assert_array_almost_equal
+
+
+def test_row_vector_penalty_forwards_updates_correctly(rng):
+    # TODO: Make this test
+    # To test if a RowVectorPenalty can be implemented by only overloading one method
+    # Create a new RowVectorPenalty subclass for box-constraints with values between 0 and 1 where only the factor_matrix_row_update method is implemented
+    # Test that factor_matrix_update and factor_matrices_update clip values correctly
+    # REMEMBER: Generate input for update-functions by calling standard_normal
+    
+    
+    pass
+
+
+def test_matrix_penalty_forwards_updates_correctly(rng):
+    # TODO: Make this test
+    # To test if a MatrixPenalty can be implemented by only overloading one method
+    # Create a new MatrixPenalty subclass for box-constraints with values between 0 and 1 where only the factor_matrix_update method is implemented
+    # Test that factor_matrices_update clip values correctly
+    # REMEMBER: Generate input for update-functions by calling standard_normal
+    pass
+
 
 ## Interfaces only, not code to be run or inherited from:
-class BaseTestRowVectorPenalty:  # e.g. non-negativity
+class BaseTestADMMPenalty:
     @fixture
     def random_row(self, rng):
         return rng.standard_normal(3)
@@ -26,6 +49,73 @@ class BaseTestRowVectorPenalty:  # e.g. non-negativity
     def random_matrices(self, rng):
         return [rng.standard_normal((10, 3)) for i in range(5)]
 
+    def test_init_aux(self, rng):
+        # TODO: Make this test
+        # Generate random cmf
+        # Generate matrices from random cmf
+        # Initialize with uniform mode 0. Check shape of aux matrix is correct, check all >= 0
+        # Initialize with uniform mode 1. Check shape of each aux matrix is correct, check all >= 0
+        # Initialize with uniform mode 2. Check shape of aux matrix is correct, check all >= 0
+        
+        # Initialize with standard normal mode 0. Check shape of aux matrix is correct, check any < 0
+        # Initialize with standard normal mode 1. Check shape of each aux matrix is correct, check any < 0
+        # Initialize with standard normal mode 2. Check shape of aux matrix is correct, check any < 0
+
+        # Check that we get type error if mode is not int
+        # Check that we get value error when we use mode != 0, 1 or 2
+        # Check that we get type error if aux_init is not str-type or tensor (for mode 0 and 2) or list for mode 1
+        # Check that we get value error if aux_init is tensor of wrong size (mode 0 or 2) and if any of the tensors have wrong size (mode 1)
+        # Check that we get value error if aux init is str but not "random_uniform" or "random_standard_normal"
+        pass
+
+    def test_init_dual(self, rng):
+        # TODO: Make this test
+        # Generate random cmf
+        # Generate matrices from random cmf
+        # Initialize with uniform mode 0. Check shape of dual matrix is correct, check all >= 0
+        # Initialize with uniform mode 1. Check shape of each dual matrix is correct, check all >= 0
+        # Initialize with uniform mode 2. Check shape of dual matrix is correct, check all >= 0
+        
+        # Initialize with standard normal mode 0. Check shape of dual matrix is correct, check any < 0
+        # Initialize with standard normal mode 1. Check shape of each dual matrix is correct, check any < 0
+        # Initialize with standard normal mode 2. Check shape of dual matrix is correct, check any < 0
+
+        # Check that we get type error if mode is not int
+        # Check that we get value error when we use mode != 0, 1 or 2
+        # Check that we get type error if dual_init is not str-type or tensor (for mode 0 and 2) or list for mode 1
+        # Check that we get value error if dual_init is tensor of wrong size (mode 0 or 2) and if any of the tensors have wrong size (mode 1)
+        # Check that we get value error if dual_init is str but not "random_uniform" or "random_standard_normal"
+        pass
+
+    def test_penalty(self, rng):
+        # TODO: Make this test
+        # TODO: Implement for all subclasses, where we check penalty with some known values
+        raise NotImplementedError
+
+    def test_subtract_from_aux(self, rng):
+        # TODO: Make this test
+        # Use two matrices of equal shape
+        # Check that subtract_from_aux(aux, dual) computes aux - dual
+        pass
+
+    def test_subtract_from_auxes(self, rng):
+        # TODO: Make this test
+        # Use two lists of matrices of equal shape
+        # Check that subtract_from_auxes(auxes, duals) computes auxes - duals
+        pass
+
+    def test_aux_as_matrix(self, rng):
+        # TODO: Make this test
+        # Check that this is an identity operator. (Use random matrix and check that it is returned exactly the same)
+        pass
+
+    def test_auxes_as_matrices(self, rng):
+        # TODO: Make this test
+        # Check that this is an identity operator. (Use list of random matrices and check that it is returned exactly the same)
+        pass
+
+
+class BaseTestRowVectorPenalty(BaseTestADMMPenalty):  # e.g. non-negativity
     def test_row_update_stationary_point(self):
         raise NotImplementedError
 
@@ -54,15 +144,7 @@ class BaseTestRowVectorPenalty:  # e.g. non-negativity
         raise NotImplementedError
 
 
-class BaseTestFactorMatrixPenalty:  # e.g. unimodality
-    @fixture
-    def random_matrix(self, rng):
-        return rng.standard_normal((10, 3))
-
-    @fixture
-    def random_matrices(self, rng):
-        return [rng.standard_normal((10, 3)) for i in range(5)]
-
+class BaseTestFactorMatrixPenalty(BaseTestADMMPenalty):  # e.g. unimodality
     def test_factor_matrix_update_stationary_point(self, rng):
         raise NotImplementedError
     
@@ -82,11 +164,7 @@ class BaseTestFactorMatrixPenalty:  # e.g. unimodality
         raise NotImplementedError
 
 
-class BaseTestFactorMatricesPenalty:  # e.g. PARAFAC2  
-    @fixture 
-    def random_matrices(self, rng):
-        return [rng.standard_normal((10, 3)) for i in range(5)] 
-
+class BaseTestFactorMatricesPenalty(BaseTestADMMPenalty):  # e.g. PARAFAC2  
     def test_factor_matrices_update_stationary_point(self,):
         raise NotImplementedError
     
@@ -97,20 +175,22 @@ class BaseTestFactorMatricesPenalty:  # e.g. PARAFAC2
         raise NotImplementedError
 
 
+# TODO: For all these, add parameter for non-negativity
 class TestL1Penalty(BaseTestRowVectorPenalty):
-    def test_row_update_stationary_point(self):
+    @pytest.mark.parametrize("non_negativity", [True, False])
+    def test_row_update_stationary_point(self, non_negativity):
         stationary_matrix_row = np.zeros((1,4))
-        l1_penalty = penalties.L1Penalty(0.1)
+        l1_penalty = penalties.L1Penalty(0.1, non_negativity=non_negativity)
 
         out = l1_penalty.factor_matrix_row_update(stationary_matrix_row, 10, None)
-        np.testing.assert_allclose(stationary_matrix_row, out)
+        assert_array_almost_equal(stationary_matrix_row, out)
 
     def test_factor_matrix_update_stationary_point(self):
         stationary_matrix = np.zeros((10, 3))
         l1_penalty = penalties.L1Penalty(0.1)
         
         out = l1_penalty.factor_matrix_update(stationary_matrix, 10, None)        
-        np.testing.assert_allclose(stationary_matrix, out)
+        assert_array_almost_equal(stationary_matrix, out)
 
     def test_factor_matrices_update_stationary_point(self):        
         stationary_matrices = [np.zeros((10, 3)) for i in range(5)]
@@ -120,7 +200,7 @@ class TestL1Penalty(BaseTestRowVectorPenalty):
 
         out = l1_penalty.factor_matrices_update(stationary_matrices, feasibility_penalties, auxes)
         for stationary_matrix, out_matrix in zip(stationary_matrices, out):
-            np.testing.assert_allclose(stationary_matrix, out_matrix)
+            assert_array_almost_equal(stationary_matrix, out_matrix)
 
     def test_row_update_reduces_penalty(self, random_row):
         l1_penalty = penalties.L1Penalty(0.1)
@@ -172,7 +252,7 @@ class TestL1Penalty(BaseTestRowVectorPenalty):
         l1_penalty = penalties.L1Penalty(1)
 
         out = l1_penalty.factor_matrix_update(random_matrix, feasibility_penalty, aux)
-        np.testing.assert_allclose(out, 0)
+        assert_array_almost_equal(out, 0)
 
 
 class TestBoxConstraint(BaseTestRowVectorPenalty):
@@ -181,7 +261,7 @@ class TestBoxConstraint(BaseTestRowVectorPenalty):
         box_penalty = penalties.BoxConstraint(min_val=-1, max_val=0)
         
         out = box_penalty.factor_matrix_row_update(stationary_matrix_row, 10, None)
-        np.testing.assert_allclose(stationary_matrix_row, out)
+        assert_array_almost_equal(stationary_matrix_row, out)
 
     
     def test_factor_matrix_update_stationary_point(self, rng):
@@ -189,7 +269,7 @@ class TestBoxConstraint(BaseTestRowVectorPenalty):
         box_penalty = penalties.BoxConstraint(min_val=-1, max_val=0)
         
         out = box_penalty.factor_matrix_update(stationary_matrix, 10, None)
-        np.testing.assert_allclose(stationary_matrix, out)
+        assert_array_almost_equal(stationary_matrix, out)
     
     def test_factor_matrices_update_stationary_point(self, rng):        
         stationary_matrices = [rng.uniform(size=(10, 3), low=-1, high=0)  for i in range(5)]
@@ -199,7 +279,7 @@ class TestBoxConstraint(BaseTestRowVectorPenalty):
 
         out = box_penalty.factor_matrices_update(stationary_matrices, feasibility_penalties, auxes)
         for stationary_matrix, out_matrix in zip(stationary_matrices, out):
-            np.testing.assert_allclose(stationary_matrix, out_matrix)
+            assert_array_almost_equal(stationary_matrix, out_matrix)
 
     def test_row_update_reduces_penalty(self, random_row):
         box_penalty = penalties.BoxConstraint(min_val=-1, max_val=0)
@@ -259,7 +339,7 @@ class TestNonNegativity(BaseTestRowVectorPenalty):
         nn_penalty = penalties.NonNegativity()
         
         out = nn_penalty.factor_matrix_row_update(stationary_matrix_row, 10, None)
-        np.testing.assert_allclose(stationary_matrix_row, out)
+        assert_array_almost_equal(stationary_matrix_row, out)
 
     
     def test_factor_matrix_update_stationary_point(self, rng):
@@ -267,7 +347,7 @@ class TestNonNegativity(BaseTestRowVectorPenalty):
         nn_penalty = penalties.NonNegativity()
         
         out = nn_penalty.factor_matrix_update(stationary_matrix, 10, None)
-        np.testing.assert_allclose(stationary_matrix, out)
+        assert_array_almost_equal(stationary_matrix, out)
     
     def test_factor_matrices_update_stationary_point(self, rng):        
         stationary_matrices = [rng.uniform(size=(10, 3)) for i in range(5)]
@@ -277,7 +357,7 @@ class TestNonNegativity(BaseTestRowVectorPenalty):
 
         out = nn_penalty.factor_matrices_update(stationary_matrices, feasibility_penalties, auxes)
         for stationary_matrix, out_matrix in zip(stationary_matrices, out):
-            np.testing.assert_allclose(stationary_matrix, out_matrix)
+            assert_array_almost_equal(stationary_matrix, out_matrix)
 
     
     def test_row_update_reduces_penalty(self, random_row):
@@ -339,9 +419,9 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
         pf2_penalty = penalties.Parafac2()
 
         out = pf2_penalty.factor_matrices_update(stationary_matrices, feasibility_penalties, auxes)
-        np.testing.assert_allclose(deltaB, out[1])
+        assert_array_almost_equal(deltaB, out[1])
         for Pk, out_matrix in zip(Pks, out[0]):
-            np.testing.assert_allclose(Pk, out_matrix)
+            assert_array_almost_equal(Pk, out_matrix)
     
     def test_factor_matrices_update_reduces_penalty(self, rng, random_matrices):
         deltaB = rng.standard_normal((3, 3))
@@ -367,3 +447,44 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
         constructed_out = [Pk@out[1] for Pk in out[0]]
         for random_matrix, out_matrix in zip(random_matrices, constructed_out):
             assert not np.allclose(random_matrix, out_matrix)
+
+    def test_init_aux(self, rng):
+        # TODO: Make this test
+        # Generate random cmf
+        # Generate matrices from random cmf
+        # Check that initialize fails with mode != 1
+
+        # Initialize with both uniform and standard normal. For both:
+        # Check that shape of the coordinate matrix is rank x rank
+        # Check that the shape of the orthogonal basis-matrices is J_i x rank
+        # For uniform, check all >= 0
+        # For standard normal, check any < 0
+
+        # Check that we get type error if mode is not int
+        # Check that we get type error if aux_init is not str-type or list
+        # Check that we get value error if aux_init is list and any of the factor matrices have wrong size
+        # Check that we get value error if aux init is str but not "random_uniform" or "random_standard_normal"
+        pass
+
+    def test_subtract_from_aux(self, rng):
+        # TODO: Make this test
+        # Check that subtract_from_aux(None, None) raises TypeError
+        pass
+
+    def test_subtract_from_auxes(self, rng):
+        # TODO: Make this test
+        # Get aux variables and dual variables by using their init functions with random_uniform init
+        # Compute aux_matrices by calling auxes_as_matrices
+        # Check that subtract_from_auxes(auxes, duals) computes aux_matrices - duals
+        pass
+
+    def test_aux_as_matrix(self, rng):
+        # TODO: Make this test
+        # Check that this raises TypeError
+        pass
+
+    def test_auxes_as_matrices(self, rng):
+        # TODO: Make this test
+        # Construct auxes manually with a list comprehension 
+        # Test that auxes_as_matrices gives the correct output.
+        pass
