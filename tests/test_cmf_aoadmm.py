@@ -42,11 +42,6 @@ def test_initialize_cmf(rng, rank, init):
     [1, 2, 5],
 )
 def test_initialize_aux(rng, rank):
-    # TODO: Make this test. 
-    # TESTPLAN:
-    # initialize_aux(matrices, rank, reg, random_state) -> A_aux_list, B_aux_list, C_aux_list
-    # Set reg=[[NonNegativity(), NonNegativity(), NonNegativity()], [NonNegativity()], []]
-    # assert len(A_aux_list) == 3. osv.
     shapes = ((5, 10), (10, 10), (15, 10)) # TODO CHECK
     matrices =  [rng.random(shape) for shape in shapes]
 
