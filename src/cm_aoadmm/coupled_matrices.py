@@ -1,5 +1,5 @@
-from tensorly._factorized_tensor import FactorizedTensor
 import tensorly as tl
+from tensorly._factorized_tensor import FactorizedTensor
 
 
 class CoupledMatrixFactorization(FactorizedTensor):

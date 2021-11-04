@@ -1,11 +1,13 @@
 import itertools
-from numpy.core.fromnumeric import shape
-import pytest
-from cm_aoadmm import cmf_aoadmm, coupled_matrices, random
-from cm_aoadmm.penalties import NonNegativity
+
 import numpy as np
-from cm_aoadmm._utils import get_svd
+import pytest
 import tensorly as tl
+from numpy.core.fromnumeric import shape
+
+from cm_aoadmm import cmf_aoadmm, coupled_matrices, random
+from cm_aoadmm._utils import get_svd
+from cm_aoadmm.penalties import NonNegativity
 
 
 def all_combinations(*args):

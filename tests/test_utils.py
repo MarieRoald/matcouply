@@ -1,8 +1,9 @@
-from numpy.core.numeric import allclose
-from cm_aoadmm import _utils as utils
 import numpy as np
-import scipy
 import pytest
+import scipy
+from numpy.core.numeric import allclose
+
+from cm_aoadmm import _utils as utils
 
 
 def test_is_iterable():

@@ -1,15 +1,18 @@
-import numpy as np
-from pytest import approx
-from cm_aoadmm import coupled_matrices, random
-import pytest
 from copy import copy
-from tensorly.testing import assert_array_almost_equal, assert_array_equal
-import tensorly as tl
-import tensorly.random
-from cm_aoadmm.coupled_matrices import CoupledMatrixFactorization, cmf_to_matrix, cmf_to_matrices
 from unittest.mock import patch
 
-from tests.conftest import random_ragged_cmf, random_ragged_shapes, random_regular_cmf, random_regular_shapes
+import numpy as np
+import pytest
+import tensorly as tl
+import tensorly.random
+from pytest import approx
+from tensorly.testing import assert_array_almost_equal, assert_array_equal
+
+from cm_aoadmm import coupled_matrices, random
+from cm_aoadmm.coupled_matrices import (CoupledMatrixFactorization,
+                                        cmf_to_matrices, cmf_to_matrix)
+from tests.conftest import (random_ragged_cmf, random_ragged_shapes,
+                            random_regular_cmf, random_regular_shapes)
 
 
 def test_from_cp_tensor(rng):

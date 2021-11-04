@@ -7,16 +7,17 @@
 #   * PARAFAC2: A PARAFAC2 component (May not be fulfilled since prox is only approximate)
 #   * Non-negative: Non-negative components
 # Test that nonstationary points move
-import pytest
-from cm_aoadmm import penalties
-import numpy as np
-import scipy.stats as stats
-from pytest import approx, fixture
-from tensorly.testing import assert_array_almost_equal, assert_array_equal
-import tensorly as tl
 from copy import copy
 
+import numpy as np
+import pytest
+import scipy.stats as stats
+import tensorly as tl
+from pytest import approx, fixture
+from tensorly.testing import assert_array_almost_equal, assert_array_equal
+
 import cm_aoadmm
+from cm_aoadmm import penalties
 
 
 @fixture

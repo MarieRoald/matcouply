@@ -1,7 +1,8 @@
 import numpy as np
 import tensorly as tl
+
+from ._utils import get_svd, is_iterable
 from .coupled_matrices import CoupledMatrixFactorization, cmf_to_matrices
-from ._utils import is_iterable, get_svd
 
 # TODO: Document all update steps, they might be slightly different from paper (e.g. new transposes)
 # TODO: Document l2_penalty as 0.5||A||^2, etc. Not ||A||^2

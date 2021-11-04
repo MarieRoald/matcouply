@@ -1,6 +1,7 @@
-import pytest
 import numpy as np
+import pytest
 import tensorly as tl
+
 from cm_aoadmm.random import random_coupled_matrices
 
 

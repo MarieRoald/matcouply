@@ -1,4 +1,5 @@
 import tensorly as tl
+
 from .coupled_matrices import CoupledMatrixFactorization
 
 
