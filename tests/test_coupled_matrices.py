@@ -13,7 +13,7 @@ from tests.conftest import random_ragged_cmf, random_ragged_shapes, random_regul
 
 
 def test_from_cp_tensor(rng):
-    # Test that cp_tensor converted to coupled matrix factorization constructs same dense tensor 
+    # Test that cp_tensor converted to coupled matrix factorization constructs same dense tensor
     cp_tensor = tl.random.random_cp((10, 15, 20), 3)
     cmf = CoupledMatrixFactorization.from_CPTensor(cp_tensor)
 
@@ -29,16 +29,16 @@ def test_from_cp_tensor(rng):
     cp_tensor = tl.random.random_cp((10, 15), 3)
     with pytest.raises(ValueError):
         cmf = CoupledMatrixFactorization.from_CPTensor(cp_tensor)
-    
+
     # Test that the B_is created from the cp tensor are copies, not the same view
-    weights, (A, B_is, C) = cmf 
+    weights, (A, B_is, C) = cmf
     B_0 = tl.copy(B_is[0])
     B_is[1][0] += 5
     assert_array_equal(B_0, B_is[0])
 
 
 def test_from_parafac2_tensor(rng, random_ragged_shapes):
-    # Test that parafac2 tensor converted to coupled matrix factorization constructs same dense tensor 
+    # Test that parafac2 tensor converted to coupled matrix factorization constructs same dense tensor
     rank = 3
     random_ragged_shapes = [(max(rank, J_i), K) for J_i, K in random_ragged_shapes]
     parafac2_tensor = tl.random.random_parafac2(random_ragged_shapes, rank)
@@ -48,7 +48,6 @@ def test_from_parafac2_tensor(rng, random_ragged_shapes):
     dense_tensor_cmf = cmf.to_tensor()
     assert_array_almost_equal(dense_tensor_cmf, dense_tensor_pf2)
 
-    
 
 def test_coupled_matrix_factorization(rng, random_regular_shapes):
     rank = 4
@@ -106,11 +105,11 @@ def test_validate_cmf(rng, random_ragged_cmf):
         coupled_matrices._validate_cmf((weights, (A, B_is, 1)))
     with pytest.raises(TypeError):
         coupled_matrices._validate_cmf((weights, (A, B_is, None)))
-    
+
     #####
     # Check that None-valued weights do not raise any errors
     coupled_matrices._validate_cmf((None, (A, B_is, C)))
-    
+
     #####
     # Check that wrongly shaped inputs result in ValueErrors
 
@@ -120,8 +119,8 @@ def test_validate_cmf(rng, random_ragged_cmf):
         coupled_matrices._validate_cmf((np.ones(shape=(rank, rank)), (A, B_is, C)))
     # Wrong number of weights
     with pytest.raises(ValueError):
-        coupled_matrices._validate_cmf((np.ones(shape=(rank+1, )), (A, B_is, C)))
-    
+        coupled_matrices._validate_cmf((np.ones(shape=(rank + 1,)), (A, B_is, C)))
+
     ### Factor matrices
     # One of the matrices is a third order tensor
     with pytest.raises(ValueError):
@@ -132,7 +131,6 @@ def test_validate_cmf(rng, random_ragged_cmf):
         B_is_copy = copy(B_is)
         B_is_copy[0] = rng.random(size=(4, rank, rank))
         coupled_matrices._validate_cmf((weights, (A, B_is_copy, C)))
-
 
     # One of the matrices is a vector
     with pytest.raises(ValueError):
@@ -146,13 +144,13 @@ def test_validate_cmf(rng, random_ragged_cmf):
 
     ### Check wrong rank
     # Check with incorrect rank for one of the factors
-    invalid_A = rng.random((len(shapes), rank+1))
-    invalid_C = rng.random((shapes[0][1], rank+1))
+    invalid_A = rng.random((len(shapes), rank + 1))
+    invalid_C = rng.random((shapes[0][1], rank + 1))
     invalid_B_is_2 = [rng.random((j_i, rank)) for j_i, k in shapes]
-    invalid_B_is_2[0] = rng.random((shapes[0][0], rank+1))
+    invalid_B_is_2[0] = rng.random((shapes[0][0], rank + 1))
 
     # Both A and C have the wrong rank:
-    with pytest.raises(ValueError): 
+    with pytest.raises(ValueError):
         coupled_matrices._validate_cmf((weights, (invalid_A, B_is, invalid_C)))
 
     # One of the matrices (A, C or any of B_is) have wrong rank
@@ -176,7 +174,7 @@ def test_cmf_to_matrix(rng, random_ragged_cmf):
 
     # Test that it always fails when a single B_i is invalid and validate=True
     invalid_B_is = copy(B_is)
-    invalid_B_is[0] = rng.random((tl.shape(B_is[0])[0], tl.shape(B_is[0])[1]+1))
+    invalid_B_is[0] = rng.random((tl.shape(B_is[0])[0], tl.shape(B_is[0])[1] + 1))
     invalid_cmf = (weights, (A, invalid_B_is, C))
 
     for i, _ in enumerate(invalid_B_is):
@@ -185,7 +183,7 @@ def test_cmf_to_matrix(rng, random_ragged_cmf):
 
     # Test that it doesn't fail when a single B_i is invalid and validate=False.
     for i, _ in enumerate(invalid_B_is):
-        if i == 0: # invalid B_i for i = 0
+        if i == 0:  # invalid B_i for i = 0
             continue
         cmf_to_matrix(invalid_cmf, i, validate=False)
 
@@ -208,13 +206,13 @@ def test_cmf_to_matrices(rng, random_ragged_cmf):
         assert_array_almost_equal(matrix, manually_assembled_matrix)
 
     invalid_B_is = copy(B_is)
-    invalid_B_is[0] = rng.random((tl.shape(B_is[0])[0], tl.shape(B_is[0])[1]+1))
+    invalid_B_is[0] = rng.random((tl.shape(B_is[0])[0], tl.shape(B_is[0])[1] + 1))
     invalid_cmf = (weights, (A, invalid_B_is, C))
 
     # Test that it always fails when a single B_i is invalid and validate=True
     with pytest.raises(ValueError):
         cmf_to_matrices(invalid_cmf, validate=True)
-    
+
     # Check that validate is called only when validate=True
     with patch("cm_aoadmm.coupled_matrices._validate_cmf", return_value=(shapes, rank)) as mock:
         coupled_matrices.cmf_to_matrices(cmf, validate=False)
@@ -275,10 +273,10 @@ def test_cmf_to_tensor(rng, random_regular_cmf):
         manually_assembled_matrix = (weights * A[i] * B_is[i]) @ C.T
 
         shape = ragged_shapes[i]
-        assert_array_almost_equal(matrix[:shape[0]], manually_assembled_matrix)
-        assert_array_almost_equal(matrix[shape[0]:], 0)
+        assert_array_almost_equal(matrix[: shape[0]], manually_assembled_matrix)
+        assert_array_almost_equal(matrix[shape[0] :], 0)
         assert matrix.shape[0] == max_length
-    
+
     with patch("cm_aoadmm.coupled_matrices._validate_cmf", return_value=(ragged_shapes, rank)) as mock:
         coupled_matrices.cmf_to_tensor(ragged_cmf, validate=False)
         mock.assert_not_called()

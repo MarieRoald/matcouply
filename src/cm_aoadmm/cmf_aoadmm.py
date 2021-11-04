@@ -116,7 +116,9 @@ def admm_update_A(
                 sum_shifted_aux_A_row += shifted_A_aux[i]
 
             tl.index_update(
-                A, tl.index[i, :], tl.dot(tl.dot(0.5 * feasibility_penalties[i] * sum_shifted_aux_A_row + rhses[i], U / s), Uh)
+                A,
+                tl.index[i, :],
+                tl.dot(tl.dot(0.5 * feasibility_penalties[i] * sum_shifted_aux_A_row + rhses[i], U / s), Uh),
             )
 
         for reg_num, single_reg in enumerate(reg):
@@ -130,7 +132,9 @@ def admm_update_A(
             else:
                 for i, feasibility_penalty in enumerate(feasibility_penalties):
                     tl.index_update(
-                        A_aux, tl.index[i, :], single_reg.factor_matrix_row_update(shifted_A[i], feasibility_penalty, A_aux[i])
+                        A_aux,
+                        tl.index[i, :],
+                        single_reg.factor_matrix_row_update(shifted_A[i], feasibility_penalty, A_aux[i]),
                     )
             shifted_A_auxes[reg_num] = single_reg.subtract_from_aux(A_aux_list[reg_num], A_dual)
             A_dual_list[reg_num] = A - shifted_A_auxes[reg_num]  # A - (A_aux - A_dual) = A - A_aux + A_dual
@@ -139,7 +143,10 @@ def admm_update_A(
             A_norm = tl.norm(A)
             A_change = tl.norm(A - old_A)
             A_gaps, _, _ = compute_feasibility_gaps(cmf, [reg, [], []], A_aux_list, [], [])
-            A_gaps = [A_gap / tl.norm(single_reg.aux_as_matrix(A_aux)) for single_reg, A_gap, A_aux in zip(reg, A_gaps, A_aux_list)]
+            A_gaps = [
+                A_gap / tl.norm(single_reg.aux_as_matrix(A_aux))
+                for single_reg, A_gap, A_aux in zip(reg, A_gaps, A_aux_list)
+            ]
 
             dual_residual_criterion = max(A_gaps) < inner_tol
             primal_residual_criterion = A_change < inner_tol * A_norm
@@ -170,8 +177,8 @@ def admm_update_B(
     rhses = []
     CtC = tl.dot(tl.transpose(C), C)
     for matrix, a_row in zip(matrices, A):
-        rhses.append(tl.dot(matrix, C*a_row))
-        lhses.append(tl.transpose(tl.transpose(CtC*a_row)*a_row))
+        rhses.append(tl.dot(matrix, C * a_row))
+        lhses.append(tl.transpose(tl.transpose(CtC * a_row) * a_row))
 
     # TODO: trace in backends?
     feasibility_penalties = [tl.trace(lhs) * feasibility_penalty_scale for lhs in lhses]
@@ -207,9 +214,9 @@ def admm_update_B(
             B_is_aux = B_is_aux_list[reg_num]
             B_is_dual = B_is_dual_list[reg_num]
             shifted_B_is = [B_i + B_i_dual for B_i, B_i_dual in zip(B_is, B_is_dual)]
-            
+
             B_is_aux_list[reg_num] = single_reg.factor_matrices_update(shifted_B_is, feasibility_penalties, B_is_aux)
-            
+
             shifted_auxes_B_is[reg_num] = single_reg.subtract_from_auxes(B_is_aux_list[reg_num], B_is_dual)
             B_is_dual_list[reg_num] = [
                 B_i - shifted_aux_B_i for B_i, shifted_aux_B_i in zip(B_is, shifted_auxes_B_is[reg_num])
@@ -288,7 +295,10 @@ def admm_update_C(
             C_norm = tl.norm(C)
             C_change = tl.norm(C - old_C)
             _, _, C_gaps = compute_feasibility_gaps(cmf, [[], [], reg], [], [], C_aux_list)
-            C_gaps = [C_gap / tl.norm(single_reg.aux_as_matrix(C_aux)) for single_reg, C_gap, C_aux in zip(reg, C_gaps, C_aux_list)]
+            C_gaps = [
+                C_gap / tl.norm(single_reg.aux_as_matrix(C_aux))
+                for single_reg, C_gap, C_aux in zip(reg, C_gaps, C_aux_list)
+            ]
 
             dual_residual_criterion = max(C_gaps) < inner_tol
             primal_residual_criterion = C_change < inner_tol * C_norm
@@ -308,12 +318,11 @@ def compute_feasibility_gaps(cmf, reg, A_aux_list, B_aux_list, C_aux_list):
     weights, (A, B_is, C) = cmf
     A_gaps = [tl.norm(A_reg.subtract_from_aux(A_aux, A)) for A_reg, A_aux in zip(reg[0], A_aux_list)]
     B_gaps = [
-        _root_sum_squared_list(B_reg.subtract_from_auxes(B_is_aux, B_is))
-        for B_reg, B_is_aux in zip(reg[1], B_aux_list)
+        _root_sum_squared_list(B_reg.subtract_from_auxes(B_is_aux, B_is)) for B_reg, B_is_aux in zip(reg[1], B_aux_list)
     ]
     C_gaps = [tl.norm(C_reg.subtract_from_aux(C_aux, C)) for C_reg, C_aux in zip(reg[2], C_aux_list)]
 
-    #C_gaps = [C_reg.compute_feasibility_gap(C, C_aux) for C_reg, C_aux in zip(reg[2], C_aux_list)]
+    # C_gaps = [C_reg.compute_feasibility_gap(C, C_aux) for C_reg, C_aux in zip(reg[2], C_aux_list)]
     return A_gaps, B_gaps, C_gaps
 
 
@@ -363,7 +372,7 @@ def cmf_aoadmm(
 
     # Parse constraints
     if not is_iterable(l2_penalty):
-        l2_penalty = [l2_penalty]*3
+        l2_penalty = [l2_penalty] * 3
     l2_penalty = [p if not p is None else 0 for p in l2_penalty]
     # TODO: Parse constraints to generate appropriate proxes
 
@@ -382,11 +391,11 @@ def cmf_aoadmm(
     rec_errors.append(rec_error)
     losses = []
     reg_penalty = (
-        + sum(A_reg.penalty(cmf[1][0]) for A_reg in reg[0])
+        +sum(A_reg.penalty(cmf[1][0]) for A_reg in reg[0])
         + sum(B_reg.penalty(cmf[1][1]) for B_reg in reg[1])
         + sum(C_reg.penalty(cmf[1][2]) for C_reg in reg[2])
     )
-    losses.append(0.5*rec_error + reg_penalty)
+    losses.append(0.5 * rec_error + reg_penalty)
 
     A_gaps, B_gaps, C_gaps = compute_feasibility_gaps(cmf, reg, A_aux_list, B_is_aux_list, C_aux_list)
     feasibility_gaps.append((A_gaps, B_gaps, C_gaps))
@@ -394,7 +403,6 @@ def cmf_aoadmm(
         print("Duality gaps for A: {}".format(A_gaps))
         print("Duality gaps for the Bi-matrices: {}".format(B_gaps))
         print("Duality gaps for C: {}".format(C_gaps))
-
 
     for it in range(n_iter_max):
         cmf, B_is_aux_list, B_is_dual_list = admm_update_B(
@@ -449,12 +457,12 @@ def cmf_aoadmm(
                     max_feasibility_gap = max((max(B_gaps), max_feasibility_gap))
                 if len(C_gaps):
                     max_feasibility_gap = max((max(C_gaps), max_feasibility_gap))
-                #max_feasibility_gap = max(max(A_gaps), max(B_gaps), max(C_gaps))
+                # max_feasibility_gap = max(max(A_gaps), max(B_gaps), max(C_gaps))
 
                 # Compute stopping criterions
                 feasibility_criterion = max_feasibility_gap < feasibility_tol
 
-                if not feasibility_criterion and not return_errors: #TODO: what if tol is False?
+                if not feasibility_criterion and not return_errors:  # TODO: what if tol is False?
                     if verbose:
                         print(
                             "Coupled matrix factorization iteration={}, reconstruction error={}, regularised loss={} squared relative variation={}.".format(
@@ -467,23 +475,22 @@ def cmf_aoadmm(
 
                     continue
 
-
             # TODO: Maybe not always compute this (to save computation)?
             # TODO: Include the regularisation
             rec_error = _cmf_reconstruction_error(matrices, cmf)
             rec_error /= norm_matrices
             rec_errors.append(rec_error)
             reg_penalty = (
-                + sum(A_reg.penalty(cmf[1][0]) for A_reg in reg[0])
+                +sum(A_reg.penalty(cmf[1][0]) for A_reg in reg[0])
                 + sum(B_reg.penalty(cmf[1][1]) for B_reg in reg[1])
                 + sum(C_reg.penalty(cmf[1][2]) for C_reg in reg[2])
             )
-            losses.append(0.5*rec_error**2 + reg_penalty)
+            losses.append(0.5 * rec_error ** 2 + reg_penalty)
 
             if verbose:
                 print(
                     "Coupled matrix factorization iteration={}, reconstruction error={}, regularised loss={} squared relative variation={}.".format(
-                        it, rec_errors[-1], losses[-1], abs(losses[-2] - losses[-1])/losses[-2]
+                        it, rec_errors[-1], losses[-1], abs(losses[-2] - losses[-1]) / losses[-2]
                     )
                 )
                 print("Duality gaps for A: {}".format(A_gaps))
@@ -492,12 +499,12 @@ def cmf_aoadmm(
 
             if tol:
                 # Compute rest of stopping criterions
-                rel_loss_criterion = abs(losses[-2]- losses[-1]) < (tol * losses[-2])
+                rel_loss_criterion = abs(losses[-2] - losses[-1]) < (tol * losses[-2])
                 abs_loss_criterion = losses[-1] < absolute_tol
                 if feasibility_criterion and (rel_loss_criterion or abs_loss_criterion):
                     if verbose:
                         print("converged in {} iterations.".format(it))
-                        #TODO: print information about what stopped it?
+                        # TODO: print information about what stopped it?
                     break
         elif verbose:
             print("Coupled matrix factorization iteration={}".format(it))

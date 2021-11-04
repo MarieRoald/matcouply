@@ -21,29 +21,24 @@ def all_combinations(*args):
     return list(itertools.product(*args))
 
 
-@pytest.mark.parametrize(
-    "rank,init",
-    all_combinations([1, 2, 5], ["random", "svd", "threshold_svd"])
-)
+@pytest.mark.parametrize("rank,init", all_combinations([1, 2, 5], ["random", "svd", "threshold_svd"]))
 def test_initialize_cmf(rng, rank, init):
     shapes = ((5, 10), (10, 10), (15, 10))
-    matrices =  [rng.random_sample(shape) for shape in shapes]
+    matrices = [rng.random_sample(shape) for shape in shapes]
 
     svd_fun = get_svd("truncated_svd")
     cmf = cmf_aoadmm.initialize_cmf(matrices, rank, init, svd_fun, random_state=None, init_params=None)
     init_matrices = coupled_matrices.cmf_to_matrices(cmf)
     for matrix, init_matrix in zip(matrices, init_matrices):
-        assert matrix.shape == init_matrix.shape 
+        assert matrix.shape == init_matrix.shape
 
-    
 
 @pytest.mark.parametrize(
-    "rank",
-    [1, 2, 5],
+    "rank", [1, 2, 5],
 )
 def test_initialize_aux(rng, rank):
-    shapes = ((5, 10), (10, 10), (15, 10)) # TODO CHECK
-    matrices =  [rng.random(shape) for shape in shapes]
+    shapes = ((5, 10), (10, 10), (15, 10))  # TODO CHECK
+    matrices = [rng.random(shape) for shape in shapes]
 
     reg = [[NonNegativity(), NonNegativity(), NonNegativity()], [NonNegativity()], []]
     A_aux_list, B_aux_list, C_aux_list = cmf_aoadmm.initialize_aux(matrices, rank, reg, rng)
@@ -60,13 +55,13 @@ def test_initialize_aux(rng, rank):
     for C_aux in C_aux_list:
         assert tl.shape(C_aux) == (shapes[0][1], rank)
 
+
 @pytest.mark.parametrize(
-    "rank",
-    [1, 2, 5],
+    "rank", [1, 2, 5],
 )
 def test_initialize_dual(rng, rank):
-    shapes = ((5, 10), (10, 10), (15, 10)) # TODO CHECK
-    matrices =  [rng.random(shape) for shape in shapes]
+    shapes = ((5, 10), (10, 10), (15, 10))  # TODO CHECK
+    matrices = [rng.random(shape) for shape in shapes]
 
     reg = [[NonNegativity(), NonNegativity(), NonNegativity()], [NonNegativity()], []]
     A_dual_list, B_dual_list, C_dual_list = cmf_aoadmm.initialize_dual(matrices, rank, reg, rng)
@@ -97,7 +92,7 @@ def test_cmf_reconstruction_error(rng):
 
 
 def test_compute_feasibility_gaps(rng):
-    # TODO: Make this test. 
+    # TODO: Make this test.
     # TESTPLAN:
     # compute_feasibility_gaps(cmf, reg, A_aux_list, B_aux_list, C_aux_list) -> A_gaps, B_gaps, C_gaps
 
@@ -111,7 +106,7 @@ def test_compute_feasibility_gaps(rng):
 
 
 def test_admm_update_A(rng, feasibility_penalty_scale, constant_feasibility_penalty):
-    # TODO: Make this test. 
+    # TODO: Make this test.
     # TESTPLAN:
     # Construct NN-CMF
     # Create copy with same B & C but where A is some other NN matrix
@@ -128,7 +123,7 @@ def test_admm_update_A(rng, feasibility_penalty_scale, constant_feasibility_pena
     # Set svd_fun=tl.GET_SVD["truncated_svd"]
     # Assert that output A is correct
     # Assert that output feasibility gap is low
-    
+
     # Create a NonNegativity-instance
     # Use NonNegativity instance to init aux and duals
     # Set matrices=constructed from original NN-CMF
@@ -142,14 +137,14 @@ def test_admm_update_A(rng, feasibility_penalty_scale, constant_feasibility_pena
     # Set feasibility_penalty_scale=[1, 10]
     # Set constant_feasibility_penalty=[True, False]
     # Set svd_fun=tl.GET_SVD["truncated_svd"]
-    
+
     # TODO: Test for l2_penalty > 0
     ## For l2_penalty, compute linear system and solve using SVD to obtain regularised components. This will work with NN constraints too
     pass
 
 
 def test_admm_update_B(rng, feasibility_penalty_scale, constant_feasibility_penalty):
-    # TODO: Make this test. 
+    # TODO: Make this test.
     # TESTPLAN:
     # Construct NN-CMF
     # Create copy with same A & C but where B_is is some other list of NN matrices
@@ -166,7 +161,7 @@ def test_admm_update_B(rng, feasibility_penalty_scale, constant_feasibility_pena
     # Set svd_fun=tl.GET_SVD["truncated_svd"]
     # Assert that output A is correct
     # Assert that output feasibility gap is low
-    
+
     # Create a NonNegativity-instance
     # Use NonNegativity instance to init auxes and duals
     # Set matrices=constructed from original NN-CMF
@@ -180,14 +175,14 @@ def test_admm_update_B(rng, feasibility_penalty_scale, constant_feasibility_pena
     # Set feasibility_penalty_scale=[1, 10]
     # Set constant_feasibility_penalty=[True, False]
     # Set svd_fun=tl.GET_SVD["truncated_svd"]
-    
+
     # TODO: Test for l2_penalty > 0
     ## For l2_penalty, compute linear system and solve using SVD to obtain regularised components. This will work with NN constraints too
     pass
 
 
 def test_admm_update_C(rng, feasibility_penalty_scale):
-    # TODO: Make this test. 
+    # TODO: Make this test.
     # TESTPLAN:
     # Construct NN-CMF
     # Create copy with same A & B but where C is some other NN matrix
@@ -203,7 +198,7 @@ def test_admm_update_C(rng, feasibility_penalty_scale):
     # Set svd_fun=tl.GET_SVD["truncated_svd"]
     # Assert that output A is correct
     # Assert that output feasibility gap is low
-    
+
     # Create a NonNegativity-instance
     # Use NonNegativity instance to init aux and duals
     # Set matrices=constructed from original NN-CMF
@@ -223,7 +218,7 @@ def test_admm_update_C(rng, feasibility_penalty_scale):
 
 
 def test_cmf_aoadmm(rng):
-    # TODO: Make this test. 
+    # TODO: Make this test.
     # TESTPLAN:
     # Create random NN CMF
     # Construct matrices

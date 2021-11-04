@@ -8,7 +8,7 @@ def is_iterable(x):
         return False
     else:
         return True
-    
+
 
 def get_svd(svd):
     if svd in tl.SVD_FUNS:

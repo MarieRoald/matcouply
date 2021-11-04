@@ -3,11 +3,13 @@ from abc import ABC, abstractmethod
 import tensorly as tl
 
 from ._utils import get_svd
+
 # TODO: Maybe remove compute_feasibility_gap and only use shift_aux
 # TODO: Maybe rename shift_aux to subtract_from_aux
 # TODO: Maybe add mixin classes for some of the functionality
 # TODO: For all penalties with __init__, make sure they call super().__init__ and have the aux_init and dual_init arguments
 # TODO: For all penalties, add the parameters of the ADMMPenalty superclass to class docstring.
+
 
 class ADMMPenalty(ABC):
     """Base class for all regularizers and constraints.
@@ -19,8 +21,9 @@ class ADMMPenalty(ABC):
     dual_init : {"random_uniform", "random_standard_normal"}
         Initialisation method for the auxiliary variables
     """
+
     def __init__(self, aux_init="random_uniform", dual_init="random_uniform"):
-        self.aux_init = aux_init    
+        self.aux_init = aux_init
         self.dual_init = dual_init
 
     def init_aux(self, matrices, rank, mode, random_state=None):
@@ -33,8 +36,16 @@ class ADMMPenalty(ABC):
         elif mode not in [0, 1, 2]:
             raise ValueError("Mode must be 0, 1, or 2.")
 
-        if not isinstance(self.aux_init, str) and not tl.is_tensor(self.aux_init) and not isinstance(self.aux_init, list):
-            raise TypeError("self.aux_init must be a tensor, a list of tensors or a string specifiying init method, not {}".format(type(self.aux_init)))
+        if (
+            not isinstance(self.aux_init, str)
+            and not tl.is_tensor(self.aux_init)
+            and not isinstance(self.aux_init, list)
+        ):
+            raise TypeError(
+                "self.aux_init must be a tensor, a list of tensors or a string specifiying init method, not {}".format(
+                    type(self.aux_init)
+                )
+            )
         elif self.aux_init == "random_uniform":
             if mode == 0:
                 return random_state.uniform(size=(len(matrices), rank))
@@ -71,7 +82,7 @@ class ADMMPenalty(ABC):
                         "Invalid shape for pre-specified auxiliary variable for mode 2"
                         "\nShould have shape {}, but has shape {}".format((K, rank), (length_, rank_))
                     )
-                
+
                 return self.aux_init
             elif mode in {0, 2} and isinstance(self.aux_init, list):
                 raise TypeError("Cannot use list of matrices to initialize auxiliary matrices for mode 0 or 2.")
@@ -79,13 +90,19 @@ class ADMMPenalty(ABC):
                 J_is = (tl.shape(matrix)[0] for matrix in matrices)
                 shapes = ((J_i, rank) for J_i in J_is)
                 if any(tl.shape(aux) != shape for aux, shape in zip(self.aux_init, shapes)):
-                    raise ValueError("Invalid shape for at least one of matrices in the auxiliary variable list for mode 1.")
+                    raise ValueError(
+                        "Invalid shape for at least one of matrices in the auxiliary variable list for mode 1."
+                    )
                 elif len(self.aux_init) != len(matrices):
-                    raise ValueError("Different number of pre-specified auxiliary factor matrices for mode 1 than the number of coupled matrices.")
-                
+                    raise ValueError(
+                        "Different number of pre-specified auxiliary factor matrices for mode 1 than the number of coupled matrices."
+                    )
+
                 return self.aux_init
             elif mode == 1 and tl.is_tensor(self.aux_init):
-                raise TypeError("Cannot use a tensor (matrix) to initialize auxiliary matrices for mode 1. Must be a list instead.")
+                raise TypeError(
+                    "Cannot use a tensor (matrix) to initialize auxiliary matrices for mode 1. Must be a list instead."
+                )
             else:
                 raise ValueError("Unknown aux init: {}".format(self.aux_init))
 
@@ -99,8 +116,16 @@ class ADMMPenalty(ABC):
         elif mode not in [0, 1, 2]:
             raise ValueError("Mode must be 0, 1, or 2.")
 
-        if not isinstance(self.dual_init, str) and not tl.is_tensor(self.dual_init) and not isinstance(self.dual_init, list):
-            raise TypeError("self.dual_init must be a tensor, a list of tensors or a string specifiying init method, not {}".format(type(self.dual_init)))
+        if (
+            not isinstance(self.dual_init, str)
+            and not tl.is_tensor(self.dual_init)
+            and not isinstance(self.dual_init, list)
+        ):
+            raise TypeError(
+                "self.dual_init must be a tensor, a list of tensors or a string specifiying init method, not {}".format(
+                    type(self.dual_init)
+                )
+            )
         if self.dual_init == "random_uniform":
             if mode == 0:
                 return random_state.uniform(size=(len(matrices), rank))
@@ -137,7 +162,7 @@ class ADMMPenalty(ABC):
                         "Invalid shape for pre-specified auxiliary variable for mode 2"
                         "\nShould have shape {}, but has shape {}".format((K, rank), (length_, rank_))
                     )
-                
+
                 return self.dual_init
             elif mode in {0, 2} and isinstance(self.dual_init, list):
                 raise TypeError("Cannot use list of matrices to initialize auxiliary matrices for mode 0 or 2.")
@@ -145,18 +170,24 @@ class ADMMPenalty(ABC):
                 J_is = (tl.shape(matrix)[0] for matrix in matrices)
                 shapes = ((J_i, rank) for J_i in J_is)
                 if any(tl.shape(dual) != shape for dual, shape in zip(self.dual_init, shapes)):
-                    raise ValueError("Invalid shape for at least one of matrices in the auxiliary variable list for mode 1.")
+                    raise ValueError(
+                        "Invalid shape for at least one of matrices in the auxiliary variable list for mode 1."
+                    )
                 elif len(self.dual_init) != len(matrices):
-                    raise ValueError("Different number of pre-specified auxiliary factor matrices for mode 1 than the number of coupled matrices.")
-                
+                    raise ValueError(
+                        "Different number of pre-specified auxiliary factor matrices for mode 1 than the number of coupled matrices."
+                    )
+
                 return self.dual_init
             elif mode == 1 and tl.is_tensor(self.dual_init):
-                raise TypeError("Cannot use a tensor (matrix) to initialize auxiliary matrices for mode 1. Must be a list instead.")
+                raise TypeError(
+                    "Cannot use a tensor (matrix) to initialize auxiliary matrices for mode 1. Must be a list instead."
+                )
             else:
                 raise ValueError("Unknown aux init: {}".format(self.dual_init))
 
     @abstractmethod
-    def penalty(self, x):    # pragma: nocover
+    def penalty(self, x):  # pragma: nocover
         # TODO: How to deal with penalties that go across matrices
         raise NotImplementedError
 
@@ -167,13 +198,13 @@ class ADMMPenalty(ABC):
         """Compute (aux - dual).
         """
         return aux - dual
-    
+
     def aux_as_matrix(self, aux):
         return aux
-    
+
     def auxes_as_matrices(self, auxes):
         return [self.aux_as_matrix(aux) for aux in auxes]
-    
+
 
 class RowVectorPenalty(ADMMPenalty):
     def factor_matrices_update(self, factor_matrices, feasibility_penalties, auxes):
@@ -210,11 +241,11 @@ class RowVectorPenalty(ADMMPenalty):
 
         for row, factor_matrix_row in enumerate(factor_matrix):
             out[row] = self.factor_matrix_row_update(factor_matrix_row, feasibility_penalty, aux[row])
-        
+
         return out
 
     @abstractmethod
-    def factor_matrix_row_update(self, factor_matrix_row, feasibility_penalty, aux_row): # pragma: nocover
+    def factor_matrix_row_update(self, factor_matrix_row, feasibility_penalty, aux_row):  # pragma: nocover
         """Update a single row of a factor matrix.
 
         Parameters
@@ -239,13 +270,13 @@ class MatrixPenalty(ADMMPenalty):
         ]
 
     @abstractmethod
-    def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux): # pragma: nocover
+    def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):  # pragma: nocover
         raise NotImplementedError
 
 
 class MatricesPenalty(ADMMPenalty):
     @abstractmethod
-    def factor_matrices_update(self, factor_matrices, feasibility_penalties, auxes): # pragma: nocover
+    def factor_matrices_update(self, factor_matrices, feasibility_penalties, auxes):  # pragma: nocover
         raise NotImplementedError
 
 
@@ -262,6 +293,7 @@ class NonNegativity(RowVectorPenalty):
     dual_init : {"random_uniform", "random_standard_normal"}
         Initialisation method for the auxiliary variables
     """
+
     def factor_matrix_row_update(self, factor_matrix_row, feasibility_penalty, aux_row):
         return tl.clip(factor_matrix_row, 0)
 
@@ -293,6 +325,7 @@ class BoxConstraint(RowVectorPenalty):
     dual_init : {"random_uniform", "random_standard_normal"}
         Initialisation method for the auxiliary variables
     """
+
     def __init__(self, min_val, max_val, aux_init="random_uniform", dual_init="random_uniform"):
         super().__init__(aux_init=aux_init, dual_init=dual_init)
         self.min_val = min_val
@@ -362,23 +395,23 @@ class L1Penalty(RowVectorPenalty):
     def factor_matrix_row_update(self, factor_matrix_row, feasibility_penalty, aux_row):
         if not self.non_negativity:
             sign = tl.sign(factor_matrix_row)
-            return sign * tl.clip(tl.abs(factor_matrix_row) - self.reg_strength/feasibility_penalty, 0)
+            return sign * tl.clip(tl.abs(factor_matrix_row) - self.reg_strength / feasibility_penalty, 0)
         else:
-            return tl.clip(factor_matrix_row - self.reg_strength/feasibility_penalty, 0)
+            return tl.clip(factor_matrix_row - self.reg_strength / feasibility_penalty, 0)
 
     def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
         if not self.non_negativity:
             sign = tl.sign(factor_matrix)
-            return sign * tl.clip(tl.abs(factor_matrix) - self.reg_strength/feasibility_penalty, 0)
+            return sign * tl.clip(tl.abs(factor_matrix) - self.reg_strength / feasibility_penalty, 0)
         else:
-            return tl.clip(factor_matrix - self.reg_strength/feasibility_penalty, 0)
+            return tl.clip(factor_matrix - self.reg_strength / feasibility_penalty, 0)
 
     def penalty(self, x):
         # TODO: return reg_strength*l1norm of x
         if tl.is_tensor(x):
-            return tl.sum(tl.abs(x))*self.reg_strength
+            return tl.sum(tl.abs(x)) * self.reg_strength
         else:
-            return sum(tl.sum(tl.abs(xi)) for xi in x)*self.reg_strength
+            return sum(tl.sum(tl.abs(xi)) for xi in x) * self.reg_strength
 
 
 class Parafac2(MatricesPenalty):
@@ -407,6 +440,7 @@ class Parafac2(MatricesPenalty):
     dual_init : {"random_uniform", "random_standard_normal"}
         Initialisation method for the auxiliary variables
     """
+
     def __init__(self, svd="truncated_svd", aux_init="random_uniform", dual_init="random_uniform"):
         self.svd_fun = get_svd(svd)
         self.aux_init = aux_init
@@ -419,7 +453,6 @@ class Parafac2(MatricesPenalty):
                 "Parafac2 auxiliary variables must be initialized using either a string"
                 " or a tuple (containing the orthogonal basis matrices and the coordinate matrix)."
             )
-        
 
         if not isinstance(rank, int):
             raise TypeError("Rank must be int, not {}".format(type(rank)))
@@ -448,26 +481,41 @@ class Parafac2(MatricesPenalty):
             basis_matrices, coordinate_matrix = self.aux_init
 
             if not isinstance(basis_matrices, list) or not tl.is_tensor(coordinate_matrix):
-                raise TypeError("If self.aux_init is a tuple, then its first element must be a list of basis matrices and second element the coordinate matrix.")
+                raise TypeError(
+                    "If self.aux_init is a tuple, then its first element must be a list of basis matrices and second element the coordinate matrix."
+                )
 
             if not len(tl.shape(coordinate_matrix)) == 2:
-                raise ValueError("The coordinate matrix must have two modes, not {}".format(len(tl.shape(coordinate_matrix))))
+                raise ValueError(
+                    "The coordinate matrix must have two modes, not {}".format(len(tl.shape(coordinate_matrix)))
+                )
 
-            if tl.shape(coordinate_matrix)[0] != tl.shape(coordinate_matrix)[1] or tl.shape(coordinate_matrix)[0] != rank:
-                raise ValueError("The coordinate matrix must be rank x rank, with rank={}, not {}".format(rank, tl.shape(coordinate_matrix)))
+            if (
+                tl.shape(coordinate_matrix)[0] != tl.shape(coordinate_matrix)[1]
+                or tl.shape(coordinate_matrix)[0] != rank
+            ):
+                raise ValueError(
+                    "The coordinate matrix must be rank x rank, with rank={}, not {}".format(
+                        rank, tl.shape(coordinate_matrix)
+                    )
+                )
 
             for matrix, basis_matrix in zip(matrices, basis_matrices):
                 if not tl.is_tensor(basis_matrix):
                     raise TypeError("Each basis matrix must be a tensorly tensor")
                 if not len(tl.shape(basis_matrix)) == 2:
-                    raise ValueError("Each basis matrix must be tensor with two modes, not {}".format(len(tl.shape(basis_matrix))))
+                    raise ValueError(
+                        "Each basis matrix must be tensor with two modes, not {}".format(len(tl.shape(basis_matrix)))
+                    )
                 if tl.shape(matrix)[0] != tl.shape(basis_matrix)[0] or tl.shape(basis_matrix)[1] != rank:
-                    raise ValueError("The i-th basis matrix must have shape J_i x rank, where J_i is the number of rows in the i-th matrix.")
-                
+                    raise ValueError(
+                        "The i-th basis matrix must have shape J_i x rank, where J_i is the number of rows in the i-th matrix."
+                    )
+
                 cross_product = tl.dot(tl.transpose(basis_matrix), basis_matrix)
-                if not tl.sum((cross_product - tl.eye(rank))**2) < 1e-8:
+                if not tl.sum((cross_product - tl.eye(rank)) ** 2) < 1e-8:
                     raise ValueError("The basis matrices must be orthogonal")
-            
+
             if len(basis_matrices) != len(matrices):
                 raise ValueError("There must be as many basis matrices as there are matrices")
 
@@ -494,7 +542,7 @@ class Parafac2(MatricesPenalty):
     # TODO: change to mixin class
     def subtract_from_aux(self, aux, dual):
         raise TypeError("The PARAFAC2 constraint cannot shift a single factor matrix.")
-    
+
     def subtract_from_auxes(self, auxes, duals):
         # TODO: Docstrings
         P_is, coord_mat = auxes
@@ -502,7 +550,7 @@ class Parafac2(MatricesPenalty):
 
     def aux_as_matrix(self, aux):
         raise TypeError("The PARAFAC2 constraint cannot convert a single aux to a matrix")
-    
+
     def auxes_as_matrices(self, auxes):
         P_is, coord_mat = auxes
         return [tl.dot(P_i, coord_mat) for P_i in P_is]

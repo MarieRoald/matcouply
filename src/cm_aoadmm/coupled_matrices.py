@@ -100,9 +100,7 @@ def _validate_cmf(cmf):
     # TODO: docstring
     weights, (A, B_is, C) = cmf
     if not (tl.is_tensor(weights) or weights is None):
-        raise TypeError(
-            "Weights should be a first order tensor of length rank, not {}".format(type(weights))
-        )
+        raise TypeError("Weights should be a first order tensor of length rank, not {}".format(type(weights)))
     elif weights is not None and len(tl.shape(weights)) != 1:
         raise ValueError(
             "Weights should be a first order tensor. However weights has shape {}".format(tl.shape(weights))
@@ -110,7 +108,7 @@ def _validate_cmf(cmf):
     if not tl.is_tensor(A):
         raise TypeError(
             "The first factor matrix, A, should be a second order tensor of size (I, rank)), not {}".format(type(A))
-        )    
+        )
     elif len(tl.shape(A)) != 2:
         raise ValueError(
             "The first factor matrix, A, should be a second order tensor. However A has shape {}".format(tl.shape(A))
@@ -134,11 +132,15 @@ def _validate_cmf(cmf):
     for i, B_i in enumerate(B_is):
         if not tl.is_tensor(B_i):
             raise TypeError(
-                "The B_is[{}] factor matrix should be second order tensor of size (J_i, rank)), not {}".format(i, type(B_i))
+                "The B_is[{}] factor matrix should be second order tensor of size (J_i, rank)), not {}".format(
+                    i, type(B_i)
+                )
             )
         elif len(tl.shape(B_i)) != 2:
             raise ValueError(
-                "The B_is[{}] factor matrix should be second order tensor. However B_is[{}] has shape {}".format(i, i, tl.shape(B_i))
+                "The B_is[{}] factor matrix should be second order tensor. However B_is[{}] has shape {}".format(
+                    i, i, tl.shape(B_i)
+                )
             )
         if tl.shape(B_i)[1] != rank:
             raise ValueError(
