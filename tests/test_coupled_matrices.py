@@ -39,7 +39,9 @@ def test_from_cp_tensor(rng):
 
 def test_from_parafac2_tensor(rng, random_ragged_shapes):
     # Test that parafac2 tensor converted to coupled matrix factorization constructs same dense tensor 
-    parafac2_tensor = tl.random.random_parafac2(random_ragged_shapes, 3)
+    rank = 3
+    random_ragged_shapes = [(max(rank, J_i), K) for J_i, K in random_ragged_shapes]
+    parafac2_tensor = tl.random.random_parafac2(random_ragged_shapes, rank)
     cmf = CoupledMatrixFactorization.from_Parafac2Tensor(parafac2_tensor)
 
     dense_tensor_pf2 = parafac2_tensor.to_tensor()
