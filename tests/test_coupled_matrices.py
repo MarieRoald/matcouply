@@ -96,11 +96,11 @@ def test_validate_cmf(rng, random_ragged_cmf):
         coupled_matrices._validate_cmf((weights, (A, None, C)))
     with pytest.raises(TypeError):
         B_is_copy = copy(B_is)
-        B_is_copy[1] = 1
+        B_is_copy[0] = 1
         coupled_matrices._validate_cmf((weights, (A, B_is_copy, C)))
     with pytest.raises(TypeError):
         B_is_copy = copy(B_is)
-        B_is_copy[1] = None
+        B_is_copy[0] = None
         coupled_matrices._validate_cmf((weights, (A, B_is_copy, C)))
     with pytest.raises(TypeError):
         coupled_matrices._validate_cmf((weights, (A, B_is, 1)))
@@ -130,7 +130,7 @@ def test_validate_cmf(rng, random_ragged_cmf):
         coupled_matrices._validate_cmf((weights, (A, B_is, rng.random(size=(4, rank, rank)))))
     with pytest.raises(ValueError):
         B_is_copy = copy(B_is)
-        B_is_copy[1] = rng.random(size=(4, rank, rank))
+        B_is_copy[0] = rng.random(size=(4, rank, rank))
         coupled_matrices._validate_cmf((weights, (A, B_is_copy, C)))
 
 
@@ -141,7 +141,7 @@ def test_validate_cmf(rng, random_ragged_cmf):
         coupled_matrices._validate_cmf((weights, (A, B_is, rng.random(size=(rank,)))))
     with pytest.raises(ValueError):
         B_is_copy = copy(B_is)
-        B_is_copy[1] = rng.random(size=(rank,))
+        B_is_copy[0] = rng.random(size=(rank,))
         coupled_matrices._validate_cmf((weights, (A, B_is_copy, C)))
 
     ### Check wrong rank
