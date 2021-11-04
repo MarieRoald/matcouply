@@ -9,6 +9,8 @@ import tensorly.random
 from cm_aoadmm.coupled_matrices import CoupledMatrixFactorization, cmf_to_matrix, cmf_to_matrices
 from unittest.mock import patch
 
+from tests.conftest import random_ragged_cmf, random_ragged_shapes, random_regular_cmf, random_regular_shapes
+
 
 def test_from_cp_tensor(rng):
     # Test that cp_tensor converted to coupled matrix factorization constructs same dense tensor 
@@ -35,10 +37,9 @@ def test_from_cp_tensor(rng):
     assert_array_equal(B_0, B_is[0])
 
 
-def test_from_parafac2_tensor(rng):
+def test_from_parafac2_tensor(rng, random_ragged_shapes):
     # Test that parafac2 tensor converted to coupled matrix factorization constructs same dense tensor 
-    shapes = ((10, 11), (11, 11), (12, 11), (13, 11))
-    parafac2_tensor = tl.random.random_parafac2(shapes, 3)
+    parafac2_tensor = tl.random.random_parafac2(random_ragged_shapes, 3)
     cmf = CoupledMatrixFactorization.from_Parafac2Tensor(parafac2_tensor)
 
     dense_tensor_pf2 = parafac2_tensor.to_tensor()
@@ -47,10 +48,9 @@ def test_from_parafac2_tensor(rng):
 
     
 
-def test_coupled_matrix_factorization(rng):
-    shapes = ((5, 10), (10, 10), (15, 10), (10, 10))
+def test_coupled_matrix_factorization(rng, random_regular_shapes):
     rank = 4
-    cmf = random.random_coupled_matrices(shapes, rank, random_state=rng)
+    cmf = random.random_coupled_matrices(random_regular_shapes, rank, random_state=rng)
 
     # Check that the length is equal to 2 (weights and factor matrices)
     assert len(cmf) == 2
@@ -71,10 +71,8 @@ def test_coupled_matrix_factorization(rng):
         assert_array_equal(B_i1, B_i2)
 
 
-@pytest.mark.parametrize("rank", [1, 2, 5])
-def test_validate_cmf(rng, rank):
-    shapes = ((5, 10), (10, 10), (15, 10), (10, 10))
-    cmf = random.random_coupled_matrices(shapes, rank, random_state=rng)
+def test_validate_cmf(rng, random_ragged_cmf):
+    cmf, shapes, rank = random_ragged_cmf
     val_shapes, val_rank = coupled_matrices._validate_cmf(cmf)
     assert val_rank == rank
     assert shapes == val_shapes
@@ -164,10 +162,8 @@ def test_validate_cmf(rng, rank):
         coupled_matrices._validate_cmf((weights, (A, invalid_B_is_2, C)))
 
 
-def test_cmf_to_matrix(rng):
-    shapes = ((5, 10), (10, 10), (15, 10), (10, 10))
-    rank = 5
-    cmf = random.random_coupled_matrices(shapes, rank, random_state=rng)
+def test_cmf_to_matrix(rng, random_ragged_cmf):
+    cmf, shapes, rank = random_ragged_cmf
     weights, (A, B_is, C) = cmf
 
     # Compare cm_aoadmm implementation with our own implementation
@@ -199,10 +195,8 @@ def test_cmf_to_matrix(rng):
         mock.assert_called()
 
 
-def test_cmf_to_matrices(rng):
-    shapes = ((15, 10), (10, 10), (15, 10), (10, 10))
-    rank = 5
-    cmf = random.random_coupled_matrices(shapes, rank, random_state=rng)
+def test_cmf_to_matrices(rng, random_ragged_cmf):
+    cmf, shapes, rank = random_ragged_cmf
     weights, (A, B_is, C) = cmf
 
     # Compare cm_aoadmm implementation with our own implementation
@@ -227,10 +221,8 @@ def test_cmf_to_matrices(rng):
         mock.assert_called()
 
 
-def test_cmf_to_slice(rng):
-    shapes = ((5, 10), (10, 10), (15, 10), (10, 10))
-    rank = 5
-    cmf = random.random_coupled_matrices(shapes, rank, random_state=rng)
+def test_cmf_to_slice(rng, random_ragged_cmf):
+    cmf, shapes, rank = random_ragged_cmf
     weights, (A, B_is, C) = cmf
 
     # Compare cm_aoadmm implementation with our own implementation
@@ -245,10 +237,8 @@ def test_cmf_to_slice(rng):
         mock.assert_called()
 
 
-def test_cmf_to_slices(rng):
-    shapes = ((15, 10), (10, 10), (15, 10), (10, 10))
-    rank = 5
-    cmf = random.random_coupled_matrices(shapes, rank, random_state=rng)
+def test_cmf_to_slices(rng, random_ragged_cmf):
+    cmf, shapes, rank = random_ragged_cmf
 
     # Compare cm_aoadmm implementation with our own implementation
     matrices = cmf.to_matrices()
@@ -262,10 +252,8 @@ def test_cmf_to_slices(rng):
         mock.assert_called()
 
 
-def test_cmf_to_tensor(rng):
-    shapes = ((10, 11), (10, 11), (10, 11), (10, 11))
-    rank = 5
-    cmf = random.random_coupled_matrices(shapes, rank, random_state=rng)
+def test_cmf_to_tensor(rng, random_regular_cmf):
+    cmf, shapes, rank = random_regular_cmf
     weights, (A, B_is, C) = cmf
 
     # Check that the tensor slices are equal to the manually assembled matrices
@@ -296,10 +284,8 @@ def test_cmf_to_tensor(rng):
         mock.assert_called()
 
 
-def test_cmf_to_unfolded(rng):
-    shapes = ((10, 11), (15, 11), (20, 11), (25, 11))
-    rank = 5
-    cmf = random.random_coupled_matrices(shapes, rank, random_state=rng)
+def test_cmf_to_unfolded(rng, random_ragged_cmf):
+    cmf, shapes, rank = random_ragged_cmf
 
     tensor = cmf.to_tensor()
     for mode in range(3):
@@ -313,10 +299,8 @@ def test_cmf_to_unfolded(rng):
             mock.assert_called()
 
 
-def test_cmf_to_vec(rng):
-    shapes = ((10, 11), (15, 11), (20, 11), (25, 11))
-    rank = 5
-    cmf = random.random_coupled_matrices(shapes, rank, random_state=rng)
+def test_cmf_to_vec(rng, random_ragged_cmf):
+    cmf, shapes, rank = random_ragged_cmf
 
     tensor = cmf.to_tensor()
     vector = tl.reshape(tensor, -1)
