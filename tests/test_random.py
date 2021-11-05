@@ -1,8 +1,7 @@
-import numpy as np
 import pytest
 import tensorly as tl
 from numpy.linalg import matrix_rank
-from tensorly.testing import assert_array_almost_equal, assert_equal
+from tensorly.testing import assert_array_almost_equal
 
 from cm_aoadmm.random import random_coupled_matrices
 

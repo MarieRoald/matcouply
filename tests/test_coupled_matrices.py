@@ -5,14 +5,14 @@ import numpy as np
 import pytest
 import tensorly as tl
 import tensorly.random
-from pytest import approx
 from tensorly.testing import assert_array_almost_equal, assert_array_equal
 
 from cm_aoadmm import coupled_matrices, random
-from cm_aoadmm.coupled_matrices import (CoupledMatrixFactorization,
-                                        cmf_to_matrices, cmf_to_matrix)
-from tests.conftest import (random_ragged_cmf, random_ragged_shapes,
-                            random_regular_cmf, random_regular_shapes)
+from cm_aoadmm.coupled_matrices import (
+    CoupledMatrixFactorization,
+    cmf_to_matrices,
+    cmf_to_matrix,
+)
 
 
 def test_from_cp_tensor(rng):
@@ -116,7 +116,7 @@ def test_validate_cmf(rng, random_ragged_cmf):
     #####
     # Check that wrongly shaped inputs result in ValueErrors
 
-    ### Weights
+    # ## Weights
     # The weights is a matrix
     with pytest.raises(ValueError):
         coupled_matrices._validate_cmf((np.ones(shape=(rank, rank)), (A, B_is, C)))
@@ -124,7 +124,7 @@ def test_validate_cmf(rng, random_ragged_cmf):
     with pytest.raises(ValueError):
         coupled_matrices._validate_cmf((np.ones(shape=(rank + 1,)), (A, B_is, C)))
 
-    ### Factor matrices
+    # ## Factor matrices
     # One of the matrices is a third order tensor
     with pytest.raises(ValueError):
         coupled_matrices._validate_cmf((weights, (rng.random(size=(4, rank, rank)), B_is, C)))
@@ -145,7 +145,7 @@ def test_validate_cmf(rng, random_ragged_cmf):
         B_is_copy[0] = rng.random(size=(rank,))
         coupled_matrices._validate_cmf((weights, (A, B_is_copy, C)))
 
-    ### Check wrong rank
+    # ## Check wrong rank
     # Check with incorrect rank for one of the factors
     invalid_A = rng.random((len(shapes), rank + 1))
     invalid_C = rng.random((shapes[0][1], rank + 1))
@@ -265,7 +265,8 @@ def test_cmf_to_tensor(rng, random_regular_cmf):
         manually_assembled_matrix = (weights * A[i] * B_is[i]) @ C.T
         assert_array_almost_equal(matrix, manually_assembled_matrix)
 
-    # Check that the tensor slices when the matrices have different number of rows are equal to the manually assembled matrices padded by zeros
+    # Check that the tensor slices when the matrices have different number
+    #   of rows are equal to the manually assembled matrices padded by zeros
     ragged_shapes = ((15, 10), (10, 10), (15, 10), (10, 10))
     max_length = max(length for length, _ in ragged_shapes)
     ragged_cmf = random.random_coupled_matrices(ragged_shapes, rank, random_state=rng)

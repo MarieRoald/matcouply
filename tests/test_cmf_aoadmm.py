@@ -3,7 +3,6 @@ import itertools
 import numpy as np
 import pytest
 import tensorly as tl
-from numpy.core.fromnumeric import shape
 
 from cm_aoadmm import cmf_aoadmm, coupled_matrices, random
 from cm_aoadmm._utils import get_svd
@@ -141,7 +140,7 @@ def test_admm_update_A(rng, feasibility_penalty_scale, constant_feasibility_pena
     # Set svd_fun=tl.GET_SVD["truncated_svd"]
 
     # TODO: Test for l2_penalty > 0
-    ## For l2_penalty, compute linear system and solve using SVD to obtain regularised components. This will work with NN constraints too
+    # # For l2_penalty, compute linear system and solve using SVD to obtain regularised components. This will work with NN constraints too
     pass
 
 

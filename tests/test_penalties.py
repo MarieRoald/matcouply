@@ -11,12 +11,10 @@ from copy import copy
 
 import numpy as np
 import pytest
-import scipy.stats as stats
 import tensorly as tl
-from pytest import approx, fixture
+from pytest import fixture
 from tensorly.testing import assert_array_almost_equal, assert_array_equal
 
-import cm_aoadmm
 from cm_aoadmm import penalties
 
 
@@ -74,7 +72,7 @@ def test_matrix_penalty_forwards_updates_correctly(rng, random_matrices):
         assert tl.all(factor_matrix <= 1)
 
 
-## Interfaces only, not code to be run or inherited from:
+# # Interfaces only, not code to be run or inherited from:
 class BaseTestADMMPenalty:
     PenaltyType = penalties.ADMMPenalty
     penalty_default_kwargs = {}
