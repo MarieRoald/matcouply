@@ -224,7 +224,8 @@ def admm_update_B(
             ]
 
         if inner_tol:
-            # TODO: How to deal with feasibility gaps for all B_is? Currently we "stack" each B_is and compute their norm
+            # TODO: How to deal with feasibility gaps for all B_is?
+            #   Currently we "stack" each B_is and compute their norm
             B_is_norm = _root_sum_squared_list(B_is)
             B_is_change = _root_sum_squared_list([B_i - prev_B_i for B_i, prev_B_i in zip(B_is, old_B_is)])
             _, B_gaps, _ = compute_feasibility_gaps(cmf, [[], reg, []], [], B_is_aux_list, [])
@@ -374,7 +375,7 @@ def cmf_aoadmm(
     # Parse constraints
     if not is_iterable(l2_penalty):
         l2_penalty = [l2_penalty] * 3
-    l2_penalty = [p if not p is None else 0 for p in l2_penalty]
+    l2_penalty = [p if p is not None else 0 for p in l2_penalty]
     # TODO: Parse constraints to generate appropriate proxes
 
     A_aux_list, B_is_aux_list, C_aux_list, = initialize_aux(
@@ -466,9 +467,10 @@ def cmf_aoadmm(
                 if not feasibility_criterion and not return_errors:  # TODO: what if tol is False?
                     if verbose:
                         print(
-                            "Coupled matrix factorization iteration={}, reconstruction error={}, regularised loss={} squared relative variation={}.".format(
-                                it, "NOT COMPUTED", "NOT COMPUTED", "NOT COMPUTED"
-                            )
+                            "Coupled matrix factorization iteration={}, ".format(it)
+                            + "reconstruction error=NOT COMPUTED, "
+                            + "regularised loss=NOT COMPUTED, "
+                            + "squared relative variation=NOT COMPUTED."
                         )
                         print("Duality gaps for A: {}".format(A_gaps))
                         print("Duality gaps for the Bi-matrices: {}".format(B_gaps))
@@ -490,9 +492,10 @@ def cmf_aoadmm(
 
             if verbose:
                 print(
-                    "Coupled matrix factorization iteration={}, reconstruction error={}, regularised loss={} squared relative variation={}.".format(
-                        it, rec_errors[-1], losses[-1], abs(losses[-2] - losses[-1]) / losses[-2]
-                    )
+                    "Coupled matrix factorization iteration={}, ".format(it)
+                    + "reconstruction error={}, ".format(rec_errors[-1])
+                    + "regularised loss={} ".format(losses[-1])
+                    + "squared relative variation={}.".format(abs(losses[-2] - losses[-1]) / losses[-2])
                 )
                 print("Duality gaps for A: {}".format(A_gaps))
                 print("Duality gaps for the Bi-matrices: {}".format(B_gaps))

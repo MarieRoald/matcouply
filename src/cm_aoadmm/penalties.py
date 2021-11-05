@@ -7,7 +7,7 @@ from ._utils import get_svd
 # TODO: Maybe remove compute_feasibility_gap and only use shift_aux
 # TODO: Maybe rename shift_aux to subtract_from_aux
 # TODO: Maybe add mixin classes for some of the functionality
-# TODO: For all penalties with __init__, make sure they call super().__init__ and have the aux_init and dual_init arguments
+# TODO: For all penalties with __init__, make sure they call super().__init__ and have aux_init and dual_init arguments
 # TODO: For all penalties, add the parameters of the ADMMPenalty superclass to class docstring.
 
 
@@ -95,7 +95,8 @@ class ADMMPenalty(ABC):
                     )
                 elif len(self.aux_init) != len(matrices):
                     raise ValueError(
-                        "Different number of pre-specified auxiliary factor matrices for mode 1 than the number of coupled matrices."
+                        "Different number of pre-specified auxiliary factor matrices for mode 1 "
+                        "than the number of coupled matrices."
                     )
 
                 return self.aux_init
@@ -175,7 +176,8 @@ class ADMMPenalty(ABC):
                     )
                 elif len(self.dual_init) != len(matrices):
                     raise ValueError(
-                        "Different number of pre-specified auxiliary factor matrices for mode 1 than the number of coupled matrices."
+                        "Different number of pre-specified auxiliary factor matrices for mode 1 "
+                        "than the number of coupled matrices."
                     )
 
                 return self.dual_init
@@ -415,7 +417,7 @@ class L1Penalty(RowVectorPenalty):
 
 
 class Parafac2(MatricesPenalty):
-    """Impose the PARAFAC2 constraint on the uncoupled factor matrices.
+    r"""Impose the PARAFAC2 constraint on the uncoupled factor matrices.
 
     The PARAFAC2 constraint can only be imposed on the uncoupled :math:`\mathbf{B}_i`-matrices, and
     states that
@@ -423,11 +425,11 @@ class Parafac2(MatricesPenalty):
     .. math::
 
         \mathbf{B}_{i_1}^\mathsf{T}\mathbf{B}_{i_1} = \mathbf{B}_{i_2}^\mathsf{T}\mathbf{B}_{i_2},
-    
+
     for any :math:`i_1` and :math:`i_2`. This constraint ensures uniqueness on the components so
     long as the number of coupled matrices are sufficiently large. A sufficent condition is that
-    there are :math:`R(R+1)(R+2)(R+3)/24` matrices, where :math:`R` is the rank of the 
-    decomposition :cite:p:`harshman1996uniqueness`. However, the true number of datasets required 
+    there are :math:`R(R+1)(R+2)(R+3)/24` matrices, where :math:`R` is the rank of the
+    decomposition :cite:p:`harshman1996uniqueness`. However, the true number of datasets required
     for uniqueness is typically lower, and it is conjectured that uniquenes for any :math:`R` holds
     in practice whenever there are four or more matrices :cite:p:`kiers1999parafac2`.
 
@@ -482,7 +484,8 @@ class Parafac2(MatricesPenalty):
 
             if not isinstance(basis_matrices, list) or not tl.is_tensor(coordinate_matrix):
                 raise TypeError(
-                    "If self.aux_init is a tuple, then its first element must be a list of basis matrices and second element the coordinate matrix."
+                    "If self.aux_init is a tuple, then its first element must be a list of basis matrices "
+                    "and second element the coordinate matrix."
                 )
 
             if not len(tl.shape(coordinate_matrix)) == 2:
@@ -509,7 +512,8 @@ class Parafac2(MatricesPenalty):
                     )
                 if tl.shape(matrix)[0] != tl.shape(basis_matrix)[0] or tl.shape(basis_matrix)[1] != rank:
                     raise ValueError(
-                        "The i-th basis matrix must have shape J_i x rank, where J_i is the number of rows in the i-th matrix."
+                        "The i-th basis matrix must have shape J_i x rank, where J_i is the number of "
+                        "rows in the i-th matrix."
                     )
 
                 cross_product = tl.dot(tl.transpose(basis_matrix), basis_matrix)

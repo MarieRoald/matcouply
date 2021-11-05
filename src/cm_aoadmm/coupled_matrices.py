@@ -16,12 +16,12 @@ class CoupledMatrixFactorization(FactorizedTensor):
     @classmethod
     def from_CPTensor(cls, cp_tensor):
         """Convert a CP tensor into a coupled matrix factorization.
-        
+
         Arguments
         ---------
         cp_tensor : tl.cp_tensor.CPTensor
             CP tensor to convert into a coupled matrix factorization
-        
+
         Returns
         -------
         CoupledMatrixFactorization
@@ -39,12 +39,12 @@ class CoupledMatrixFactorization(FactorizedTensor):
     @classmethod
     def from_Parafac2Tensor(cls, parafac2_tensor):
         """Convert a PARAFAC2 tensor into a coupled matrix factorization.
-        
+
         Arguments
         ---------
         parafac2_tensor : tl.parafac2_tensor.Parafac2Tensor
             PARAFAC2 tensor to convert into a coupled matrix factorization
-        
+
         Returns
         -------
         CoupledMatrixFactorization
