@@ -3,6 +3,9 @@ from tensorly._factorized_tensor import FactorizedTensor
 
 
 class CoupledMatrixFactorization(FactorizedTensor):
+    """Class wrapper for coupled matrix factorizations.
+    """
+
     # TODO: Unit test
     def __init__(self, cmf_matrices):
         super().__init__()
@@ -81,18 +84,28 @@ class CoupledMatrixFactorization(FactorizedTensor):
         return message
 
     def to_tensor(self):
+        """Convert to a dense tensor (pad uneven slices by zeros). See ``cmf_to_tensor``.
+        """
         return cmf_to_tensor(self)
 
-    def to_vec(self):
+    def to_vec(self):  # TODO: Add flag to not pad by zeros
+        """Convert to a vector by first converting to a dense tensor and unraveling. See ``cmf_to_vec``
+        """
         return cmf_to_vec(self)
 
     def to_unfolded(self, mode):
+        """Convert to a matrix by first converting to a dense tensor and unfolding. See ``cmf_to_unfolded``
+        """
         return cmf_to_unfolded(self, mode)
 
     def to_matrices(self):
+        """Convert to a list of matrices. See ``cmf_to_matrices``
+        """
         return cmf_to_matrices(self)
 
     def to_matrix(self, matrix_idx):
+        """Construct a single dense matrix from the decomposition. See ``cmf_to_matrix``
+        """
         return cmf_to_matrix(self, matrix_idx)
 
 
@@ -162,34 +175,43 @@ def _validate_cmf(cmf):
 def cmf_to_matrix(cmf, matrix_idx, validate=True):
     r"""Generate a single matrix from the coupled matrix factorisation.
 
-    The decomposition is on the form :math:`(A [B_i] C)` such that the i-th matrix,
-    :math:`X_i` is given by
+    The decomposition is on the form :math:`(\mathbf{A} [\mathbf{B}_i] \mathbf{C})`
+    such that the i-th matrix, :math:`X_i` is given by
+
     .. math::
 
-        X_i = B_i diag(a_i) C^T,
+        X_i = \mathbf{B}_i \text{diag}(\mathbf{a}_i) \mathbf{C}^T,
 
-    where :math: `diag(a_i)` is the diagonal matrix whose nonzero entries are equal to
-    the :math:`i`-th row of the :math:`I \times R`factor matrix :math:`A`, :math:`B_i`
-    is a :math:`J_i` \times R` factor matrix, and :math:`C` is a :math: `K \times R`factor matrix.
+    where :math:`\text{diag}(a_i)` is the diagonal matrix whose nonzero entries are equal to
+    the :math:`i`-th row of the :math:`I \times R`factor matrix :math:`\mathbf{A}`,
+    :math:`\mathbf{B}_i` is a :math:`J_i \times R` factor matrix, and :math:`\mathbf{C}`
+    is a :math:`K \times R` factor matrix.
 
     Parameters
     ----------
 
-    cmf: CoupledMatrixFactorization - (weight, factors)
+    cmf : CoupledMatrixFactorization - (weight, factors)
 
         * weights : 1D array of shape (rank, )
             weights of the factors
         * factors : List of factors of the coupled matrix decomposition
-            Containts the matrices :math:`A`, :math:`B_i` and math:`C` described above
+            Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}_i` and
+            :math:`\mathbf{C}` described above
+
+    matrix_idx : int
+        Index of the matrix we want to construct, :math:`i` in the equations above.
+
+    validate : bool
+        If true, then the decomposition is validated before the matrix is constructed
+        (see ``CoupledMatrixFactorization``).
 
     Returns
     -------
     ndarray
-        Full tensor of shape [B[slice_idx].shape[1], C.shape[1]], where
-        B #TODO: explanation
-
+        Dense tensor of shape ``[B_is[matrix_idx].shape[0], C.shape[0]]``, where
+        ``B`` is a list containing all the :math:`\mathbf{B}_i`-factor matrices.
     """
-    # TODO: Unit test
+    # TODO: Example
     if validate:
         cmf = CoupledMatrixFactorization(cmf)
     weights, (A, B_is, C) = cmf
@@ -203,14 +225,50 @@ def cmf_to_matrix(cmf, matrix_idx, validate=True):
 
 
 def cmf_to_slice(cmf, slice_idx, validate=True):
+    """Alias for ``cmf_to_matrix``.
+    """
     return cmf_to_matrix(cmf, slice_idx, validate=validate)
 
 
 def cmf_to_matrices(cmf, validate=True):
+    r"""Generate a list of all matrices represented by the coupled matrix factorisation.
+
+    The decomposition is on the form :math:`(\mathbf{A} [\mathbf{B}_i] \mathbf{C})`
+    such that the i-th matrix, :math:`X_i` is given by
+
+    .. math::
+
+        X_i = \mathbf{B}_i \text{diag}(\mathbf{a}_i) \mathbf{C}^T,
+
+    where :math:`\text{diag}(a_i)` is the diagonal matrix whose nonzero entries are equal to
+    the :math:`i`-th row of the :math:`I \times R`factor matrix :math:`\mathbf{A}`,
+    :math:`\mathbf{B}_i` is a :math:`J_i \times R` factor matrix, and :math:`\mathbf{C}`
+    is a :math:`K \times R` factor matrix.
+
+    Parameters
+    ----------
+
+    cmf: CoupledMatrixFactorization - (weight, factors)
+
+        * weights : 1D array of shape (rank, )
+            weights of the factors
+        * factors : List of factors of the coupled matrix decomposition
+            Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}_i` and
+            :math:`\mathbf{C}` described above
+
+    validate : bool
+        If true, then the decomposition is validated before the matrix is constructed
+        (see ``CoupledMatrixFactorization``).
+
+    Returns
+    -------
+    List of ndarray
+        List of all :math:`\mathbf{X}_i`-matrices, where the ``i``-th element of the list
+        has shape ``[B_is[i].shape[0], C.shape[0]]``, where ``B_is`` is a list containing all
+        the :math:`\mathbf{B}_i`-factor matrices.
+    """
+    # TODO: Example
     # Construct matrices and return list
-    # TODO: docstring
-    # TODO: B or B_i
-    # TODO: Unit test
     if validate:
         cmf = CoupledMatrixFactorization(cmf)
 
@@ -225,12 +283,53 @@ def cmf_to_matrices(cmf, validate=True):
 
 
 def cmf_to_slices(cmf, validate=True):
+    """Alias for ``cmf_to_matrices``.
+    """
     return cmf_to_matrices(cmf, validate=validate)
 
 
 def cmf_to_tensor(cmf, validate=True):
-    # TODO: docstring
-    # TODO: Unit test
+    r"""Generate the tensor represented by the coupled matrix factorization.
+
+    If all :math:`\mathbf{B}_i`-factor matrices have the same number of rows, then this
+    function returnes a tensorized version of ``cmf_to_matrices``. Otherwise, each
+    matrix is padded by zeros to have the same number of rows before forming the tensor.
+
+    The decomposition is on the form :math:`(\mathbf{A} [\mathbf{B}_i] \mathbf{C})`
+    such that the i-th matrix, :math:`X_i` is given by
+
+    .. math::
+
+        X_i = \mathbf{B}_i \text{diag}(\mathbf{a}_i) \mathbf{C}^T,
+
+    where :math:`\text{diag}(a_i)` is the diagonal matrix whose nonzero entries are equal to
+    the :math:`i`-th row of the :math:`I \times R`factor matrix :math:`\mathbf{A}`,
+    :math:`\mathbf{B}_i` is a :math:`J_i \times R` factor matrix, and :math:`\mathbf{C}`
+    is a :math:`K \times R` factor matrix.
+
+    Parameters
+    ----------
+
+    cmf: CoupledMatrixFactorization - (weight, factors)
+
+        * weights : 1D array of shape (rank, )
+            weights of the factors
+        * factors : List of factors of the coupled matrix decomposition
+            Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}_i` and
+            :math:`\mathbf{C}` described above
+
+    validate : bool
+        If true, then the decomposition is validated before the matrix is constructed
+        (see ``CoupledMatrixFactorization``).
+
+    Returns
+    -------
+    ndarray
+        Full tensor of shape ``[A.shape[0], J, C.shape[0]]``, where ``J`` is the maximum
+        number of rows in all the :math:`\mathbf{B}_i`-factor matrices.
+    """
+    # TODO: Example
+
     _, (A, B_is, C) = cmf
     matrices = cmf_to_matrices(cmf, validate=validate)
     lengths = [B_i.shape[0] for B_i in B_is]
@@ -244,13 +343,11 @@ def cmf_to_tensor(cmf, validate=True):
 
 def cmf_to_unfolded(cmf, mode, validate=True):
     # TODO: docstring
-    # TODO: Unit test
     # TODO: Option to use stack of matrices instead of tensor padded with zeros
     return tl.unfold(cmf_to_tensor(cmf, validate=validate), mode)
 
 
 def cmf_to_vec(cmf, validate=True):
     # TODO: docstring
-    # TODO: Unit test
     # TODO: Option to use stack of matrices instead of tensor padded with zeros
     return tl.tensor_to_vec(cmf_to_tensor(cmf, validate=validate))
