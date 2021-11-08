@@ -3,7 +3,7 @@ import tensorly as tl
 from numpy.linalg import matrix_rank
 from tensorly.testing import assert_array_almost_equal
 
-from cm_aoadmm.random import random_coupled_matrices
+from matcouply.random import random_coupled_matrices
 
 
 def test_random_coupled_matrices():

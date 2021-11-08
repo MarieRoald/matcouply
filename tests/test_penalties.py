@@ -15,7 +15,7 @@ import tensorly as tl
 from pytest import fixture
 from tensorly.testing import assert_array_almost_equal, assert_array_equal
 
-from cm_aoadmm import penalties
+from matcouply import penalties
 
 
 @fixture

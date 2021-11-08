@@ -4,9 +4,9 @@ import numpy as np
 import pytest
 import tensorly as tl
 
-from cm_aoadmm import cmf_aoadmm, coupled_matrices, random
-from cm_aoadmm._utils import get_svd
-from cm_aoadmm.penalties import NonNegativity
+from matcouply import cmf_aoadmm, coupled_matrices, random
+from matcouply._utils import get_svd
+from matcouply.penalties import NonNegativity
 
 
 def all_combinations(*args):

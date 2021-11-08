@@ -3,7 +3,7 @@ import pytest
 import scipy
 from numpy.core.numeric import allclose
 
-from cm_aoadmm import _utils as utils
+from matcouply import _utils as utils
 
 
 def test_is_iterable():

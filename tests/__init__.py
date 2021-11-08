@@ -1,3 +1,3 @@
 # -*- coding: utf-8 -*-
 
-"""Unit test package for cm_aoadmm."""
+"""Unit test package for matcouply."""

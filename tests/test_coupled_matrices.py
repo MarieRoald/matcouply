@@ -7,8 +7,8 @@ import tensorly as tl
 import tensorly.random
 from tensorly.testing import assert_array_almost_equal, assert_array_equal
 
-from cm_aoadmm import coupled_matrices, random
-from cm_aoadmm.coupled_matrices import (
+from matcouply import coupled_matrices, random
+from matcouply.coupled_matrices import (
     CoupledMatrixFactorization,
     cmf_to_matrices,
     cmf_to_matrix,
@@ -169,7 +169,7 @@ def test_cmf_to_matrix(rng, random_ragged_cmf):
     cmf, shapes, rank = random_ragged_cmf
     weights, (A, B_is, C) = cmf
 
-    # Compare cm_aoadmm implementation with our own implementation
+    # Compare matcouply implementation with our own implementation
     for i, B_i in enumerate(B_is):
         matrix = cmf.to_matrix(i)
         manually_assembled_matrix = (weights * A[i] * B_i) @ C.T
@@ -191,7 +191,7 @@ def test_cmf_to_matrix(rng, random_ragged_cmf):
         cmf_to_matrix(invalid_cmf, i, validate=False)
 
     # Check that validate is called only when validate=True
-    with patch("cm_aoadmm.coupled_matrices._validate_cmf", return_value=(shapes, rank)) as mock:
+    with patch("matcouply.coupled_matrices._validate_cmf", return_value=(shapes, rank)) as mock:
         coupled_matrices.cmf_to_matrix(cmf, 0, validate=False)
         mock.assert_not_called()
         coupled_matrices.cmf_to_matrix(cmf, 0, validate=True)
@@ -202,7 +202,7 @@ def test_cmf_to_matrices(rng, random_ragged_cmf):
     cmf, shapes, rank = random_ragged_cmf
     weights, (A, B_is, C) = cmf
 
-    # Compare cm_aoadmm implementation with our own implementation
+    # Compare matcouply implementation with our own implementation
     matrices = cmf.to_matrices()
     for i, matrix in enumerate(matrices):
         manually_assembled_matrix = (weights * A[i] * B_is[i]) @ C.T
@@ -217,7 +217,7 @@ def test_cmf_to_matrices(rng, random_ragged_cmf):
         cmf_to_matrices(invalid_cmf, validate=True)
 
     # Check that validate is called only when validate=True
-    with patch("cm_aoadmm.coupled_matrices._validate_cmf", return_value=(shapes, rank)) as mock:
+    with patch("matcouply.coupled_matrices._validate_cmf", return_value=(shapes, rank)) as mock:
         coupled_matrices.cmf_to_matrices(cmf, validate=False)
         mock.assert_not_called()
         coupled_matrices.cmf_to_matrices(cmf, validate=True)
@@ -228,14 +228,14 @@ def test_cmf_to_slice(rng, random_ragged_cmf):
     cmf, shapes, rank = random_ragged_cmf
     weights, (A, B_is, C) = cmf
 
-    # Compare cm_aoadmm implementation with our own implementation
+    # Compare matcouply implementation with our own implementation
     for i, B_i in enumerate(B_is):
         matrix = cmf.to_matrix(i)
         slice_ = coupled_matrices.cmf_to_slice(cmf, i)
         assert_array_almost_equal(matrix, slice_)
 
     # Check that to_slice is an alias for to_matrix
-    with patch("cm_aoadmm.coupled_matrices.cmf_to_matrix") as mock:
+    with patch("matcouply.coupled_matrices.cmf_to_matrix") as mock:
         coupled_matrices.cmf_to_slice(cmf, 0)
         mock.assert_called()
 
@@ -243,14 +243,14 @@ def test_cmf_to_slice(rng, random_ragged_cmf):
 def test_cmf_to_slices(rng, random_ragged_cmf):
     cmf, shapes, rank = random_ragged_cmf
 
-    # Compare cm_aoadmm implementation with our own implementation
+    # Compare matcouply implementation with our own implementation
     matrices = cmf.to_matrices()
     slices = coupled_matrices.cmf_to_slices(cmf)
     for slice_, matrix in zip(slices, matrices):
         assert_array_almost_equal(matrix, slice_)
 
     # Check that to_slices is an alias for to_matrices
-    with patch("cm_aoadmm.coupled_matrices.cmf_to_matrices", return_value=matrices) as mock:
+    with patch("matcouply.coupled_matrices.cmf_to_matrices", return_value=matrices) as mock:
         coupled_matrices.cmf_to_slices(cmf)
         mock.assert_called()
 
@@ -281,7 +281,7 @@ def test_cmf_to_tensor(rng, random_regular_cmf):
         assert_array_almost_equal(matrix[shape[0] :], 0)
         assert matrix.shape[0] == max_length
 
-    with patch("cm_aoadmm.coupled_matrices._validate_cmf", return_value=(ragged_shapes, rank)) as mock:
+    with patch("matcouply.coupled_matrices._validate_cmf", return_value=(ragged_shapes, rank)) as mock:
         coupled_matrices.cmf_to_tensor(ragged_cmf, validate=False)
         mock.assert_not_called()
         coupled_matrices.cmf_to_tensor(ragged_cmf, validate=True)
@@ -296,7 +296,7 @@ def test_cmf_to_unfolded(rng, random_ragged_cmf):
         unfolded_tensor = cmf.to_unfolded(mode)
         assert_array_almost_equal(unfolded_tensor, tl.unfold(tensor, mode))
 
-        with patch("cm_aoadmm.coupled_matrices._validate_cmf", return_value=(shapes, rank)) as mock:
+        with patch("matcouply.coupled_matrices._validate_cmf", return_value=(shapes, rank)) as mock:
             coupled_matrices.cmf_to_unfolded(cmf, mode, validate=False)
             mock.assert_not_called()
             coupled_matrices.cmf_to_unfolded(cmf, mode, validate=True)
@@ -310,7 +310,7 @@ def test_cmf_to_vec(rng, random_ragged_cmf):
     vector = tl.reshape(tensor, -1)
     assert_array_almost_equal(cmf.to_vec(), vector)
 
-    with patch("cm_aoadmm.coupled_matrices._validate_cmf", return_value=(shapes, rank)) as mock:
+    with patch("matcouply.coupled_matrices._validate_cmf", return_value=(shapes, rank)) as mock:
         coupled_matrices.cmf_to_vec(cmf, validate=False)
         mock.assert_not_called()
         coupled_matrices.cmf_to_vec(cmf, validate=True)

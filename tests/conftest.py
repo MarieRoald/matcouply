@@ -1,7 +1,7 @@
 import pytest
 import tensorly as tl
 
-from cm_aoadmm.random import random_coupled_matrices
+from matcouply.random import random_coupled_matrices
 
 
 @pytest.fixture
