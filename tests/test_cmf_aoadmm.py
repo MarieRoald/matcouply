@@ -106,6 +106,9 @@ def test_compute_feasibility_gaps(rng):
     pass
 
 
+@pytest.mark.parametrize(
+    "feasibility_penalty_scale,constant_feasibility_penalty", all_combinations([0.5, 1, 10], [True, False])
+)
 def test_admm_update_A(rng, feasibility_penalty_scale, constant_feasibility_penalty):
     # TODO: Make this test.
     # TESTPLAN:
@@ -144,6 +147,9 @@ def test_admm_update_A(rng, feasibility_penalty_scale, constant_feasibility_pena
     pass
 
 
+@pytest.mark.parametrize(
+    "feasibility_penalty_scale,constant_feasibility_penalty", all_combinations([0.5, 1, 10], [True, False])
+)
 def test_admm_update_B(rng, feasibility_penalty_scale, constant_feasibility_penalty):
     # TODO: Make this test.
     # TESTPLAN:
@@ -182,6 +188,7 @@ def test_admm_update_B(rng, feasibility_penalty_scale, constant_feasibility_pena
     pass
 
 
+@pytest.mark.parametrize("feasibility_penalty_scale", [True, False])
 def test_admm_update_C(rng, feasibility_penalty_scale):
     # TODO: Make this test.
     # TESTPLAN:
