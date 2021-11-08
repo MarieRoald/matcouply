@@ -10,6 +10,10 @@ Coupled Matrix AO-ADMM
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
     :target: https://github.com/psf/black
 
+.. image::https://github.com/MarieRoald/cm_aoadmm/actions/workflows/Tests.yml/badge.svg
+    :target: https://github.com/MarieRoald/cm_aoadmm/actions/workflows/Tests.yml
+    :alt: Tests
+
 
 Regularised coupled matrix factorisation with AO-ADMM
 
@@ -22,11 +26,3 @@ Features
 --------
 
 * TODO
-
-Credits
--------
-
-This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.
-
-.. _Cookiecutter: https://github.com/audreyr/cookiecutter
-.. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
