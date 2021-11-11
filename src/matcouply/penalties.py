@@ -448,16 +448,11 @@ class UnitSimplex(MatrixPenalty):
         # But using bisection instead of Newton's method, since Newton's method requires a C2 function, and this is only a C0 function.
         # 0 = ∑_i[x_i] − 1 = ∑_i[min((yi−μ), 0)] - 1
 
-        min_val = -tl.max(factor_matrix_column)  # TODO: CHECK
-        max_val = tl.max(factor_matrix_column)  # TODO: CHECK
-        print(min_val)
-        print(max_val)
+        min_val = -tl.max(factor_matrix_column)
+        max_val = tl.max(factor_matrix_column)
 
         def f(multiplier):
             return tl.sum(tl.clip(factor_matrix_column - multiplier, 0, None)) - 1
-
-        print("f(min_val)", f(min_val))
-        print("f(max_val)", f(max_val))
 
         return bisect(f, min_val, max_val)
 
