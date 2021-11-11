@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
 import tensorly as tl
+from scipy.optimize import bisect
 
 from ._utils import get_svd
 
@@ -414,6 +415,62 @@ class L1Penalty(RowVectorPenalty):
             return tl.sum(tl.abs(x)) * self.reg_strength
         else:
             return sum(tl.sum(tl.abs(xi)) for xi in x) * self.reg_strength
+
+
+class L2Ball(MatrixPenalty):
+    def __init__(self, max_norm, aux_init="random_uniform", dual_init="random_uniform"):
+        super().__init__(aux_init, dual_init)
+        self.max_norm = max_norm
+
+    def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
+        column_norms = tl.sqrt(tl.sum(factor_matrix ** 2, axis=0))
+        column_norms = tl.clip(column_norms, self.max_norm, None)
+        return factor_matrix * self.max_norm / column_norms
+
+    def penalty(self, x):
+        return 0
+
+
+class UnitSimplex(MatrixPenalty):
+    def compute_lagrange_multiplier(self, factor_matrix_column):
+        """Compute lagrange multipliers for the equality constraint: sum(x) = 1 with x >= 0.
+
+        Parameters
+        ----------
+        factor_matrix_column : ndarray
+            Single column of a factor matrix
+
+        Returns
+        lagrange_multiplier : float
+            The single lagrange multiplier for the simplex constraint.
+        """
+        # Inspired by https://math.stackexchange.com/questions/2402504/orthogonal-projection-onto-the-unit-simplex
+        # But using bisection instead of Newton's method, since Newton's method requires a C2 function, and this is only a C0 function.
+        # 0 = ∑_i[x_i] − 1 = ∑_i[min((yi−μ), 0)] - 1
+
+        min_val = -tl.max(factor_matrix_column)  # TODO: CHECK
+        max_val = tl.max(factor_matrix_column)  # TODO: CHECK
+        print(min_val)
+        print(max_val)
+
+        def f(multiplier):
+            return tl.sum(tl.clip(factor_matrix_column - multiplier, 0, None)) - 1
+
+        print("f(min_val)", f(min_val))
+        print("f(max_val)", f(max_val))
+
+        return bisect(f, min_val, max_val)
+
+    def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
+        output_factor_matrix = tl.zeros(tl.shape(factor_matrix))
+        for r in range(tl.shape(factor_matrix)[1]):
+            lagrange_multiplier = self.compute_lagrange_multiplier(factor_matrix[:, r])
+            output_factor_matrix[:, r] = tl.clip(factor_matrix[:, r] - lagrange_multiplier, 0, None)
+
+        return output_factor_matrix
+
+    def penalty(self, x):
+        return 0
 
 
 class Parafac2(MatricesPenalty):
