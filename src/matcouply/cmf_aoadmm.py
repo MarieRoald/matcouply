@@ -447,8 +447,8 @@ def _parse_mode_penalties(
             description_str += " * L2 ball constraint\n"
 
     if tv_penalty:
-        regs.append(penalties.TotalVariationPenalty(
-            tv_penalty, l1_strength=l1_penalty, aux_init=aux_init, dual_init=dual_init)
+        regs.append(
+            penalties.TotalVariationPenalty(tv_penalty, l1_strength=l1_penalty, aux_init=aux_init, dual_init=dual_init)
         )
         if l1_penalty:
             description_str += " * Total Variation penalty (with L1)\n"
@@ -471,7 +471,7 @@ def _parse_mode_penalties(
         skip_non_negative = True
 
     if non_negative and not skip_non_negative:
-        regs.append(penalties.NonNegativity(, aux_init=aux_init, dual_init=dual_init))
+        regs.append(penalties.NonNegativity(aux_init=aux_init, dual_init=dual_init))
         description_str += " * Non negativity constraints"
 
     return regs, description_str
