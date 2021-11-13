@@ -1,6 +1,7 @@
 import numpy as np
 import tensorly as tl
 
+from . import penalties
 from ._utils import get_svd, is_iterable
 from .coupled_matrices import CoupledMatrixFactorization, cmf_to_matrices
 
@@ -333,6 +334,149 @@ def _cmf_reconstruction_error(matrices, cmf):
     return _root_sum_squared_list([X - Xhat for X, Xhat in zip(matrices, estimated_matrices)])
 
 
+def _listify(input_value, param_name):
+    if hasattr(input_value, "get"):
+        return [input_value.get(i, False) for i in range(3)]
+    elif not is_iterable(input_value):
+        return [input_value] * 3
+    else:
+        out = list(input_value)
+        if not len(out) == 3:
+            raise ValueError(
+                "All parameters must be a dictionary, non-iterable value or non-dictionary iterable of length 3."
+                f" {param_name} is iterable of length {len(out)}."
+            )
+        return out
+
+
+def _parse_all_penalties(
+    non_negative,
+    lower_bound,
+    upper_bound,
+    max_l2_norm,
+    unimodal,
+    parafac2,
+    l1_penalty,
+    tv_penalty,
+    generalized_l2_penalty,
+    svd,
+    regs,
+    dual_init,
+    aux_init,
+    verbose,
+):
+    if regs is None:
+        regs = [[], [], []]
+
+    non_negative = _listify(non_negative, "non_negative")
+    upper_bound = _listify(upper_bound, "upper_bound")
+    lower_bound = _listify(lower_bound, "lower_bound")
+    max_l2_norm = _listify(max_l2_norm, "max_l2_norm")
+    unimodal = _listify(unimodal, "unimodal")
+    if parafac2:
+        parafac2 = [False, True, False]
+    else:
+        parafac2 = [False, False, False]
+    l1_penalty = _listify(l1_penalty, "l1_penalty")
+    generalized_l2_penalty = _listify(generalized_l2_penalty, "generalized_l2_penalty")
+    tv_penalty = _listify(tv_penalty, "tv_penalty")
+
+    for mode in range(3):
+        parsed_regs, message = _parse_mode_penalties(
+            non_negative=non_negative[mode],
+            lower_bound=lower_bound[mode],
+            upper_bound=upper_bound[mode],
+            max_l2_norm=max_l2_norm[mode],
+            unimodal=unimodal[mode],
+            parafac2=parafac2[mode],
+            l1_penalty=l1_penalty[mode],
+            tv_penalty=tv_penalty[mode],
+            generalized_l2_penalty=generalized_l2_penalty[mode],
+            svd=svd,
+            dual_init=dual_init,
+            aux_init=aux_init,
+        )
+
+        regs[mode] = parsed_regs + regs[mode]
+
+        if verbose:
+            print(f"Added mode {mode} penalties and constraints:")
+            print(message)
+    return regs
+
+
+def _parse_mode_penalties(
+    non_negative,
+    lower_bound,
+    upper_bound,
+    max_l2_norm,
+    unimodal,
+    parafac2,
+    l1_penalty,
+    tv_penalty,
+    generalized_l2_penalty,
+    svd,
+    dual_init,
+    aux_init,
+):
+    if unimodal:
+        raise NotImplementedError("Unimodality is not yet implemented")
+    if not l1_penalty:
+        l1_penalty = 0
+
+    description_str = ""
+    regs = []
+
+    skip_non_negative = False
+
+    if parafac2:
+        regs.append(penalties.Parafac2(svd=svd, aux_init=aux_init, dual_init=dual_init))
+        description_str += " * PARAFAC2\n"
+
+    if (
+        generalized_l2_penalty is not None or generalized_l2_penalty is False
+    ):  # generalized_l2_penalty is None or matrix
+        regs.append(penalties.GeneralizedL2Penalty(generalized_l2_penalty, aux_init=aux_init, dual_init=dual_init))
+        description_str += " * Generalized L2 penalty\n"
+
+    if max_l2_norm:
+        regs.append(penalties.L2Ball(max_l2_norm, non_negativity=non_negative, aux_init=aux_init, dual_init=dual_init))
+        if non_negative:
+            description_str += " * L2 ball constraint (with non-negativity)\n"
+        else:
+            description_str += " * L2 ball constraint\n"
+
+    if tv_penalty:
+        regs.append(penalties.TotalVariationPenalty(
+            tv_penalty, l1_strength=l1_penalty, aux_init=aux_init, dual_init=dual_init)
+        )
+        if l1_penalty:
+            description_str += " * Total Variation penalty (with L1)\n"
+        else:
+            description_str += " * Total Variation penalty\n"
+        l1_penalty = 0  # Already included in the total variation penalty
+
+    if l1_penalty:
+        regs.append(penalties.L1Penalty(non_negativity=non_negative, aux_init=aux_init, dual_init=dual_init))
+        description_str += " * L1 penalty"
+        skip_non_negative = True
+
+    if lower_bound or upper_bound:
+        if lower_bound is None:
+            lower_bound = -float("inf")
+        if non_negative:
+            lower_bound = min(lower_bound, 0)
+        regs.append(penalties.BoxConstraint(lower_bound, upper_bound, aux_init=aux_init, dual_init=dual_init))
+        description_str += f" * Box constraints ({lower_bound} < x < {upper_bound})"
+        skip_non_negative = True
+
+    if non_negative and not skip_non_negative:
+        regs.append(penalties.NonNegativity(, aux_init=aux_init, dual_init=dual_init))
+        description_str += " * Non negativity constraints"
+
+    return regs, description_str
+
+
 def cmf_aoadmm(
     matrices,
     rank,
@@ -341,21 +485,18 @@ def cmf_aoadmm(
     l2_penalty=0,
     tv_penalty=None,
     l1_penalty=None,
-    non_negativity=None,
-    unimodality=None,
-    # group_lasso_penalty=None,  # No reasonable default
-    # group_lasso_groups,  # No reasonable default
-    smoothness_penalty=None,  # SVD trick default
-    l2_ball_constraint=None,
-    l1_ball_constraint=None,  # Maybe implement?
-    box_constraint=None,  # Maybe implement?
+    non_negative=None,
+    unimodal=None,
+    generalized_l2_penalty=None,
+    max_l2_norm=None,
+    lower_bound=None,
+    upper_bound=None,
     parafac2_constraint=None,
-    log_det=None,
-    reg=None,
-    feasibility_penalty_scale=10,
+    regs=None,
+    feasibility_penalty_scale=1,
     constant_feasibility_penalty=False,
-    aux_init=None,
-    dual_init=None,
+    aux_init="random_uniform",
+    dual_init="random_uniform",
     svd="truncated_svd",
     init_params=None,
     random_state=None,
@@ -377,7 +518,7 @@ def cmf_aoadmm(
 
         \mathbf{X}_i \approx \mathbf{B}_i \mathbf{D}_i \mathbf{C}^\mathsf{T},
 
-    where :math:`\mathbf{B}_i \in \mathbb{R}^{J_i \times R}` and 
+    where :math:`\mathbf{B}_i \in \mathbb{R}^{J_i \times R}` and
     :math:`\mathbf{C} \in \mathbb{R}^{K \times R}` are factor matrices and
     :math:`\mathbf{D}_k \in \mathbb{R}^{R \times R}` is a diagonal matrix. Here, we
     collect the diagonal entries in all :math:`\mathbf{D}_i`-matrices into a
@@ -388,10 +529,10 @@ def cmf_aoadmm(
     ^^^^^^^^^^^^^^^^^^^^
 
     [TODO: Write this section]
-    
+
     Uniqueness
     ^^^^^^^^^^
-    
+
     Unfortunately, the coupled matrix factorization model is not unique. To see this,
     we stack the data matrices, :math:`\{\mathbf{X}_i\}_{i=1}^I` into one large matrix,
     :math:`\tilde{\mathbf{X}} \in \mathbb{R}^{\sum_{i=1}^I J_i \times K}`. A coupled
@@ -407,7 +548,7 @@ def cmf_aoadmm(
 
     To combat the problem of uniqueness, we can constrain the model. Common constraints are
     non-negativity [TODO: CITE], sparsity  [TODO: CITE] and the *PARAFAC2-constraint*  [TODO: CITE].
-    
+
 
     Non-negativity
     """ """""" """""
@@ -458,15 +599,31 @@ def cmf_aoadmm(
     if not is_iterable(l2_penalty):
         l2_penalty = [l2_penalty] * 3
     l2_penalty = [p if p is not None else 0 for p in l2_penalty]
-    # TODO: Parse constraints to generate appropriate proxes
+
+    regs = _parse_all_penalties(
+        non_negative=non_negative,
+        lower_bound=lower_bound,
+        upper_bound=upper_bound,
+        max_l2_norm=max_l2_norm,
+        unimodal=unimodal,
+        parafac2=parafac2_constraint,
+        l1_penalty=l1_penalty,
+        tv_penalty=tv_penalty,
+        generalized_l2_penalty=generalized_l2_penalty,
+        svd=svd,
+        regs=regs,
+        dual_init=dual_init,
+        aux_init=aux_init,
+        verbose=verbose,
+    )
 
     A_aux_list, B_is_aux_list, C_aux_list, = initialize_aux(
-        matrices, rank, reg, random_state=random_state
+        matrices, rank, regs, random_state=random_state
     )  # TODO: Include cmf?
     A_dual_list, B_is_dual_list, C_dual_list, = initialize_dual(
-        matrices, rank, reg, random_state=random_state
+        matrices, rank, regs, random_state=random_state
     )  # TODO: Include cmf?
-    norm_matrices = _root_sum_squared_list(matrices)  # TODO: calculate norm of matrices
+    norm_matrices = _root_sum_squared_list(matrices)
     rec_errors = []
     feasibility_gaps = []
 
@@ -475,13 +632,13 @@ def cmf_aoadmm(
     rec_errors.append(rec_error)
     losses = []
     reg_penalty = (
-        +sum(A_reg.penalty(cmf[1][0]) for A_reg in reg[0])
-        + sum(B_reg.penalty(cmf[1][1]) for B_reg in reg[1])
-        + sum(C_reg.penalty(cmf[1][2]) for C_reg in reg[2])
+        +sum(A_reg.penalty(cmf[1][0]) for A_reg in regs[0])
+        + sum(B_reg.penalty(cmf[1][1]) for B_reg in regs[1])
+        + sum(C_reg.penalty(cmf[1][2]) for C_reg in regs[2])
     )
     losses.append(0.5 * rec_error + reg_penalty)
 
-    A_gaps, B_gaps, C_gaps = compute_feasibility_gaps(cmf, reg, A_aux_list, B_is_aux_list, C_aux_list)
+    A_gaps, B_gaps, C_gaps = compute_feasibility_gaps(cmf, regs, A_aux_list, B_is_aux_list, C_aux_list)
     feasibility_gaps.append((A_gaps, B_gaps, C_gaps))
     if verbose:
         print("Duality gaps for A: {}".format(A_gaps))
@@ -491,7 +648,7 @@ def cmf_aoadmm(
     for it in range(n_iter_max):
         cmf, B_is_aux_list, B_is_dual_list = admm_update_B(
             matrices=matrices,
-            reg=reg[1],
+            reg=regs[1],
             cmf=cmf,
             B_is_aux_list=B_is_aux_list,
             B_is_dual_list=B_is_dual_list,
@@ -504,7 +661,7 @@ def cmf_aoadmm(
         )
         cmf, A_aux_list, A_dual_list = admm_update_A(
             matrices=matrices,
-            reg=reg[0],
+            reg=regs[0],
             cmf=cmf,
             A_aux_list=A_aux_list,
             A_dual_list=A_dual_list,
@@ -517,7 +674,7 @@ def cmf_aoadmm(
         )
         cmf, C_aux_list, C_dual_list = admm_update_C(
             matrices=matrices,
-            reg=reg[2],
+            reg=regs[2],
             cmf=cmf,
             C_aux_list=C_aux_list,
             C_dual_list=C_dual_list,
@@ -530,7 +687,7 @@ def cmf_aoadmm(
 
         # TODO: Do we want normalisation?
         if tol or return_errors:
-            A_gaps, B_gaps, C_gaps = compute_feasibility_gaps(cmf, reg, A_aux_list, B_is_aux_list, C_aux_list)
+            A_gaps, B_gaps, C_gaps = compute_feasibility_gaps(cmf, regs, A_aux_list, B_is_aux_list, C_aux_list)
             feasibility_gaps.append((A_gaps, B_gaps, C_gaps))
 
             if tol:
@@ -546,7 +703,7 @@ def cmf_aoadmm(
                 # Compute stopping criterions
                 feasibility_criterion = max_feasibility_gap < feasibility_tol
 
-                if not feasibility_criterion and not return_errors:  # TODO: what if tol is False?
+                if not feasibility_criterion and not return_errors:
                     if verbose:
                         print(
                             "Coupled matrix factorization iteration={}, ".format(it)
@@ -566,9 +723,9 @@ def cmf_aoadmm(
             rec_error /= norm_matrices
             rec_errors.append(rec_error)
             reg_penalty = (
-                +sum(A_reg.penalty(cmf[1][0]) for A_reg in reg[0])
-                + sum(B_reg.penalty(cmf[1][1]) for B_reg in reg[1])
-                + sum(C_reg.penalty(cmf[1][2]) for C_reg in reg[2])
+                +sum(A_reg.penalty(cmf[1][0]) for A_reg in regs[0])
+                + sum(B_reg.penalty(cmf[1][1]) for B_reg in regs[1])
+                + sum(C_reg.penalty(cmf[1][2]) for C_reg in regs[2])
             )
             losses.append(0.5 * rec_error ** 2 + reg_penalty)
 
