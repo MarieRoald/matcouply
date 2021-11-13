@@ -19,7 +19,8 @@ from matcouply import penalties
 from matcouply.random import random_coupled_matrices
 
 # TODO: Change self.PenaltyType and self.default_penalty_kwargs into fixtures (i.e. use as parameters)
-#       Then, we can use pytest.mark.parametrize for them with each of the test classes, which allows us to test different penalty kwargs
+#       Then, we can use pytest.mark.parametrize for them with each of the test classes, which allows
+#       us to test different penalty kwargs
 
 
 @fixture
