@@ -433,9 +433,7 @@ def _parse_mode_penalties(
         regs.append(penalties.Parafac2(svd=svd, aux_init=aux_init, dual_init=dual_init))
         description_str += " * PARAFAC2\n"
 
-    if (
-        generalized_l2_penalty is not None or generalized_l2_penalty is False
-    ):  # generalized_l2_penalty is None or matrix
+    if generalized_l2_penalty not in {None, False}:  # generalized_l2_penalty is None or matrix
         regs.append(penalties.GeneralizedL2Penalty(generalized_l2_penalty, aux_init=aux_init, dual_init=dual_init))
         description_str += " * Generalized L2 penalty\n"
 
