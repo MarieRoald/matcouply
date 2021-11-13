@@ -16,6 +16,10 @@ from pytest import fixture
 from tensorly.testing import assert_array_almost_equal, assert_array_equal
 
 from matcouply import penalties
+from matcouply.random import random_coupled_matrices
+
+# TODO: Change self.PenaltyType and self.default_penalty_kwargs into fixtures (i.e. use as parameters)
+#       Then, we can use pytest.mark.parametrize for them with each of the test classes, which allows us to test different penalty kwargs
 
 
 @fixture
@@ -698,6 +702,151 @@ class TestUnitSimplex(MixinTestHardConstraint, BaseTestFactorMatrixPenalty):
         random_matrix = rng.uniform(size=shape)
         col_sum = tl.sum(random_matrix, axis=0)
         return 10 + random_matrix / col_sum
+
+
+class TestGeneralizedL2Penalty(BaseTestFactorMatrixPenalty):
+    PenaltyType = penalties.GeneralizedL2Penalty
+    n_rows = 50
+
+    norm_matrix1 = 2 * np.eye(n_rows // 2) - np.eye(n_rows // 2, k=-1) - np.eye(n_rows // 2, k=1)
+    norm_matrix1[0, 0] = 1
+    norm_matrix1[-1, -1] = 1
+
+    norm_matrix2 = 2 * np.eye(n_rows // 2) - np.eye(n_rows // 2, k=-1) - np.eye(n_rows // 2, k=1)
+    norm_matrix2[0, 0] = 1
+    norm_matrix2[-1, -1] = 1
+
+    zeros_matrix = np.zeros((n_rows // 2, n_rows // 2))
+
+    # fmt: off
+    norm_matrix = np.block([
+        [norm_matrix1, zeros_matrix],
+        [zeros_matrix, norm_matrix2]
+    ])
+    # fmt: on
+    penalty_default_kwargs = {"norm_matrix": norm_matrix, "method": "svd"}
+
+    def get_stationary_matrix(self, rng, shape):
+        if shape[0] != self.n_rows:
+            raise ValueError("Shape must align with the norm matrix")
+        return tl.ones(shape)
+
+    def get_non_stationary_matrix(self, rng, shape):
+        return rng.random(size=shape)
+
+    @pytest.fixture
+    def stationary_matrix(self, rng):
+        n_columns = rng.randint(1, 10)
+        shape = (self.n_rows, n_columns)
+        return self.get_stationary_matrix(rng, shape)
+
+    @pytest.fixture
+    def non_stationary_matrix(self, rng):
+        n_columns = rng.randint(1, 10)
+        shape = (self.n_rows, n_columns)
+        return self.get_non_stationary_matrix(rng, shape)
+
+    @pytest.fixture
+    def stationary_matrices(self, rng):
+        n_columns = rng.randint(1, 10)
+        n_matrices = rng.randint(1, 10)
+        shapes = tuple((self.n_rows, n_columns) for k in range(n_matrices))
+        return self.get_stationary_matrices(rng, shapes)
+
+    @pytest.fixture
+    def non_stationary_matrices(self, rng):
+        n_columns = rng.randint(1, 10)
+        n_matrices = rng.randint(1, 10)
+        shapes = tuple((self.n_rows, n_columns) for k in range(n_matrices))
+        return self.get_non_stationary_matrices(rng, shapes)
+
+    @pytest.fixture
+    def random_regular_cmf(self, rng):
+        n_matrices = rng.randint(4, 10)
+        n_columns = rng.randint(4, 10)
+        rank = rng.randint(1, min(n_matrices, n_columns))
+        shapes = [[self.n_rows, n_columns] for _ in range(n_matrices)]
+        cmf = random_coupled_matrices(shapes, rank, random_state=rng)
+        return cmf, shapes, rank
+
+    @pytest.fixture
+    def random_matrix(self, rng):
+        shape = self.n_rows, rng.randint(1, 10)
+        return rng.random(size=shape)
+
+    @pytest.fixture
+    def random_matrices(self, rng):
+        shape = self.n_rows, rng.randint(1, 10)
+        return [rng.random(size=shape) for _ in range(rng.randint(2, 10))]
+
+    def test_penalty(self, random_regular_cmf):
+        cmf, shapes, rank = random_regular_cmf
+        weights, (A, B_is, C) = cmf
+        B01 = B_is[0][: self.n_rows // 2]
+        B02 = B_is[0][self.n_rows // 2 :]
+        penalty_manual = np.sum((B01[1:] - B01[:-1]) ** 2) + np.sum((B02[1:] - B02[:-1]) ** 2)
+
+        penalty = self.PenaltyType(**self.penalty_default_kwargs)
+        assert penalty.penalty(B_is[0]) == pytest.approx(penalty_manual)
+
+
+class TestTotalVariationPenalty(BaseTestFactorMatrixPenalty):
+    PenaltyType = penalties.TotalVariationPenalty
+    penalty_default_kwargs = {"reg_strength": 1, "l1_strength": 0}
+
+    def get_stationary_matrix(self, rng, shape):
+        return tl.zeros(shape)
+
+    def get_non_stationary_matrix(self, rng, shape):
+        return rng.uniform(size=shape)
+
+    @pytest.fixture
+    def non_stationary_matrix(self, rng):
+        n_columns = rng.randint(1, 10)
+        n_rows = rng.randint(3, 20)
+        shape = (n_rows, n_columns)
+        return self.get_non_stationary_matrix(rng, shape)
+
+    @pytest.fixture
+    def non_stationary_matrices(self, rng):
+        n_rows = rng.randint(3, 20)
+        n_matrices = rng.randint(1, 10)
+        shapes = tuple((n_rows, rng.randint(1, 10)) for k in range(n_matrices))
+        return self.get_non_stationary_matrices(rng, shapes)
+
+    def test_penalty(self, rng):
+        shape = rng.randint(3, 20), rng.randint(3, 20)
+        # shape = 10, 10
+        tv_penalty = self.PenaltyType(reg_strength=1, l1_strength=1)
+
+        # Penalty is 0 if input is 0
+        assert tv_penalty.penalty(tl.zeros(shape)) == pytest.approx(0)
+
+        # Penalty is sum(abs(X)) if X is only ones
+        X1 = tl.ones(shape)
+        assert tv_penalty.penalty(X1) == pytest.approx(tl.sum(tl.abs(X1)))
+
+        # Penalty is sum(abs(X))+2 if X is only ones except for one non-boundary entry (not index 0 or -1) in one
+        # column which is zero
+        X2 = tl.ones(shape)
+        X2[shape[0] // 2, shape[1] // 2] = 0
+        print("X2", X2)
+        assert tv_penalty.penalty(X2) == pytest.approx(tl.sum(tl.abs(X2)) + 2)
+
+        # Penalty is sum(abs(X))+1 if X is only ones except for one boundary entry (index 0 or -1) in one column
+        X3 = tl.ones(shape)
+        X3[0, shape[1] // 2] = 0
+        assert tv_penalty.penalty(X3) == pytest.approx(tl.sum(tl.abs(X3)) + 1)
+
+        # Penalty is sum(abs(X))+n_cols if all columns of x is on form [0, 0, 0, 0, 1, 1, 1, 1]
+        X4 = np.ones(shape)
+        X4[: shape[0] // 2] = 0
+        assert tv_penalty.penalty(X4) == pytest.approx(tl.sum(tl.abs(X4)) + shape[1])
+
+        # Penalty is zero for constant columns if l1_strength is 0
+        tv_penalty_no_l1 = self.PenaltyType(reg_strength=1, l1_strength=0)
+        X_constant_columns = rng.uniform(shape[0]) * tl.ones(shape)
+        assert tv_penalty_no_l1.penalty(X_constant_columns) == pytest.approx(0)
 
 
 class TestNonNegativity(MixinTestHardConstraint, BaseTestRowVectorPenalty):
