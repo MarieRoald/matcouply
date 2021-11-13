@@ -326,9 +326,9 @@ class BoxConstraint(RowVectorPenalty):
 
     Parameters
     ----------
-    min_val : float
+    min_val : float or None
         Lower bound on the factor elements.
-    max_val : float
+    max_val : float or None
         Upper bound on the factor elements
     aux_init : {"random_uniform", "random_standard_normal"}
         Initialisation method for the auxiliary variables
@@ -479,7 +479,8 @@ class TotalVariationPenalty(MatrixPenalty):
     ):
         if not HAS_TV:
             raise RuntimeError(
-                "Cannot use total variation penalty without the ``condat_tv`` package (GPL-3 lisenced). Install with ``pip install condat_tv``."
+                "Cannot use total variation penalty without the ``condat_tv`` package (GPL-3 lisenced). "
+                "Install with ``pip install condat_tv``."
             )
         super().__init__(aux_init, dual_init)
         self.reg_strength = reg_strength
@@ -508,11 +509,14 @@ class TotalVariationPenalty(MatrixPenalty):
 
 
 class L2Ball(MatrixPenalty):
-    def __init__(self, max_norm, aux_init="random_uniform", dual_init="random_uniform"):
+    def __init__(self, max_norm, non_negativity=False, aux_init="random_uniform", dual_init="random_uniform"):
         super().__init__(aux_init, dual_init)
         self.max_norm = max_norm
+        self.non_negativity = non_negativity
 
     def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
+        if self.non_negativity:
+            factor_matrix = tl.clip(factor_matrix, 0)
         column_norms = tl.sqrt(tl.sum(factor_matrix ** 2, axis=0))
         column_norms = tl.clip(column_norms, self.max_norm, None)
         return factor_matrix * self.max_norm / column_norms
@@ -535,7 +539,8 @@ class UnitSimplex(MatrixPenalty):
             The single lagrange multiplier for the simplex constraint.
         """
         # Inspired by https://math.stackexchange.com/questions/2402504/orthogonal-projection-onto-the-unit-simplex
-        # But using bisection instead of Newton's method, since Newton's method requires a C2 function, and this is only a C0 function.
+        # But using bisection instead of Newton's method, since Newton's method requires a C2 function,
+        # and this is only a C0 function.
         # 0 = ∑_i[x_i] − 1 = ∑_i[min((yi−μ), 0)] - 1
 
         min_val = tl.min(factor_matrix_column) - 1
