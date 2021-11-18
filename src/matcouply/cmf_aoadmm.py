@@ -435,7 +435,9 @@ def _parse_mode_penalties(
     if (
         generalized_l2_penalty is not None and generalized_l2_penalty is not False
     ):  # generalized_l2_penalty is None or matrix
-        regs.append(penalties.GeneralizedL2Penalty(generalized_l2_penalty, aux_init=aux_init, dual_init=dual_init))
+        regs.append(
+            penalties.GeneralizedL2Penalty(generalized_l2_penalty, aux_init=aux_init, dual_init=dual_init, svd=svd)
+        )
         description_str += "\n * Generalized L2 penalty"
 
     if max_l2_norm:
