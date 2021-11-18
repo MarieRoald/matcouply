@@ -150,7 +150,7 @@ def admm_update_A(
                 for single_reg, A_gap, A_aux in zip(reg, A_gaps, A_aux_list)
             ]
 
-            dual_residual_criterion = max(A_gaps) < inner_tol
+            dual_residual_criterion = len(A_gaps) == 0 or max(A_gaps) < inner_tol
             primal_residual_criterion = A_change < inner_tol * A_norm
 
             if primal_residual_criterion and dual_residual_criterion:
@@ -235,7 +235,7 @@ def admm_update_B(
                 for single_reg, B_gap, B_is_aux in zip(reg, B_gaps, B_is_aux_list)
             ]
 
-            dual_residual_criterion = max(B_gaps) < inner_tol
+            dual_residual_criterion = len(B_gaps) == 0 or max(B_gaps) < inner_tol
             primal_residual_criterion = B_is_change < inner_tol * B_is_norm
 
             if primal_residual_criterion and dual_residual_criterion:
@@ -303,7 +303,7 @@ def admm_update_C(
                 for single_reg, C_gap, C_aux in zip(reg, C_gaps, C_aux_list)
             ]
 
-            dual_residual_criterion = max(C_gaps) < inner_tol
+            dual_residual_criterion = len(C_gaps) == 0 or max(C_gaps) < inner_tol
             primal_residual_criterion = C_change < inner_tol * C_norm
 
             if primal_residual_criterion and dual_residual_criterion:
@@ -336,7 +336,7 @@ def _cmf_reconstruction_error(matrices, cmf):
 
 def _listify(input_value, param_name):
     if hasattr(input_value, "get"):
-        return [input_value.get(i, False) for i in range(3)]
+        return [input_value.get(i, None) for i in range(3)]
     elif not is_iterable(input_value):
         return [input_value] * 3
     else:
@@ -400,8 +400,7 @@ def _parse_all_penalties(
         regs[mode] = parsed_regs + regs[mode]
 
         if verbose:
-            print(f"Added mode {mode} penalties and constraints:")
-            print(message)
+            print(f"Added mode {mode} penalties and constraints:{message}")
     return regs
 
 
@@ -431,47 +430,54 @@ def _parse_mode_penalties(
 
     if parafac2:
         regs.append(penalties.Parafac2(svd=svd, aux_init=aux_init, dual_init=dual_init))
-        description_str += " * PARAFAC2\n"
+        description_str += "\n * PARAFAC2"
 
-    if generalized_l2_penalty not in {None, False}:  # generalized_l2_penalty is None or matrix
+    if (
+        generalized_l2_penalty is not None and generalized_l2_penalty is not False
+    ):  # generalized_l2_penalty is None or matrix
         regs.append(penalties.GeneralizedL2Penalty(generalized_l2_penalty, aux_init=aux_init, dual_init=dual_init))
-        description_str += " * Generalized L2 penalty\n"
+        description_str += "\n * Generalized L2 penalty"
 
     if max_l2_norm:
         regs.append(penalties.L2Ball(max_l2_norm, non_negativity=non_negative, aux_init=aux_init, dual_init=dual_init))
         if non_negative:
-            description_str += " * L2 ball constraint (with non-negativity)\n"
+            description_str += "\n * L2 ball constraint (with non-negativity)"
         else:
-            description_str += " * L2 ball constraint\n"
+            description_str += "\n * L2 ball constraint"
+        skip_non_negative = True
 
     if tv_penalty:
         regs.append(
             penalties.TotalVariationPenalty(tv_penalty, l1_strength=l1_penalty, aux_init=aux_init, dual_init=dual_init)
         )
         if l1_penalty:
-            description_str += " * Total Variation penalty (with L1)\n"
+            description_str += "\n * Total Variation penalty (with L1)"
         else:
-            description_str += " * Total Variation penalty\n"
+            description_str += "\n * Total Variation penalty"
         l1_penalty = 0  # Already included in the total variation penalty
 
     if l1_penalty:
-        regs.append(penalties.L1Penalty(non_negativity=non_negative, aux_init=aux_init, dual_init=dual_init))
-        description_str += " * L1 penalty"
+        regs.append(
+            penalties.L1Penalty(l1_penalty, non_negativity=non_negative, aux_init=aux_init, dual_init=dual_init)
+        )
+        description_str += "\n * L1 penalty"
         skip_non_negative = True
 
-    if lower_bound or upper_bound:
+    if lower_bound is not None or upper_bound is not None:
         if lower_bound is None:
             lower_bound = -float("inf")
         if non_negative:
-            lower_bound = min(lower_bound, 0)
+            lower_bound = max(lower_bound, 0)
         regs.append(penalties.BoxConstraint(lower_bound, upper_bound, aux_init=aux_init, dual_init=dual_init))
-        description_str += f" * Box constraints ({lower_bound} < x < {upper_bound})"
+        description_str += f"\n * Box constraints ({lower_bound} < x < {upper_bound})"
         skip_non_negative = True
 
     if non_negative and not skip_non_negative:
         regs.append(penalties.NonNegativity(aux_init=aux_init, dual_init=dual_init))
-        description_str += " * Non negativity constraints"
+        description_str += "\n * Non negativity constraints"
 
+    if len(description_str) == 0:
+        description_str += "\n (no additional regularisation added)"
     return regs, description_str
 
 
