@@ -14,15 +14,8 @@ Coupled Matrix AO-ADMM
     :target: https://github.com/MarieRoald/cm_aoadmm/actions/workflows/Tests.yml
     :alt: Tests
 
+.. image:: https://codecov.io/gh/MarieRoald/cm_aoadmm/branch/main/graph/badge.svg?token=GDCXEF2MGE
+    :target: https://codecov.io/gh/MarieRoald/cm_aoadmm
+    :alt: Coverage
 
 Regularised coupled matrix factorisation with AO-ADMM
-
-
-* Free software: MIT license
-* Documentation: https://cm-aoadmm.readthedocs.io.
-
-
-Features
---------
-
-* TODO
