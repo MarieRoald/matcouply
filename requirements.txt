@@ -18,4 +18,4 @@ autodocsumm
 matplotlib
 plotly
 pandas
-git+https://github.com/marieroald/component-vis
+https://github.com/MarieRoald/matcouply/archive/refs/heads/main.zip
