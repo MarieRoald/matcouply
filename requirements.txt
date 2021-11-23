@@ -16,3 +16,4 @@ scipy
 tensorly
 autodocsumm
 matplotlib
+plotly
