@@ -20,8 +20,8 @@ class CoupledMatrixFactorization(FactorizedTensor):
     def from_CPTensor(cls, cp_tensor):
         """Convert a CP tensor into a coupled matrix factorization.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         cp_tensor : tl.cp_tensor.CPTensor
             CP tensor to convert into a coupled matrix factorization
 
@@ -30,6 +30,11 @@ class CoupledMatrixFactorization(FactorizedTensor):
         CoupledMatrixFactorization
             A coupled matrix factorization that represents the same tensor
             as ``cp_tensor``.
+        
+        Raises
+        ------
+        ValueError
+            If the CP tensor has more than tree modes.
         """
         cp_tensor = tl.cp_tensor.CPTensor(cp_tensor)
         weights, factors = cp_tensor
@@ -247,8 +252,7 @@ def cmf_to_matrices(cmf, validate=True):
 
     Parameters
     ----------
-
-    cmf: CoupledMatrixFactorization - (weight, factors)
+    cmf : CoupledMatrixFactorization - (weight, factors)
 
         * weights : 1D array of shape (rank, )
             weights of the factors
@@ -309,8 +313,7 @@ def cmf_to_tensor(cmf, validate=True):
 
     Parameters
     ----------
-
-    cmf: CoupledMatrixFactorization - (weight, factors)
+    cmf : CoupledMatrixFactorization - (weight, factors)
 
         * weights : 1D array of shape (rank, )
             weights of the factors
