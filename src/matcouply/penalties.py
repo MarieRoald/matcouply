@@ -10,23 +10,18 @@ import numpy as np
 import tensorly as tl
 from scipy.optimize import bisect
 
+from ._doc_utils import InheritableDocstrings, copy_ancestor_docstring
 from ._utils import get_svd
 
-# TODO: Maybe remove compute_feasibility_gap and only use shift_aux
-# TODO: Maybe rename shift_aux to subtract_from_aux
-# TODO: Maybe add mixin classes for some of the functionality
-# TODO: For all penalties with __init__, make sure they call super().__init__ and have aux_init and dual_init arguments
-# TODO: For all penalties, add the parameters of the ADMMPenalty superclass to class docstring.
 
-
-class ADMMPenalty(ABC):
+class ADMMPenalty(ABC, metaclass=InheritableDocstrings):
     """Base class for all regularizers and constraints.
 
     Parameters
     ----------
-    aux_init : {"random_uniform", "random_standard_normal"}
+    aux_init : {"random_uniform", "random_standard_normal", "zeros", tl.tensor(ndim=2), list of tl.tensor(ndim=2)}
         Initialisation method for the auxiliary variables
-    dual_init : {"random_uniform", "random_standard_normal"}
+    dual_init : {"random_uniform", "random_standard_normal", "zeros", tl.tensor(ndim=2), list of tl.tensor(ndim=2)}
         Initialisation method for the auxiliary variables
     """
 
@@ -35,6 +30,36 @@ class ADMMPenalty(ABC):
         self.dual_init = dual_init
 
     def init_aux(self, matrices, rank, mode, random_state=None):
+        """Initialize the auxiliary variables
+
+        Initialization schemes
+
+         * ``"random_uniform"``: The elements of the auxiliary variables
+            are drawn from a uniform distribution between 0 and 1.
+         * ``"random_standard_normal"``: The elements of the auxiliary
+            variables are drawn from a standard normal distribution.
+         * ``"zeros"``: The elements of the auxiliary variables are
+            initialized as zero.
+         * tl.tensor(ndim=2) : Pre-computed auxiliary variables (mode=0 or mode=2)
+         * list of tl.tensor(ndim=2): Pre-computed auxiliary variables (mode=1)
+        
+        Parameters
+        ----------
+        matrices : list of tensor(ndim=2) or tensor(ndim=3)
+            The data matrices represented by the coupled matrix factorization
+            these auxiliary variables correspond to.
+        rank : int
+            Rank of the decomposition.
+        mode : int
+            The mode represented by the factor matrices that these
+            auxiliary variables correspond to.
+        random_state : RandomState
+            TensorLy random state.
+        
+        Returns
+        -------
+        tl.tensor(ndim=2) or list of tl.tensor(ndim=2)
+        """
         random_state = tl.check_random_state(random_state)
 
         if not isinstance(rank, int):
@@ -116,6 +141,36 @@ class ADMMPenalty(ABC):
                 raise ValueError("Unknown aux init: {}".format(self.aux_init))
 
     def init_dual(self, matrices, rank, mode, random_state=None):
+        """Initialize the dual variables
+
+        Initialization schemes
+
+         * ``"random_uniform"``: The elements of the dual variables
+            are drawn from a uniform distribution between 0 and 1.
+         * ``"random_standard_normal"``: The elements of the dual
+            variables are drawn from a standard normal distribution.
+         * ``"zeros"``: The elements of the dual variables are
+            initialized as zero.
+         * tl.tensor(ndim=2) : Pre-computed dual variables (mode=0 or mode=2)
+         * list of tl.tensor(ndim=2): Pre-computed dual variables (mode=1)
+        
+        Parameters
+        ----------
+        matrices : list of tensor(ndim=2) or tensor(ndim=3)
+            The data matrices represented by the coupled matrix factorization
+            these dual variables correspond to.
+        rank : int
+            Rank of the decomposition.
+        mode : int
+            The mode represented by the factor matrices that these
+            dual variables correspond to.
+        random_state : RandomState
+            TensorLy random state.
+
+        Returns
+        -------
+        tl.tensor(ndim=2) or list of tl.tensor(ndim=2)
+        """
         random_state = tl.check_random_state(random_state)
 
         if not isinstance(rank, int):
@@ -198,27 +253,115 @@ class ADMMPenalty(ABC):
 
     @abstractmethod
     def penalty(self, x):  # pragma: nocover
-        # TODO: How to deal with penalties that go across matrices
+        """Compute the penalty for the given factor matrix or list of factor matrices.
+        """
         raise NotImplementedError
 
     def subtract_from_auxes(self, auxes, duals):
+        """Compute (aux - dual) for each auxiliary- and dual-factor matrix for mode=1.
+
+        For some penalties, the aux is not a list of factor matrices but rather some
+        other parametrization of a list of factor matrices. This function is used so
+        the AO-ADMM procedure can work with any auxiliary-variable parametrization
+        seamlessly.
+
+        Parameters
+        ----------
+        auxes : list of tl.tensor(ndim=2)
+            Auxiliary variables
+        duals : list of tl.tensor(ndim=2)
+            Dual variables (or other variable to subtract from the auxes)
+
+        Returns
+        -------
+        list of tl.tensor(ndim=2)
+            The list of differences
+        """
         return [self.subtract_from_aux(aux, dual) for aux, dual in zip(auxes, duals)]
 
     def subtract_from_aux(self, aux, dual):
-        """Compute (aux - dual).
+        """Compute (aux - dual) for mode=0 and mode=2.
+
+        For some penalties, the aux is not a factor matrix but rather some other
+        parametrization of a matrix. This function is used so the AO-ADMM procedure
+        can work with any auxiliary-variable parametrization seamlessly.
+
+        Parameters
+        ----------
+        aux : tl.tensor(ndim=2)
+            Auxiliary variables
+        dual : tl.tensor(ndim=2)
+            Dual variables (or other variable to subtract from the auxes)
+
+        Returns
+        -------
+        tl.tensor(ndim=2)
+            The list of differences
         """
         return aux - dual
 
     def aux_as_matrix(self, aux):
+        """Convert an auxiliary variable to a matrix (mode=0 and mode=2).
+
+        This is an identity function that just returns its input. However,
+        it is required for AO-ADMM to seamlessly work when the auxiliary variable
+        is a parametrization of a matrix.
+
+        Parameters
+        ----------
+        aux : tl.tensor(ndim=2)
+
+        Returns
+        -------
+        tl.tensor(ndim=2)
+        """
         return aux
 
     def auxes_as_matrices(self, auxes):
+        """Convert a list of auxiliary variables to a list of matrices (mode=1).
+        
+        This is an identity function that just returns its input. However,
+        it is required for AO-ADMM to seamlessly work when the auxiliary variable
+        is a parametrization of a matrix.
+
+        Parameters
+        ----------
+        auxes : list of tl.tensor(ndim=2)
+
+        Returns
+        -------
+        list of tl.tensor(ndim=2)
+        """
         return [self.aux_as_matrix(aux) for aux in auxes]
 
 
-class RowVectorPenalty(ADMMPenalty):
+class MatricesPenalty(ADMMPenalty):
+    """Base class for penalties that are applied to a list of factor matrices simultaneously.
+    """
+
+    @abstractmethod
+    def factor_matrices_update(self, factor_matrices, feasibility_penalties, auxes):  # pragma: nocover
+        """Update all factor matrices in given list according to this penalty.
+
+        Parameters
+        ----------
+        factor_matrices : list of tl.tensor(ndim=2)
+            List of factor matrix to update.
+        feasibility_penalties : list of floats
+            Penalty parameters for the feasibility gap of the different factor matrices.
+        auxes : list of tl.tensor(ndim=2)
+            List of auxiliary matrices, each element corresponds to the auxiliary factor matrix
+            for the same element in ``factor_matrices``.
+        """
+        raise NotImplementedError
+
+
+class MatrixPenalty(MatricesPenalty):
+    """Base class for penalties that can be applied to a single factor matrix at a time.
+    """
+
     def factor_matrices_update(self, factor_matrices, feasibility_penalties, auxes):
-        """Update a all factor matrices in given list.
+        """Update all factor matrices in given list according to this penalty.
 
         Parameters
         ----------
@@ -235,8 +378,28 @@ class RowVectorPenalty(ADMMPenalty):
             for fm, feasibility_penalty, aux in zip(factor_matrices, feasibility_penalties, auxes)
         ]
 
+    @abstractmethod
+    def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):  # pragma: nocover
+        """Update a factor matrix according to this penalty.
+
+        Parameters
+        ----------
+        factor_matrix : tl.tensor(ndim=2)
+            Factor matrix to update.
+        feasibility_penalty : float
+            Penalty parameter for infeasible solutions.
+        aux : tl.tensor(ndim=2)
+            Auxiliary matrix that correspond to the factor matrix supplied to ``factor_matrix``.
+        """
+        raise NotImplementedError
+
+
+class RowVectorPenalty(MatrixPenalty):
+    """Base class for penalties that can be applied to one row of a factor matrix at a time.
+    """
+
     def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
-        """Update a factor matrix.
+        """Update a factor matrix according to this penalty.
 
         Parameters
         ----------
@@ -256,7 +419,7 @@ class RowVectorPenalty(ADMMPenalty):
 
     @abstractmethod
     def factor_matrix_row_update(self, factor_matrix_row, feasibility_penalty, aux_row):  # pragma: nocover
-        """Update a single row of a factor matrix.
+        """Update a single row of a factor matrix according to this constraint.
 
         Parameters
         ----------
@@ -272,51 +435,53 @@ class RowVectorPenalty(ADMMPenalty):
         raise NotImplementedError
 
 
-class MatrixPenalty(ADMMPenalty):
-    def factor_matrices_update(self, factor_matrices, feasibility_penalties, auxes):
-        return [
-            self.factor_matrix_update(fm, feasibility_penalty, aux)
-            for fm, feasibility_penalty, aux in zip(factor_matrices, feasibility_penalties, auxes)
-        ]
-
-    @abstractmethod
-    def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):  # pragma: nocover
-        raise NotImplementedError
-
-
-class MatricesPenalty(ADMMPenalty):
-    @abstractmethod
-    def factor_matrices_update(self, factor_matrices, feasibility_penalties, auxes):  # pragma: nocover
-        raise NotImplementedError
-
-
-class NonNegativity(RowVectorPenalty):
-    r"""Impose non-negative values for the factor.
-
-    The non-negativity constraint works element-wise, constraining the elements of a factor
-    to satisfy :math:`0 \leq x, where :math:`x` represents a factor element
-
-    Parameters
-    ----------
-    aux_init : {"random_uniform", "random_standard_normal"}
-        Initialisation method for the auxiliary variables
-    dual_init : {"random_uniform", "random_standard_normal"}
-        Initialisation method for the auxiliary variables
+class HardConstraintMixin(metaclass=InheritableDocstrings):
+    """Mixin for hard constraints.
     """
 
-    def factor_matrix_row_update(self, factor_matrix_row, feasibility_penalty, aux_row):
-        return tl.clip(factor_matrix_row, 0)
-
-    def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
-        # Return elementwise maximum of zero and factor_matrix
-        return tl.clip(factor_matrix, 0)
-
     def penalty(self, x):
+        """Returns 0 as there is no penalty for hard constraints.
+
+        Hard constraints are always penalised with 0 even when the components are infeasible.
+        Slightly infeasible components would otherwise result in an infinite penalty because
+        the penalty function of hard constraints is 0 for feasible solutions and infinity for
+        infeasible solutions. An infinite penalty would stop all convergence checking and not
+        provide any information on the quality of the components. To ensure that the hard
+        constraints are sufficiently imposed, it is recommended to examine the feasibility gap
+        instead of the penalty and ensure that the feasibility gap is low.
+
+        Parameters
+        ----------
+        x : tl.tensor(ndim=2) or list of tl.tensor(ndim=2)
+            Factor matrix or list of factor matrices.
+        """
         return 0
 
 
-# TODO: unit tests
-class BoxConstraint(RowVectorPenalty):
+class NonNegativity(HardConstraintMixin, RowVectorPenalty):
+    r"""Impose non-negative values for the factor.
+
+    The non-negativity constraint works element-wise, constraining the elements of a factor
+    to satisfy :math:`0 \leq x`, where :math:`x` represents a factor element
+
+    Parameters
+    ----------
+    aux_init : {"random_uniform", "random_standard_normal", "zeros", tl.tensor(ndim=2), list of tl.tensor(ndim=2)}
+        Initialisation method for the auxiliary variables
+    dual_init : {"random_uniform", "random_standard_normal", "zeros", tl.tensor(ndim=2), list of tl.tensor(ndim=2)}
+        Initialisation method for the auxiliary variables
+    """
+
+    @copy_ancestor_docstring
+    def factor_matrix_row_update(self, factor_matrix_row, feasibility_penalty, aux_row):
+        return tl.clip(factor_matrix_row, 0)
+
+    @copy_ancestor_docstring
+    def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
+        return tl.clip(factor_matrix, 0)
+
+
+class BoxConstraint(HardConstraintMixin, RowVectorPenalty):
     r"""Set minimum and maximum value for the factor.
 
     A box constraint works element-wise, constraining the elements of a factor
@@ -330,9 +495,9 @@ class BoxConstraint(RowVectorPenalty):
         Lower bound on the factor elements.
     max_val : float or None
         Upper bound on the factor elements
-    aux_init : {"random_uniform", "random_standard_normal"}
+    aux_init : {"random_uniform", "random_standard_normal", "zeros", tl.tensor(ndim=2), list of tl.tensor(ndim=2)}
         Initialisation method for the auxiliary variables
-    dual_init : {"random_uniform", "random_standard_normal"}
+    dual_init : {"random_uniform", "random_standard_normal", "zeros", tl.tensor(ndim=2), list of tl.tensor(ndim=2)}
         Initialisation method for the auxiliary variables
     """
 
@@ -341,38 +506,13 @@ class BoxConstraint(RowVectorPenalty):
         self.min_val = min_val
         self.max_val = max_val
 
+    @copy_ancestor_docstring
     def factor_matrix_row_update(self, factor_matrix_row, feasibility_penalty, aux_row):
-        """Update a single row of a factor matrix.
-
-        Parameters
-        ----------
-        factor_matrix_row : tl.tensor(ndim=1)
-            Vector (first order tensor) that corresponds to the single row in the factor matrix
-            we wish to update.
-        feasibility_penalty : float
-            Penalty parameter for infeasible solutions.
-        aux_row : tl.tensor(ndim=1)
-            Vector (first order tensor) that corresponds to the row in the auxiliary matrix that
-            correspond to the row supplied to ``factor_matrix_row``.
-        """
         return tl.clip(factor_matrix_row, self.min_val, self.max_val)
 
+    @copy_ancestor_docstring
     def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
-        """Update a factor matrix.
-
-        Parameters
-        ----------
-        factor_matrix : tl.tensor(ndim=2)
-            Factor matrix to update.
-        feasibility_penalty : float
-            Penalty parameter for infeasible solutions.  (Ignored)
-        aux : tl.tensor(ndim=2)
-            Auxiliary matrix that correspond to the factor matrix supplied to ``factor_matrix``.  (Ignored)
-        """
         return tl.clip(factor_matrix, self.min_val, self.max_val)
-
-    def penalty(self, x):
-        return 0
 
 
 class L1Penalty(RowVectorPenalty):
@@ -389,12 +529,12 @@ class L1Penalty(RowVectorPenalty):
         The regularisation strength, :math:`\gamma` in the equation above
     non_negativity : bool
         If ``True``, then non-negativity is also imposed on the factor elements.
-    aux_init : {"random_uniform", "random_standard_normal"}
+    aux_init : {"random_uniform", "random_standard_normal", "zeros", tl.tensor(ndim=2), list of tl.tensor(ndim=2)}
         Initialisation method for the auxiliary variables
-    dual_init : {"random_uniform", "random_standard_normal"}
+    dual_init : {"random_uniform", "random_standard_normal", "zeros", tl.tensor(ndim=2), list of tl.tensor(ndim=2)}
         Initialisation method for the auxiliary variables
     """
-    # TODO: Different scaling versions
+
     def __init__(self, reg_strength, non_negativity=False, aux_init="random_uniform", dual_init="random_uniform"):
         super().__init__(aux_init=aux_init, dual_init=dual_init)
         if reg_strength < 0:
@@ -402,6 +542,7 @@ class L1Penalty(RowVectorPenalty):
         self.reg_strength = reg_strength
         self.non_negativity = non_negativity
 
+    @copy_ancestor_docstring
     def factor_matrix_row_update(self, factor_matrix_row, feasibility_penalty, aux_row):
         if not self.non_negativity:
             sign = tl.sign(factor_matrix_row)
@@ -409,6 +550,7 @@ class L1Penalty(RowVectorPenalty):
         else:
             return tl.clip(factor_matrix_row - self.reg_strength / feasibility_penalty, 0)
 
+    @copy_ancestor_docstring
     def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
         if not self.non_negativity:
             sign = tl.sign(factor_matrix)
@@ -416,8 +558,8 @@ class L1Penalty(RowVectorPenalty):
         else:
             return tl.clip(factor_matrix - self.reg_strength / feasibility_penalty, 0)
 
+    @copy_ancestor_docstring
     def penalty(self, x):
-        # TODO: return reg_strength*l1norm of x
         if tl.is_tensor(x):
             return tl.sum(tl.abs(x)) * self.reg_strength
         else:
@@ -425,6 +567,124 @@ class L1Penalty(RowVectorPenalty):
 
 
 class GeneralizedL2Penalty(MatrixPenalty):
+    r"""Penalty on the form :math:`\mathbf{x}^\mathsf{T} \mathbf{Mx}`, where :math:`\mathbf{M}` is any symmetric positive semidefinite matrix.
+
+    The generalized L2 penalty adds a squared (semi-)norm penalty on the form
+
+    .. math::
+
+        g(\mathbf{x}) = \mathbf{x}^\mathsf{T} \mathbf{Mx}
+    
+    where :math:`\mathbf{M}` is a symmetric positive semidefinite matrix and :math:`\mathbf{x}`
+    is a vector. This penalty is imposed for all columns of the factor matrix (or matrices for
+    the :math:`\mathbf{B}_i`-s). Note that the regular L2-penalty (or Ridge penalty) is a special
+    case of the generalised L2 penalty, which we obtain by setting :math:`\mathbf{M}=\mathbf{I}`.
+    Also, this penalty is a squared seminorm penalty since
+
+    .. math::
+
+        g(\mathbf{x}) = \mathbf{x}^\mathsf{T} \mathbf{Mx} = \| \mathbf{Lx} \|_2^2,
+
+    where :math:`\mathbf{L}` is a Cholesky factorization of :math:`\mathbf{M}`. However, the
+    formulation with :math:`\mathbf{M}` is more practical than the formulation with :math:`\mathbf{L}`,
+    since 
+
+    .. math::
+
+        \mathbf{M} = \mathbf{L}^\mathsf{T}\mathbf{L}
+    
+    is easy to compute with :math:`\mathbf{L}` known, but not wise-versa (e.g. if
+    :math:`\mathbf{M}` is indefinite).
+
+    Graph Laplacian penalty
+    ^^^^^^^^^^^^^^^^^^^^^^^
+
+    A special case of the generalized L2 penalty is the graph Laplacian penalty. This penalty
+    is on the form
+
+    .. math::
+
+        g(\mathbf{x}) = \sum_{m=1}^M \sum_{n=1}^N w_{mn} (x_m - x_n)^2.
+
+    That is, squared differences between the different component vector elements are penalised.
+    Graph laplacian penalties are useful, for example, in image processing, where :math:`w_{mn}` 
+    is a high number for vector elements that represent pixels that are close to each other and 
+    a low number for vector elements that represent pixels that are far apart.
+
+    To transform the graph Laplacian penalty into a generalised L2 penalty, we consider the
+    component vector elements as nodes in a graph and :math:`w_{mn}` as the edge weight between
+    node :math:`m` and node :math:`m`. Then, we set :math:`\mathbf{M}` equal to the graph Laplacian
+    of this graph. That is
+
+    .. math::
+
+        m_{mn} = \begin{cases}
+            -w_{mn}   & m \neq n \\
+            \sum_m  & m = n
+        \end{cases}.
+
+    The proximal operator
+    ^^^^^^^^^^^^^^^^^^^^^
+  
+    The proximal operator of the generalised L2 penalty is obtained by solving
+
+    .. math::
+
+        \text{prox}_{\mathbf{x}^\mathsf{T} \mathbf{Mx}}(\mathbf{x}) 
+        = \left(\mathbf{M} + 0.5\rho\mathbf{I}\right)^{-1}\mathbf{x},
+ 
+    where :math:`\rho` is the scale parameter. There are several ways to solve this equation.
+    One of which is via the SVD. Let :math:`\mathbf{M} = \mathbf{USU}^\mathsf{T}`, then, the
+    proximal operator is given by
+
+    .. math::
+
+        \text{prox}_{\mathbf{x}^\mathsf{T} \mathbf{Mx}}(\mathbf{x})
+        = \rho\mathbf{U}\tilde{\mathbf{S}}^{-1}\mathbf{U}^\mathsf{T} \mathbf{x},
+
+    where :math:`\tilde{\mathbf{S}}^{-1}` is a diagonal matrix whose :math:`i`-th diagonal entry,
+    :math:`\tilde{s}^{-1}_{ii} = \frac{1}{s_{ii}\rho}`.
+
+    Parameters
+    ----------
+    norm_matrix : tl.tensor(ndim=2)
+        The :math:`\mathbf{M}`-matrix above
+    method : {"svd"}
+        Which method to use when evaluating the proximal operator
+    svd : str
+        String that specifies which SVD algorithm to use. Valid strings are the keys of ``tensorly.SVD_FUNS``.
+    aux_init : {"random_uniform", "random_standard_normal", "zeros", tl.tensor(ndim=2), list of tl.tensor(ndim=2)}
+        Initialisation method for the auxiliary variables
+    dual_init : {"random_uniform", "random_standard_normal", "zeros", tl.tensor(ndim=2), list of tl.tensor(ndim=2)}
+        Initialisation method for the auxiliary variables
+    preconditioner : {sparse matrix, dense matrix, LinearOperator}
+        Which preconditioner to use (for iterative methods)
+    validate : bool (default=True)
+        Enable naive validation of the norm matrix.
+    
+    Examples
+    --------
+    This example creates a generalised L2 penalty for a simple Laplacian penalty on
+    the form :math:`\sum_{n} (x_n - x_{n-1})^2`.
+
+    >>> import numpy as np
+    >>> import tensorly as tl
+    >>> from matcouply.penalties import GeneralizedL2Penalty
+    >>> num_elements = 30
+    >>> M = 2 * np.eye(num_elements) - np.eye(num_elements, k=1) - np.eye(num_elements, k=-1)
+    >>> M[0, 0] = 1
+    >>> M[-1, -1] = 1
+    >>> M = tl.tensor(M)
+    >>> penalty = GeneralizedL2Penalty(M)
+
+    This penalty can now be added to ``matcouply.cmf_aoadmm`` via the ``regs``-parameter.
+    Alternatively, if the ``generalized_l2_penalty``-argument of ``matcouply.cmf_aoadmm`` is
+    used, then a ``GeneralizedL2Penalty`` is added with ``method="svd"``.
+    """
+    # TODO: Consider the preconditioner
+    # TODO: Support sparse matrices
+    # TODO: Write why this is generalized L2 penalty
+    # TODO: Write about graph Laplacian penalty
     def __init__(
         self,
         norm_matrix,
@@ -455,6 +715,7 @@ class GeneralizedL2Penalty(MatrixPenalty):
             self.svd_fun = get_svd(svd)
             self.U, self.s, _ = self.svd_fun(norm_matrix)  # Ignore Vh since norm matrix is symmetric
 
+    @copy_ancestor_docstring
     def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
         if self.method == "svd":
             s_aug = self.s + feasibility_penalty
@@ -465,6 +726,7 @@ class GeneralizedL2Penalty(MatrixPenalty):
     def _penalty(self, x):
         return tl.trace(tl.dot(tl.dot(tl.transpose(x), self.norm_matrix), x))
 
+    @copy_ancestor_docstring
     def penalty(self, x):
         if tl.is_tensor(x):
             return self._penalty(x)
@@ -473,19 +735,76 @@ class GeneralizedL2Penalty(MatrixPenalty):
 
 
 class TotalVariationPenalty(MatrixPenalty):
-    # This penalty is only available for the numpy backend
+    r"""Impose piecewise constant components 
+
+    Total variation regularization imposes piecewise constant components by
+    obtaining components whose derivative is sparse. This sparsity is obtained
+    using an L1 penalty. That is
+
+    .. math::
+
+        g(\mathbf{x}) = \alpha \|\nabla \mathbf{x}\|_1 = \alpha \sum_{n=1}^{N} |x_n - x_{n-1}|,
+
+    where :math:`\alpha` is a regularisation coefficient that controls the sparsity
+    level of the gradient and :math:`\nabla` is the finite difference operator.
+    :math:`\mathbf{x}` is a column vector of a factor matrix, and all column vectors
+    are penalised equally.
+
+    The total variation penalty is compatible with the L1 penalty in the sense that
+    it is easy to compute the proximal operator of
+
+    .. math::
+
+        g(\mathbf{x}) = \alpha \sum_{n=2}^{N} |x_n - x_{n-1}| + \sum_{n=1}^N \| x_n \|_1.
+    
+    Specifically, if we first evaluate the proximal operator for the total variation penalty,
+    followed by the proximal operator of the L1 penalty, then that is equivalent to
+    evaluating the proximal operator of the sum of a TV and an L1 penalty :cite:p:`friedman2007pathwise`.
+
+    To evaluate the proximal operator, we use the improved direct total variation algorithm
+    by Laurent Condat :cite:p:`condat2013direct` (C code of the improved version is available
+    here: https://lcondat.github.io/publications.html). 
+
+    Parameters
+    ----------
+    reg_strength : float (> 0)
+        The strength of the total variation regularisation (:math:`\alpha` above)
+    l1_strength : float (>= 0)
+        The strength of the L1 penalty (:math:`\beta` above)
+    aux_init : {"random_uniform", "random_standard_normal", "zeros", tl.tensor(ndim=2), list of tl.tensor(ndim=2)}
+        Initialisation method for the auxiliary variables
+    dual_init : {"random_uniform", "random_standard_normal", "zeros", tl.tensor(ndim=2), list of tl.tensor(ndim=2)}
+        Initialisation method for the auxiliary variables
+    
+    Note
+    ----
+    The C-code this penalty is based in has a CeCILL lisence, which is compatible with GPL, but
+    not MIT. This penalty is therefore not available with the default installation of
+    MatCoupLy. To use this penalty, you need to install the GPL-lisenced ``condat-tv``.
+
+    Note
+    ----
+    This penalty is only available with the numpy backend, since it is based on
+    an external C-library.
+    """
+
     def __init__(
         self, reg_strength, l1_strength=0, aux_init="random_uniform", dual_init="random_uniform",
     ):
         if not HAS_TV:
-            raise RuntimeError(
+            raise ModuleNotFoundError(
                 "Cannot use total variation penalty without the ``condat_tv`` package (GPL-3 lisenced). "
                 "Install with ``pip install condat_tv``."
             )
+        if reg_strength <= 0:
+            raise ValueError("The TV regularisation strength must be positive.")
+        if l1_strength < 0:
+            raise ValueError("The L1 regularisation strength must be non-negative.")
         super().__init__(aux_init, dual_init)
         self.reg_strength = reg_strength
         self.l1_strength = l1_strength
 
+    @copy_ancestor_docstring
     def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
         X = tl.transpose(
             condat_tv.tv_denoise_matrix(tl.transpose(factor_matrix), self.reg_strength * 2 / feasibility_penalty)
@@ -501,6 +820,7 @@ class TotalVariationPenalty(MatrixPenalty):
             penalty = penalty + self.l1_strength * tl.sum(tl.abs(x))
         return penalty
 
+    @copy_ancestor_docstring
     def penalty(self, x):
         if tl.is_tensor(x):
             return self._penalty(x)
@@ -508,25 +828,106 @@ class TotalVariationPenalty(MatrixPenalty):
             return sum(self._penalty(xi) for xi in x)
 
 
-class L2Ball(MatrixPenalty):
-    def __init__(self, max_norm, non_negativity=False, aux_init="random_uniform", dual_init="random_uniform"):
+class L2Ball(HardConstraintMixin, MatrixPenalty):
+    r"""Ensure that the L2-norm of component vectors are less than a given scalar.
+    
+    This is a hard constraint on the L2-norm of the component vectors given by
+
+    .. math::
+
+        \|\mathbf{x}\|_2 \leq r,
+
+    where :math:`\mathbf{x}` is a column vector for a factor matrix and
+    :math:`r` is a positive constant.
+
+    The L2-ball constraint is compatible with the non-negativity constraint.
+
+    Parameters
+    ----------
+    norm_bound : float (> 0)
+        Maximum L2-norm of the component vectors (:math:`r` above)
+    non_negativity : float
+        If true, then non-negativity is imposed too
+    aux_init : {"random_uniform", "random_standard_normal", "zeros", tl.tensor(ndim=2), list of tl.tensor(ndim=2)}
+        Initialisation method for the auxiliary variables
+    dual_init : {"random_uniform", "random_standard_normal", "zeros", tl.tensor(ndim=2), list of tl.tensor(ndim=2)}
+        Initialisation method for the auxiliary variables
+
+    Notes
+    -----
+    **Proof of compatibility with non-negativity constraints**
+
+    The compatibility with non-negativity constraints can be obtained with the
+    standard projection onto convex sets (POCS) algorithm, which states that the
+    projection onto a convex set that is the intersection of two other convex sets
+    :math:`\mathcal{C} = \mathcal{C}_1 \cap \mathcal{C}_2`,
+    :math:`\mathcal{P}_\mathcal{C}` is given by
+    
+    .. math::
+        \mathcal{P}_\mathcal{C} = \prod_{n=1}^\infty \mathcal{P}_{\mathcal{C}_1} \mathcal{P}_{\mathcal{C}_2},
+    
+    where :math:`\mathcal{P}_{\mathcal{C}_1}` and :math:`\mathcal{P}_{\mathcal{C}_2}`
+    are the projections onto :math:`\mathcal{C}_1` and :math:`\mathcal{C}_2`,
+    respectively. In other words, to project only :math:`\mathcal{C}`, we can
+    alternatingly project onto :math:`\mathcal{C}_1` and :math:`\mathcal{C}_2`.
+
+    We can now use this relation to prove that the projection onto the intersection
+    of the L2 ball and the non-negative orthant can be obtained by first projecting
+    onto the L2 ball followed by a projection onto the non-negative orthant. Consider
+    any point :math:`\mathbf{x} \in \mathbb{R}^N`. The projection onto the L2 ball
+    of radius :math:`r` is given by:
+
+    .. math::
+
+        \mathbf{x}^{(0.5)} = \frac{\min(\|\mathbf{x}\|_2, r) \mathbf{x}}{\|\mathbf{x}\|_2}.
+    
+    If any entries in :math:`\mathbf{x}` are negative, then their sign will not change.
+    Next, we project :math:`\mathbf{x}^{(0.5)}` onto the non-negative orthant:
+
+    
+    .. math::
+
+        x_n^{(1)} = \max(x_n^{(0.5)}, 0).
+
+    This operation has the property that :math:`\|\mathbf{x}^{(1)}\|_2 \leq \|\mathbf{x}^{(0.5)}\|_2 \leq`.
+    Thus, any subsequent projection either onto the L2-ball of radius :math:`r` or
+    the non-negative orthant will not change :math:`\mathbf{x}^{(1)}`, which means that
+    :math:`\mathbf{x}^{(1)}` is the projection of :math:`\mathbf{x}` onto the intersection
+    of the L2 ball of radius :math:`r` and the non-negative orthant.
+    """
+
+    def __init__(self, norm_bound, non_negativity=False, aux_init="random_uniform", dual_init="random_uniform"):
         super().__init__(aux_init, dual_init)
-        self.max_norm = max_norm
+        self.norm_bound = norm_bound
         self.non_negativity = non_negativity
 
+        if norm_bound <= 0:
+            raise ValueError("The norm bound must be positive.")
+
+    @copy_ancestor_docstring
     def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
         if self.non_negativity:
             factor_matrix = tl.clip(factor_matrix, 0)
         column_norms = tl.sqrt(tl.sum(factor_matrix ** 2, axis=0))
-        column_norms = tl.clip(column_norms, self.max_norm, None)
-        return factor_matrix * self.max_norm / column_norms
-
-    def penalty(self, x):
-        return 0
+        column_norms = tl.clip(column_norms, self.norm_bound, None)
+        return factor_matrix * self.norm_bound / column_norms
 
 
-class UnitSimplex(MatrixPenalty):
-    def compute_lagrange_multiplier(self, factor_matrix_column):
+class UnitSimplex(HardConstraintMixin, MatrixPenalty):
+    """Constraint the component-vectors so they are non-negative and sum to 1.
+
+    This is a hard constraint which is useful when the component-vectors represent
+    probabilities.
+
+    Parameters
+    ----------
+    aux_init : {"random_uniform", "random_standard_normal", "zeros", tl.tensor(ndim=2), list of tl.tensor(ndim=2)}
+        Initialisation method for the auxiliary variables
+    dual_init : {"random_uniform", "random_standard_normal", "zeros", tl.tensor(ndim=2), list of tl.tensor(ndim=2)}
+        Initialisation method for the auxiliary variables
+    """
+
+    def _compute_lagrange_multiplier(self, factor_matrix_column):
         """Compute lagrange multipliers for the equality constraint: sum(x) = 1 with x >= 0.
 
         Parameters
@@ -551,16 +952,14 @@ class UnitSimplex(MatrixPenalty):
 
         return bisect(f, min_val, max_val)
 
+    @copy_ancestor_docstring
     def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
         output_factor_matrix = tl.zeros(tl.shape(factor_matrix))
         for r in range(tl.shape(factor_matrix)[1]):
-            lagrange_multiplier = self.compute_lagrange_multiplier(factor_matrix[:, r])
+            lagrange_multiplier = self._compute_lagrange_multiplier(factor_matrix[:, r])
             output_factor_matrix[:, r] = tl.clip(factor_matrix[:, r] - lagrange_multiplier, 0, None)
 
         return output_factor_matrix
-
-    def penalty(self, x):
-        return 0
 
 
 class Parafac2(MatricesPenalty):
@@ -580,23 +979,107 @@ class Parafac2(MatricesPenalty):
     for uniqueness is typically lower, and it is conjectured that uniquenes for any :math:`R` holds
     in practice whenever there are four or more matrices :cite:p:`kiers1999parafac2`.
 
+    Parametrization of matrix-collections that satisfy the PARAFAC2 constraint
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    The standard way of parametrizing collections of matrices that satisfy the PARAFAC2 constraint
+    is due to Kiers et al. :cite:p:`kiers1999parafac2`. If :math:`\{\mathbf{B}_i\}_{i=1}^I` satsify
+    the PARAFAC2 constraint, then there exists a matrix :math:`\mathbf{\Delta} \in \mathbb{R}^{R \times R}`
+    (the coordinate matrix) and a collection of orthonormal matrices :math:`\{\mathbf{P}_i\}_{i=1}^I`
+    (the orthogonal basis matrices) such that
+
+    .. math::
+
+        \mathbf{B}_i = \mathbf{P}_i \mathbf{\Delta}.
+
+    For this implementation, we use the above parametrization of the auxiliary variables, which
+    is a tuple whose first element is a list of orthogonal basis matrices and second element
+    is the coordinate matrix.
+
+    The proximal operator
+    ^^^^^^^^^^^^^^^^^^^^^
+
+    To evaluate the proximal operator, we use the projection scheme presented in
+    :cite:p:`roald2021admm,roald2021parafac2`. Specifically, we project with a coordinate descent
+    scheme, where we first update the basis matrices and then update the coordinate matrix. It
+    has been observed that only one iteration of this coordinate descent scheme is sufficient
+    for fitting PARAFAC2 models with AO-ADMM :cite:p:`roald2021admm,roald2021parafac2`.
+
+    To project :math:`\{\mathbf{X}_i\}_{i=1}^I` onto the set of collections of matrices that
+    satisfy the PARAFAC2 constraint, we first update the orthogonal basis matrices by
+
+    .. math::
+
+        \mathbf{P}_i = \mathbf{U}_i \mathbf{V}_i^\mathsf{T}
+
+    where :math:`\mathbf{U}_i` and :math:`\mathbf{V}_i` contain the left and right singular vectors
+    of :math:`\mathbf{X}_i \mathbf{Delta}^\Tra`.
+
+    Then we update the coordinate matrix by
+
+    .. math::
+
+        \mathbf{\Delta}
+        = \frac{1}{\sum_{i=1}^I \rho_i}\sum_{i=1}^I \rho_i \mathbf{P}_i^\mathsf{T}\mathbf{X}_i,
+
+    where :math:`\rho_i` is the feasibility penalty (which parameterizes the norm of the projection)
+    for the :math:`i`-th factor matrix.
+
     Parameters
     ----------
     svd : str
         String that specifies which SVD algorithm to use. Valid strings are the keys of ``tensorly.SVD_FUNS``.
-    aux_init : {"random_uniform", "random_standard_normal"}
+    n_iter : int
+        Number of iterations for the coordinate descent scheme
+    aux_init : {"random_uniform", "random_standard_normal", "zeros", tl.tensor(ndim=2), list of tl.tensor(ndim=2)}
         Initialisation method for the auxiliary variables
-    dual_init : {"random_uniform", "random_standard_normal"}
+    dual_init : {"random_uniform", "random_standard_normal", "zeros", tl.tensor(ndim=2), list of tl.tensor(ndim=2)}
         Initialisation method for the auxiliary variables
     """
+    # TODO: Update cite once proceedings is published
 
-    def __init__(self, svd="truncated_svd", aux_init="random_uniform", dual_init="random_uniform"):
+    def __init__(self, svd="truncated_svd", n_iter=1, aux_init="random_uniform", dual_init="random_uniform"):
         self.svd_fun = get_svd(svd)
         self.aux_init = aux_init
         self.dual_init = dual_init
+        self.n_iter = n_iter
 
     def init_aux(self, matrices, rank, mode, random_state=None):
-        # TODO: Not provided random state
+        r"""Initialize the auxiliary variables
+
+        For all initialization schemes, the orthogonal basis matrices are initialized
+        using the first :math:`R` rows of an identity matrix.
+
+        **Coordinate matrix initialization schemes**
+
+         * ``"random_uniform"``: The elements of the coordinate matrix
+            are drawn from a uniform distribution between 0 and 1.
+         * ``"random_standard_normal"``: The elements of the coordinate matrix
+            are drawn from a standard normal distribution.
+         * ``"zeros"``: The elements of the coordinate matrix are
+            initialized as zero.
+         * tl.tensor(ndim=2) : Pre-computed coordinate matrix (mode=0 or mode=2)
+         * list of tl.tensor(ndim=2): Pre-computed coordinate matrix (mode=1)
+        
+        Parameters
+        ----------
+        matrices : list of tensor(ndim=2) or tensor(ndim=3)
+            The data matrices represented by the coupled matrix factorization
+            these auxiliary variables correspond to.
+        rank : int
+            Rank of the decomposition.
+        mode : int
+            The mode represented by the factor matrices that these
+            auxiliary variables correspond to.
+        random_state : RandomState
+            TensorLy random state.
+        
+        Returns
+        -------
+        tuple
+            Tuple whose first element is the :math:`R \times R` coordinate matrix
+            and second element is the list of the orthogonal basis matrices.
+        """
         if not isinstance(self.aux_init, (str, tuple)):
             raise TypeError(
                 "Parafac2 auxiliary variables must be initialized using either a string"
@@ -674,39 +1157,98 @@ class Parafac2(MatricesPenalty):
         else:
             raise ValueError(f"Unknown aux init: {self.aux_init}")
 
+    @copy_ancestor_docstring
     def factor_matrices_update(self, factor_matrices, feasibility_penalties, auxes):
-        # TODO: docstring
-        # TODO: Unit test: Check if PARAFAC2 factor is unchanged
-        basis_matrices, coord_mat = auxes
-        basis_matrices = []  # To prevent inplace editing of basis matrices
-        for fm in factor_matrices:
-            U, s, Vh = self.svd_fun(fm @ coord_mat.T, n_eigenvecs=tl.shape(coord_mat)[0])
-            basis_matrices.append(U @ Vh)
+        basis_matrices, coordinate_matrix = auxes
+        R = tl.shape(coordinate_matrix)[0]
 
-        coordinate_matrix = 0  # TODO: Project all factor matrices and compute weighted mean
-        for fm, basis_matrix, feasibility_penalty in zip(factor_matrices, basis_matrices, feasibility_penalties):
-            coordinate_matrix += feasibility_penalty * basis_matrix.T @ fm
-        coordinate_matrix /= sum(feasibility_penalties)
+        for iter in range(self.n_iter):
+            # Update orthogonal basis matrices
+            basis_matrices = []  # To prevent inplace editing of basis matrices
+            for fm in factor_matrices:
+                U, s, Vh = self.svd_fun(fm @ coordinate_matrix.T, n_eigenvecs=R)
+                basis_matrices.append(U @ Vh)
+
+            # Project all factor matrices onto the space spanned by the orthogonal basis matrices and compute weighted mean
+            coordinate_matrix = 0
+            for fm, basis_matrix, feasibility_penalty in zip(factor_matrices, basis_matrices, feasibility_penalties):
+                coordinate_matrix += feasibility_penalty * basis_matrix.T @ fm
+            coordinate_matrix /= sum(feasibility_penalties)
 
         return basis_matrices, coordinate_matrix
 
-    # TODO: change to mixin class
     def subtract_from_aux(self, aux, dual):
+        """Raises TypeError since the PARAFAC2 constraint only works with mode=1.
+        """
         raise TypeError("The PARAFAC2 constraint cannot shift a single factor matrix.")
 
     def subtract_from_auxes(self, auxes, duals):
-        # TODO: Docstrings
+        r"""Compute (aux - dual) for each auxiliary- and dual-factor matrix for mode=1.
+
+        Computing the difference between the auxiliary variables and the dual variables
+        is an essential part of ADMM. However, the auxiliary variables is not a
+        list of factor matrices but rather a coordinate matrix and a collection of
+        orthogonal basis matrices, so this difference cannot be computed by simply subtracting
+        one from the other. First auxiliary matrices must be computed by multiplying
+        the basis matrices with the coordinate matrix and then the difference can
+        be computed. 
+
+        Parameters
+        ----------
+        auxes : tuple
+            Tuple whose first element is the :math:`R \times R` coordinate matrix
+            and second element is the list of the orthogonal basis matrices.
+        duals : list of tl.tensor(ndim=2)
+            Dual variables (or other variable to subtract from the auxes)
+
+        Returns
+        -------
+        list of tl.tensor(ndim=2)
+            The list of differences
+        """
         P_is, coord_mat = auxes
         return [tl.dot(P_i, coord_mat) - dual for P_i, dual in zip(P_is, duals)]
 
     def aux_as_matrix(self, aux):
+        """Raises TypeError since the PARAFAC2 constraint only works with mode=1.
+        """
         raise TypeError("The PARAFAC2 constraint cannot convert a single aux to a matrix")
 
     def auxes_as_matrices(self, auxes):
+        """Convert a the auxiliary variables into a list of matrices (mode=1).
+
+        This function computes the list of matrices parametrized by the coordinate
+        matrix and orthogonal basis matrices by multiplying them together.
+
+        Parameters
+        ----------
+        auxes : tuple
+            Tuple whose first element is the :math:`R \times R` coordinate matrix
+            and second element is the list of the orthogonal basis matrices.
+
+        Returns
+        -------
+        list of tl.tensor(ndim=2)
+        """
         P_is, coord_mat = auxes
         return [tl.dot(P_i, coord_mat) for P_i in P_is]
 
     def penalty(self, x):
+        """Returns 0 as there is no penalty for hard constraints.
+
+        Hard constraints are always penalised with 0 even when the components are infeasible.
+        Slightly infeasible components would otherwise result in an infinite penalty because
+        the penalty function of hard constraints is 0 for feasible solutions and infinity for
+        infeasible solutions. An infinite penalty would stop all convergence checking and not
+        provide any information on the quality of the components. To ensure that the hard
+        constraints are sufficiently imposed, it is recommended to examine the feasibility gap
+        instead of the penalty and ensure that the feasibility gap is low.
+
+        Parameters
+        ----------
+        x : list of tl.tensor(ndim=2)
+            List of factor matrices.
+        """
         if not isinstance(x, list):
             raise TypeError("Cannot compute PARAFAC2 penalty of other types than a list of tensors")
         return 0

@@ -4,9 +4,73 @@ from tensorly._factorized_tensor import FactorizedTensor
 
 class CoupledMatrixFactorization(FactorizedTensor):
     """Class wrapper for coupled matrix factorizations.
+
+    This class validates the decomposition and provides conversion to
+    dense formats via methods.
+
+    Parameters
+    ----------
+
+    cmf : CoupledMatrixFactorization - (weight, factors)
+
+        * weights : 1D array of shape (rank, )
+            weights of the factors
+        * factors : List of factors of the coupled matrix decomposition
+            Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}_i` and
+            :math:`\mathbf{C}` described above
+
+    Examples
+    --------
+    >>> from tensorly.random import random_tensor
+    >>> from matcouply.coupled_matrices import CoupledMatrixFactorization
+    >>> A = random_tensor((5, 3))
+    >>> B_is = [random_tensor((10, 3)) for i in range(5)]
+    >>> C = random_tensor((15, 3))
+    >>> cmf = CoupledMatrixFactorization((None, (A, B_is, C)))
+
+    We can then convert the factorization to a dense format easily
+
+    >>> matrices = cmf.to_matrices()
+    >>> len(matrices)
+    5
+
+    >>> tl.shape(matrices[0])
+    (10, 15)
+
+    We see that we can get the shape of the decomposition without
+    converting it to a dense format first also.
+
+    >>> len(cmf.shape)
+    5
+
+    >>> cmf.shape[0]
+    (10, 15)
+
+    We can also extract the weights and factor matrices from the decomposition
+    object as if it was a tuple.
+
+    >>> weights, (A, B_is, C) = cmf
+
+    And if the decomposition is invalid, then a helpful error message will be
+    printed.
+
+    >>> A = random_tensor((5, 3))
+    >>> B_is = [random_tensor((10, 3)) for i in range(5)]
+    >>> C = random_tensor((15, 15, 3))
+    >>> cmf = CoupledMatrixFactorization((None, (A, B_is, C)))
+    Traceback (most recent call last):
+      ...
+    ValueError: The last factor matrix, C, should be a second order tensor. However C has shape (15, 15, 3)
+
+    >>> A = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+    >>> B_is = [random_tensor((10, 3)) for i in range(5)]
+    >>> C = random_tensor((15, 3))
+    >>> cmf = CoupledMatrixFactorization((None, (A, B_is, C)))
+    Traceback (most recent call last):
+      ...
+    TypeError: The first factor matrix, A, should be a second order tensor of size (I, rank)), not <class 'list'>
     """
 
-    # TODO: Unit test
     def __init__(self, cmf_matrices):
         super().__init__()
 
@@ -20,8 +84,8 @@ class CoupledMatrixFactorization(FactorizedTensor):
     def from_CPTensor(cls, cp_tensor):
         """Convert a CP tensor into a coupled matrix factorization.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         cp_tensor : tl.cp_tensor.CPTensor
             CP tensor to convert into a coupled matrix factorization
 
@@ -31,6 +95,7 @@ class CoupledMatrixFactorization(FactorizedTensor):
             A coupled matrix factorization that represents the same tensor
             as ``cp_tensor``.
         """
+
         cp_tensor = tl.cp_tensor.CPTensor(cp_tensor)
         weights, factors = cp_tensor
         if len(factors) != 3:
@@ -43,8 +108,8 @@ class CoupledMatrixFactorization(FactorizedTensor):
     def from_Parafac2Tensor(cls, parafac2_tensor):
         """Convert a PARAFAC2 tensor into a coupled matrix factorization.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         parafac2_tensor : tl.parafac2_tensor.Parafac2Tensor
             PARAFAC2 tensor to convert into a coupled matrix factorization
 
@@ -84,33 +149,104 @@ class CoupledMatrixFactorization(FactorizedTensor):
         return message
 
     def to_tensor(self):
-        """Convert to a dense tensor (pad uneven slices by zeros). See ``cmf_to_tensor``.
+        """Convert to a dense tensor (pad uneven slices by zeros).
+        
+        See also
+        --------
+        cmf_to_tensor
         """
         return cmf_to_tensor(self)
 
     def to_vec(self):  # TODO: Add flag to not pad by zeros
-        """Convert to a vector by first converting to a dense tensor and unraveling. See ``cmf_to_vec``
+        """Convert to a vector by first converting to a dense tensor and unraveling.
+        
+        See also
+        --------
+        cmf_to_vec
         """
         return cmf_to_vec(self)
 
     def to_unfolded(self, mode):
-        """Convert to a matrix by first converting to a dense tensor and unfolding. See ``cmf_to_unfolded``
+        """Convert to a matrix by first converting to a dense tensor and unfolding.
+        
+        See also
+        --------
+        cmf_to_unfolded
         """
         return cmf_to_unfolded(self, mode)
 
     def to_matrices(self):
-        """Convert to a list of matrices. See ``cmf_to_matrices``
+        """Convert to a list of matrices.
+        
+        See also
+        --------
+        cmf_to_matrices
         """
         return cmf_to_matrices(self)
 
     def to_matrix(self, matrix_idx):
-        """Construct a single dense matrix from the decomposition. See ``cmf_to_matrix``
+        """Construct a single dense matrix from the decomposition.
+        
+        See also
+        --------
+        cmf_to_matrix
         """
         return cmf_to_matrix(self, matrix_idx)
 
 
 def _validate_cmf(cmf):
-    # TODO: docstring
+    r"""Check that the coupled matrix factorization is valid and return the shapes and its rank.
+
+    Parameters
+    ----------
+    cmf : CoupledMatrixFactorization - (weight, factors)
+
+        * weights : 1D array of shape (rank, )
+            weights of the factors
+        * factors : List of factors of the coupled matrix decomposition
+            Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}_i` and
+            :math:`\mathbf{C}` described above
+
+    Returns
+    -------
+    shapes : tuple of tuple of ints
+        A tuple containing the shape of each matrix represented by the 
+        coupled matrix factorization
+    rank : int
+        The rank of the factorization
+
+    Examples
+    --------
+    The ``_validate_cmf`` function returns the shapes and rank of any
+    valid coupled matrix factorization
+
+    >>> from tensorly.random import random_tensor
+    >>> from matcouply.coupled_matrices import _validate_cmf
+    >>> A = random_tensor((5, 3))
+    >>> B_is = [random_tensor((10, 3)) for i in range(5)]
+    >>> C = random_tensor((15, 3))
+    >>> _validate_cmf((None, (A, B_is, C)))
+    (((10, 15), (10, 15), (10, 15), (10, 15), (10, 15)), 3)
+
+    And if the decomposition is invalid, then a helpful error message will be
+    printed.
+
+    >>> A = random_tensor((5, 3))
+    >>> B_is = [random_tensor((10, 3)) for i in range(5)]
+    >>> C = random_tensor((15, 15, 3))
+    >>> _validate_cmf((None, (A, B_is, C)))
+    Traceback (most recent call last):
+      ...
+    ValueError: The last factor matrix, C, should be a second order tensor. However C has shape (15, 15, 3)
+
+    >>> A = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+    >>> B_is = [random_tensor((10, 3)) for i in range(5)]
+    >>> C = random_tensor((15, 3))
+    >>> _validate_cmf((None, (A, B_is, C)))
+    Traceback (most recent call last):
+      ...
+    TypeError: The first factor matrix, A, should be a second order tensor of size (I, rank)), not <class 'list'>
+    """
     weights, (A, B_is, C) = cmf
     if not (tl.is_tensor(weights) or weights is None):
         raise TypeError("Weights should be a first order tensor of length rank, not {}".format(type(weights)))
@@ -183,7 +319,7 @@ def cmf_to_matrix(cmf, matrix_idx, validate=True):
         X_i = \mathbf{B}_i \text{diag}(\mathbf{a}_i) \mathbf{C}^T,
 
     where :math:`\text{diag}(a_i)` is the diagonal matrix whose nonzero entries are equal to
-    the :math:`i`-th row of the :math:`I \times R`factor matrix :math:`\mathbf{A}`,
+    the :math:`i`-th row of the :math:`I \times R` factor matrix :math:`\mathbf{A}`,
     :math:`\mathbf{B}_i` is a :math:`J_i \times R` factor matrix, and :math:`\mathbf{C}`
     is a :math:`K \times R` factor matrix.
 
@@ -210,8 +346,20 @@ def cmf_to_matrix(cmf, matrix_idx, validate=True):
     ndarray
         Dense tensor of shape ``[B_is[matrix_idx].shape[0], C.shape[0]]``, where
         ``B`` is a list containing all the :math:`\mathbf{B}_i`-factor matrices.
+    
+    Examples
+    --------
+    An example where we calculate one of the matrices described by 
+    a coupled matrix factorization
+
+    >>> from matcouply.random import random_coupled_matrices
+    >>> from matcouply.coupled_matrices import cmf_to_matrix
+    >>> shapes = ((5, 10), (6, 10), (7, 10))
+    >>> cmf = random_coupled_matrices(shapes, rank=3)
+    >>> matrix = cmf_to_matrix(cmf, matrix_idx=1)
+    >>> tl.shape(matrix)
+    (6, 10)
     """
-    # TODO: Example
     if validate:
         cmf = CoupledMatrixFactorization(cmf)
     weights, (A, B_is, C) = cmf
@@ -226,6 +374,10 @@ def cmf_to_matrix(cmf, matrix_idx, validate=True):
 
 def cmf_to_slice(cmf, slice_idx, validate=True):
     """Alias for ``cmf_to_matrix``.
+
+    See also
+    --------
+    cmf_to_matrix
     """
     return cmf_to_matrix(cmf, slice_idx, validate=validate)
 
@@ -241,7 +393,7 @@ def cmf_to_matrices(cmf, validate=True):
         X_i = \mathbf{B}_i \text{diag}(\mathbf{a}_i) \mathbf{C}^T,
 
     where :math:`\text{diag}(a_i)` is the diagonal matrix whose nonzero entries are equal to
-    the :math:`i`-th row of the :math:`I \times R`factor matrix :math:`\mathbf{A}`,
+    the :math:`i`-th row of the :math:`I \times R` factor matrix :math:`\mathbf{A}`,
     :math:`\mathbf{B}_i` is a :math:`J_i \times R` factor matrix, and :math:`\mathbf{C}`
     is a :math:`K \times R` factor matrix.
 
@@ -266,9 +418,22 @@ def cmf_to_matrices(cmf, validate=True):
         List of all :math:`\mathbf{X}_i`-matrices, where the ``i``-th element of the list
         has shape ``[B_is[i].shape[0], C.shape[0]]``, where ``B_is`` is a list containing all
         the :math:`\mathbf{B}_i`-factor matrices.
+    
+    Examples
+    --------
+    We can convert a coupled matrix factorization to a list of matrices
+
+    >>> from matcouply.random import random_coupled_matrices
+    >>> from matcouply.coupled_matrices import cmf_to_matrix
+    >>> shapes = ((5, 10), (6, 10), (7, 10))
+    >>> cmf = random_coupled_matrices(shapes, rank=3)
+    >>> matrices = cmf_to_matrices(cmf)
+    >>> for matrix in matrices:
+    ...    print(tl.shape(matrix))
+    (5, 10)
+    (6, 10)
+    (7, 10)
     """
-    # TODO: Example
-    # Construct matrices and return list
     if validate:
         cmf = CoupledMatrixFactorization(cmf)
 
@@ -284,6 +449,10 @@ def cmf_to_matrices(cmf, validate=True):
 
 def cmf_to_slices(cmf, validate=True):
     """Alias for ``cmf_to_matrices``.
+
+    See also
+    --------
+    cmf_to_matrices
     """
     return cmf_to_matrices(cmf, validate=validate)
 
@@ -327,9 +496,37 @@ def cmf_to_tensor(cmf, validate=True):
     ndarray
         Full tensor of shape ``[A.shape[0], J, C.shape[0]]``, where ``J`` is the maximum
         number of rows in all the :math:`\mathbf{B}_i`-factor matrices.
-    """
-    # TODO: Example
 
+    Examples
+    --------
+    We can convert a coupled matrix factorization to a tensor. This will be equivalent
+    to stacking the matrices using axis=0.
+
+    >>> from matcouply.random import random_coupled_matrices
+    >>> from matcouply.coupled_matrices import cmf_to_tensor
+    >>> shapes = ((5, 10), (5, 10), (5, 10), (5, 10))
+    >>> cmf = random_coupled_matrices(shapes, rank=3)
+    >>> tensor = cmf_to_tensor(cmf)
+    >>> tl.shape(tensor)
+    (4, 5, 10)
+
+    We can also convert a coupled matrix factorization that represent matrices with different
+    numbers of columns. Then, the smaller matrices will be padded by zeros so all have the same
+    shape.
+
+    >>> shapes = ((5, 10), (5, 10), (5, 10), (3, 10))
+    >>> cmf = random_coupled_matrices(shapes, rank=3)
+    >>> tensor = cmf_to_tensor(cmf)
+    >>> tl.shape(tensor)
+    (4, 5, 10)
+
+    It is only the last matrix which has a different shape. It has two fewer rows than the rest,
+    which means that it has 20 zero-valued elements (:math:`20 = 2 \times 10`).
+
+    >>> num_zeros = (tensor == 0).sum()
+    >>> num_zeros
+    20
+    """
     _, (A, B_is, C) = cmf
     matrices = cmf_to_matrices(cmf, validate=validate)
     lengths = [B_i.shape[0] for B_i in B_is]
@@ -342,12 +539,152 @@ def cmf_to_tensor(cmf, validate=True):
 
 
 def cmf_to_unfolded(cmf, mode, validate=True):
-    # TODO: docstring
+    r"""Generate the unfolded tensor represented by the coupled matrix factorization.
+
+    This function is an alias for first constructing a tensor (``cmf_to_tensor``) and
+    then unfolding that tensor in a given mode. Note that if the matrices have a different
+    number of rows, then they will be padded when the tensor is constructed, and thus,
+    there will be zeros in the unfolded tensor too.
+
+    Parameters
+    ----------
+
+    cmf: CoupledMatrixFactorization - (weight, factors)
+
+        * weights : 1D array of shape (rank, )
+            weights of the factors
+        * factors : List of factors of the coupled matrix decomposition
+            Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}_i` and
+            :math:`\mathbf{C}` described above
+
+    validate : bool
+        If true, then the decomposition is validated before the matrix is constructed
+        (see ``CoupledMatrixFactorization``).
+
+    Returns
+    -------
+    ndarray
+        Matrix of an appropriate shape (see ``cmf_to_tensor`` and ``tensorly.unfold``).
+    
+    Examples
+    --------
+    Here, we show how to unfold a coupled matrix factorization along a given mode.
+
+    >>> from matcouply.random import random_coupled_matrices
+    >>> from matcouply.coupled_matrices import cmf_to_tensor
+    >>> shapes = ((5, 10), (5, 10), (5, 10), (5, 10))
+    >>> cmf = random_coupled_matrices(shapes, rank=3)
+    >>> matrix_0 = cmf_to_unfolded(cmf, mode=0)
+    >>> tl.shape(matrix_0)
+    (4, 50)
+
+    We can also unfold the tensor using ``mode=1``
+
+    >>> matrix_1 = cmf_to_unfolded(cmf, mode=1)
+    >>> tl.shape(matrix_1)
+    (5, 40)
+
+    And using ``mode=2``
+
+    >>> matrix_2 = cmf_to_unfolded(cmf, mode=2)
+    >>> tl.shape(matrix_2)
+    (10, 20)
+
+    We can also unfold a coupled matrix factorization where the matrices
+    have a varying number of rows
+
+    >>> shapes = ((5, 10), (3, 10), (2, 10), (4, 10))
+    >>> cmf = random_coupled_matrices(shapes, rank=3)
+    >>> matrix_0 = cmf_to_unfolded(cmf, mode=0)
+    >>> tl.shape(matrix_0)
+    (4, 50)
+
+    However, as we see, the shape of the unfolded tensor is still (4, 50)
+    despite some matrices being shorter. This is because the matrices are
+    padded by zeros to construct the tensor, which is subsequently unfolded.
+    
+    This padding happens independently of the unfolding mode.
+
+    >>> matrix_1 = cmf_to_unfolded(cmf, mode=1)
+    >>> tl.shape(matrix_1)
+    (5, 40)
+
+    >>> matrix_2 = cmf_to_unfolded(cmf, mode=2)
+    >>> tl.shape(matrix_2)
+    (10, 20)
+
+    We can see the padding by counting the number of zeros. The number of
+    zeros should be :math:`((5 - 5) + (5 - 3) + (5 - 2) + (5 - 4)) \times 10 = 60`.
+
+    >>> nonzeros_0 = tl.sum(matrix_0 == 0)
+    >>> nonzeros_1 = tl.sum(matrix_1 == 0)
+    >>> nonzeros_2 = tl.sum(matrix_2 == 0)
+    >>> nonzeros_0, nonzeros_1, nonzeros_2
+    (60, 60, 60)
+    """
     # TODO: Option to use stack of matrices instead of tensor padded with zeros
     return tl.unfold(cmf_to_tensor(cmf, validate=validate), mode)
 
 
 def cmf_to_vec(cmf, validate=True):
-    # TODO: docstring
+    r"""Generate the vectorized tensor represented by the coupled matrix factorization.
+
+    This function is an alias for first constructing a tensor (``cmf_to_tensor``) and
+    then vectorizing that tensor. Note that if the matrices have a different number of
+    rows, then they will be padded when the tensor is constructed, and thus, there will
+    be zeros in the vectorized tensor too.
+
+    Parameters
+    ----------
+
+    cmf: CoupledMatrixFactorization - (weight, factors)
+
+        * weights : 1D array of shape (rank, )
+            weights of the factors
+        * factors : List of factors of the coupled matrix decomposition
+            Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}_i` and
+            :math:`\mathbf{C}` described above
+
+    validate : bool
+        If true, then the decomposition is validated before the matrix is constructed
+        (see ``CoupledMatrixFactorization``).
+
+    Returns
+    -------
+    ndarray
+        Vector of length ``A.shape[0] * J * C.shape[0]``, where ``J`` is the maximum
+        number of rows in all the :math:`\mathbf{B}_i`-factor matrices.
+
+    Examples
+    --------
+    Here, we show how to vectorize a coupled matrix factorization
+
+    >>> from matcouply.random import random_coupled_matrices
+    >>> from matcouply.coupled_matrices import cmf_to_tensor
+    >>> shapes = ((5, 10), (5, 10), (5, 10), (5, 10))
+    >>> cmf = random_coupled_matrices(shapes, rank=3)
+    >>> vector = cmf_to_vec(cmf)
+    >>> tl.shape(vector)
+    (200,)
+
+    We can also vectorize a coupled matrix factorization where the matrices
+    have a varying number of rows
+    
+    >>> shapes = ((5, 10), (3, 10), (2, 10), (4, 10))
+    >>> cmf = random_coupled_matrices(shapes, rank=3)
+    >>> vector = cmf_to_vec(cmf)
+    >>> tl.shape(vector)
+    (200,)
+
+    However, as we see, the length of the vectorized coupled matrix factorization 
+    is still 200, despite some matrices being shorter. This is because the matrices
+    are padded by zeros to construct a tensor, which is subsequently unfolded.
+
+    We can see the padding by counting the number of zeros. The number of
+    zeros should be :math:`((5 - 5) + (5 - 3) + (5 - 2) + (5 - 4)) \times 10 = 60`.
+    
+    >>> tl.sum(vector == 0)
+    60
+    """
     # TODO: Option to use stack of matrices instead of tensor padded with zeros
     return tl.tensor_to_vec(cmf_to_tensor(cmf, validate=validate))
