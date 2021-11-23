@@ -17,3 +17,4 @@ tensorly
 autodocsumm
 matplotlib
 plotly
+git+https://github.com/marieroald/component_vis
