@@ -37,7 +37,6 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinxcontrib.bibtex",
     "autodocsumm",
-    # "numpydoc",
 ]
 bibtex_bibfiles = ["references.bib"]
 autodoc_default_options = {"autosummary": True}
