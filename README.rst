@@ -1,8 +1,7 @@
 =========
 MatCoupLy
 =========
-*Learning coupled matrix factorisations with Python*
-
+*Learning coupled matrix factorizations with Python*
 
 .. image:: https://readthedocs.org/projects/cm-aoadmm/badge/?version=latest
         :target: https://cm-aoadmm.readthedocs.io/en/latest/?badge=latest
@@ -20,7 +19,8 @@ MatCoupLy
     :alt: Coverage
 
 
-MatCoupLy is a Python library for learning coupled matrix factorisations with flexible constraints and regularisation with Python.
+MatCoupLy is a Python library for learning coupled matrix factorizations with flexible constraints and regularization with Python.
+
 
 Installation
 ------------
@@ -31,17 +31,25 @@ To install MatCoupLy and all MIT-compatible dependencies from PyPI, you can run
 
         pip install matcouply
         
-If you also want to enable total variation regularisation, you need to install all components, which comes with a GPL-v3 lisence
+If you also want to enable total variation regularization, you need to install all components, which comes with a GPL-v3 lisence
 
 .. code::
 
         pip install matcouply[all]
 
+About
+-----
+
+MatCoupLy uses AO-ADMM to fit constrained and regularised coupled matrix factorization (and PARAFAC2) models.
+It uses the alternating updates with the alternating direction method of multipliers (AO-ADMM) algorithm,
+which is very flexible in terms of constraints [1, 2]
+
 
 Example
 -------
 
-Below is a simulated example, where a set of three random non-negative coupled matrices are generated and decomposed using a non-negative PARAFAC2 factorisation with both L1 and L2 penalty functions.
+Below is a simulated example, where a set of three random non-negative coupled matrices are generated and
+decomposed using a non-negative PARAFAC2 factorization with both L1 and L2 penalty functions.
 
 .. code:: python
 
@@ -61,3 +69,10 @@ Below is a simulated example, where a set of three random non-negative coupled m
         )
         
         est_weights, (est_A, est_B_is, est_C) = estimated_cmf
+
+
+References
+----------
+
+ * [1]: Roald M, Schenker C, Cohen JE, Acar E. PARAFAC2 AO-ADMM: Constraints in all modes. EUSIPCO (2021).
+ * [2]: Roald M, Schenker C, Bro R, Cohen JE, Acar E. An AO-ADMM approach to constraining PARAFAC2 on all modes (2021). arXiv preprint arXiv:2110.01278.
