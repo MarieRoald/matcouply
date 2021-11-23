@@ -10,7 +10,10 @@ Welcome to MatCoupLy's documentation!
    :maxdepth: 2
    :caption: Contents:
    
+   installation
+   optimization
    api
+   references
 
 
 

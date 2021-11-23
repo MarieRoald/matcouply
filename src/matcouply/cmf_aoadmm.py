@@ -316,16 +316,65 @@ def _root_sum_squared_list(x_list):
     return tl.sqrt(sum(tl.sum(x ** 2) for x in x_list))
 
 
-def compute_feasibility_gaps(cmf, reg, A_aux_list, B_aux_list, C_aux_list):
-    # TODO: Docstring for compute_feasibility_gaps
-    weights, (A, B_is, C) = cmf
-    A_gaps = [tl.norm(A_reg.subtract_from_aux(A_aux, A)) for A_reg, A_aux in zip(reg[0], A_aux_list)]
-    B_gaps = [
-        _root_sum_squared_list(B_reg.subtract_from_auxes(B_is_aux, B_is)) for B_reg, B_is_aux in zip(reg[1], B_aux_list)
-    ]
-    C_gaps = [tl.norm(C_reg.subtract_from_aux(C_aux, C)) for C_reg, C_aux in zip(reg[2], C_aux_list)]
+def compute_feasibility_gaps(cmf, regs, A_aux_list, B_aux_list, C_aux_list):
+    r"""Compute all feasibility gaps.
 
-    # C_gaps = [C_reg.compute_feasibility_gap(C, C_aux) for C_reg, C_aux in zip(reg[2], C_aux_list)]
+    The feasibility gaps for AO-ADMM are given by
+
+    .. math::
+
+        \|\mathbf{x} - \mathbf{z}\|_2,
+    
+    where :math:`\mathbf{x}` is a component vector and :math:`\mathbf{z}` is an auxiliary
+    variable that represents a component vector. If a decomposition obtained with AO-ADMM
+    is valid, then all feasibility gaps should be small compared to the components. If any
+    of the feasibility penalties are large, then the decomposition may not satisfy the
+    imposed constraints.
+
+    To compute the feasibility gap for the :math:`\mathbf{A}` and :math:`\mathbf{C}`
+    matrices, we use the frobenius norm, and to compute the feasibility gap for the
+    :math:`B_{i}`-matrices, we compute :math:`\sqrt{\sum_i \|\mathbf{B}_i - \mathbf{Z}^{(\mathbf{B}_i)}\|^2}`,
+    where :math:`\mathbf{Z}^{(\mathbf{B}_i)}\|^2` is the auxiliary variable for
+    :math:`\mathbf{B}_i`.
+
+    Parameters
+    ----------
+    cmf: CoupledMatrixFactorization - (weight, factors)
+
+        * weights : 1D array of shape (rank, )
+            weights of the factors
+        * factors : List of factors of the coupled matrix decomposition
+            Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}_i` and
+            :math:`\mathbf{C}` described above
+
+    regs : list of list of matcouply.penalties.ADMMPenalty
+        The regs list should have three elements, the first being a list of penalties imposed
+        on mode 0, the second being a list of penalties imposed on mode 1 and the last being
+        a list of penalties imposed on mode 2.
+    A_aux_list : list
+        A list of all auxiliary variables for the A-matrix
+    B_aux_list : list
+        A list of all auxiliary variables for the B_is-matrices
+    C_aux_list : list
+        A list of all auxiliary variables for the C-matrix
+    
+    Returns
+    -------
+    list
+        Feasibility gaps for A
+    list
+        Feasibility gaps for B_is
+    list
+        Veasibility gaps for C
+    """
+    weights, (A, B_is, C) = cmf
+    A_gaps = [tl.norm(A_reg.subtract_from_aux(A_aux, A)) for A_reg, A_aux in zip(regs[0], A_aux_list)]
+    B_gaps = [
+        _root_sum_squared_list(B_reg.subtract_from_auxes(B_is_aux, B_is))
+        for B_reg, B_is_aux in zip(regs[1], B_aux_list)
+    ]
+    C_gaps = [tl.norm(C_reg.subtract_from_aux(C_aux, C)) for C_reg, C_aux in zip(regs[2], C_aux_list)]
+
     return A_gaps, B_gaps, C_gaps
 
 
@@ -353,7 +402,7 @@ def _parse_all_penalties(
     non_negative,
     lower_bound,
     upper_bound,
-    max_l2_norm,
+    l2_norm_bound,
     unimodal,
     parafac2,
     l1_penalty,
@@ -371,7 +420,7 @@ def _parse_all_penalties(
     non_negative = _listify(non_negative, "non_negative")
     upper_bound = _listify(upper_bound, "upper_bound")
     lower_bound = _listify(lower_bound, "lower_bound")
-    max_l2_norm = _listify(max_l2_norm, "max_l2_norm")
+    l2_norm_bound = _listify(l2_norm_bound, "l2_norm_bound")
     unimodal = _listify(unimodal, "unimodal")
     if parafac2:
         parafac2 = [False, True, False]
@@ -386,7 +435,7 @@ def _parse_all_penalties(
             non_negative=non_negative[mode],
             lower_bound=lower_bound[mode],
             upper_bound=upper_bound[mode],
-            max_l2_norm=max_l2_norm[mode],
+            l2_norm_bound=l2_norm_bound[mode],
             unimodal=unimodal[mode],
             parafac2=parafac2[mode],
             l1_penalty=l1_penalty[mode],
@@ -408,7 +457,7 @@ def _parse_mode_penalties(
     non_negative,
     lower_bound,
     upper_bound,
-    max_l2_norm,
+    l2_norm_bound,
     unimodal,
     parafac2,
     l1_penalty,
@@ -440,8 +489,10 @@ def _parse_mode_penalties(
         )
         description_str += "\n * Generalized L2 penalty"
 
-    if max_l2_norm:
-        regs.append(penalties.L2Ball(max_l2_norm, non_negativity=non_negative, aux_init=aux_init, dual_init=dual_init))
+    if l2_norm_bound:
+        regs.append(
+            penalties.L2Ball(l2_norm_bound, non_negativity=non_negative, aux_init=aux_init, dual_init=dual_init)
+        )
         if non_negative:
             description_str += "\n * L2 ball constraint (with non-negativity)"
         else:
@@ -483,6 +534,9 @@ def _parse_mode_penalties(
     return regs, description_str
 
 
+# TODO: add alias for parafac2 decomposition
+
+
 def cmf_aoadmm(
     matrices,
     rank,
@@ -494,10 +548,10 @@ def cmf_aoadmm(
     non_negative=None,
     unimodal=None,
     generalized_l2_penalty=None,
-    max_l2_norm=None,
+    l2_norm_bound=None,
     lower_bound=None,
     upper_bound=None,
-    parafac2_constraint=None,
+    parafac2_constraint=None,  # TODO: change name?
     regs=None,
     feasibility_penalty_scale=1,
     constant_feasibility_penalty=False,
@@ -534,7 +588,53 @@ def cmf_aoadmm(
     Optimization problem
     ^^^^^^^^^^^^^^^^^^^^
 
-    [TODO: Write this section]
+    Fitting coupled matrix factorizations involve solving the following optimization problem
+
+    .. math::
+
+        \min_{\mathbf{A}, \{\mathbf{B}_i\}_{i=1}^I, \mathbf{C}}
+        \sum_{i=1}^I \| \mathbf{B}_i \mathbf{D}_i \mathbf{C}^\mathsf{T} - \mathbf{X}_i\|^2.
+    
+    However, this problem does not have a unique solution, and each time we fit a coupled matrx
+    factorization, we may obtain different factor matrices. As a consequence, we cannot interpret
+    the factor matrices. To circumvent this problem, it is common to add regularisation, forming
+    the following optimisation problem
+
+    .. math::
+
+        \min_{\mathbf{A}, \{\mathbf{B}_i\}_{i=1}^I, \mathbf{C}}
+        \sum_{i=1}^I \| \mathbf{B}_i \mathbf{D}_i \mathbf{C}^\mathsf{T} - \mathbf{X}_i\|^2.
+        + \sum_{n=1}^{N_\mathbf{A}} g^{(A)}_n(\mathbf{A})
+        + \sum_{n=1}^{N_\mathbf{B}} g^{(B)}_n(\{ \mathbf{B}_i \}_{i=1}^I)
+        + \sum_{n=1}^{N_\mathbf{C}} g^{(C)}_n(\mathbf{C}),
+
+    where the :math:`g`-functions are regularisation penalties, and :math:`N_\mathbf{A}, N_\mathbf{B}`
+    and :math:`N_\mathbf{C}` are the number of regularisation penalties for 
+    :math:`\mathbf{A}, \{\mathbf{B}\}_{i=1}^I` and :math:`\mathbf{C}`, respectively.
+
+    The formulation above also encompasses hard constraints, such as :math:`a_{ir} \geq 0` for
+    any index :math:`(i, r)`. To obtain such a constraint, we set 
+    
+    .. math::
+        
+        g^{(\mathbf{A})} = \begin{cases}
+            0 & \text{if } a_{ir} \geq 0 \text{ for all } a_{ir} \\
+            \infty & \text{otherwise}.
+        \end{cases}
+
+    Optimization
+    ^^^^^^^^^^^^
+
+    To solve the regularized least squares problem, we use AO-ADMM. AO-ADMM is a block 
+    coordinate descent scheme, where the factor matrices for each mode is updated in an
+    alternating fashion. To update these factor matrices we use (a few) iterations of ADMM.
+
+    The benefit of AO-ADMM is its flexibility in terms of regularization and constraints. We
+    can impose any regularization penalty or hard constraint so long as we have a way to
+    evaluate the scaled proximal operator of the penalty function[TODO: CITE] or projection
+    onto the feasible set of the hard constraint.
+
+    For more information about AO-ADMM see :ref:`optimization`.
 
     Uniqueness
     ^^^^^^^^^^
@@ -556,8 +656,7 @@ def cmf_aoadmm(
     non-negativity [TODO: CITE], sparsity  [TODO: CITE] and the *PARAFAC2-constraint*  [TODO: CITE].
 
 
-    Non-negativity
-    """ """""" """""
+    **Non-negativity**
 
     Non-negativity constraints work by requiring that (some of) the factor matrices
     contain only non-negative entries. This is both helpful for uniqueness and interpretability
@@ -566,8 +665,7 @@ def cmf_aoadmm(
     is truly unique. It is therefore also common to combine non-negativity constraints with
     other constraints, such as sparsity or the PARAFAC2 constraint.
 
-    Sparsity
-    """ """""
+    **Sparsity**
 
     Sparsity constraints are used when we want one or more of the factor matrices to be sparse.
     This also improves the interpretability of the model, as it becomes easy to see the variables
@@ -578,8 +676,7 @@ def cmf_aoadmm(
 
         \|\mathbf{M}\|_1 = \sum_{n m} |m_{nm}|.
 
-    PARAFAC2
-    """ """""
+    **PARAFAC2**
 
     Another way to impose uniqueness is via the PARAFAC2 model [TODO: CITE]. This model is equivalent
     to the coupled matrix factorization model, but has the additional constraint
@@ -594,7 +691,7 @@ def cmf_aoadmm(
     Optimization
     ^^^^^^^^^^^^
 
-    [TODO: WRITE THIS]
+    To fit the coupled matrix factorization, we use AO-ADMM. 
     """
     # TODO: docstring
     random_state = tl.check_random_state(random_state)
@@ -610,7 +707,7 @@ def cmf_aoadmm(
         non_negative=non_negative,
         lower_bound=lower_bound,
         upper_bound=upper_bound,
-        max_l2_norm=max_l2_norm,
+        l2_norm_bound=l2_norm_bound,
         unimodal=unimodal,
         parafac2=parafac2_constraint,
         l1_penalty=l1_penalty,
@@ -710,7 +807,7 @@ def cmf_aoadmm(
                 feasibility_criterion = max_feasibility_gap < feasibility_tol
 
                 if not feasibility_criterion and not return_errors:
-                    if verbose:
+                    if verbose and it % verbose == 0:
                         print(
                             "Coupled matrix factorization iteration={}, ".format(it)
                             + "reconstruction error=NOT COMPUTED, "
@@ -735,7 +832,7 @@ def cmf_aoadmm(
             )
             losses.append(0.5 * rec_error ** 2 + reg_penalty)
 
-            if verbose:
+            if verbose and it % verbose == 0:
                 print(
                     "Coupled matrix factorization iteration={}, ".format(it)
                     + "reconstruction error={}, ".format(rec_errors[-1])
@@ -755,7 +852,7 @@ def cmf_aoadmm(
                         print("converged in {} iterations.".format(it))
                         # TODO: print information about what stopped it?
                     break
-        elif verbose:
+        elif verbose and it % verbose == 0:
             print("Coupled matrix factorization iteration={}".format(it))
 
     # Save as validated factorization instead of tuple
@@ -776,3 +873,74 @@ def cmf_aoadmm(
             (A_aux_list, B_is_aux_list, C_aux_list),
             (A_dual_list, B_is_dual_list, C_dual_list),
         )
+
+
+def parafac2_aoadmm(
+    matrices,
+    rank,
+    init="random",
+    n_iter_max=1000,
+    l2_penalty=0,
+    tv_penalty=None,
+    l1_penalty=None,
+    non_negative=None,
+    unimodal=None,
+    generalized_l2_penalty=None,
+    l2_norm_bound=None,
+    lower_bound=None,
+    upper_bound=None,
+    regs=None,
+    feasibility_penalty_scale=1,
+    constant_feasibility_penalty=False,
+    aux_init="random_uniform",
+    dual_init="random_uniform",
+    svd="truncated_svd",
+    init_params=None,
+    random_state=None,
+    tol=1e-8,
+    absolute_tol=1e-10,
+    feasibility_tol=1e-4,
+    inner_tol=None,
+    inner_n_iter_max=5,
+    return_errors=False,
+    verbose=False,
+):
+    """Alias for cmf_aoadmm with PARAFAC2 constraint (constant cross-product) on mode 1 (B mode)  
+
+    See also
+    --------
+    cmf_aoadmm : General coupled matrix factorization with AO-ADMM
+    penalties.Parafac2 : Class for PARAFAC2 constraint with more information about its properties
+    """  # FIXME: crossref penalties.Parafac2 correctly
+
+    return cmf_aoadmm(
+        matrices=matrices,
+        rank=rank,
+        init=init,
+        n_iter_max=n_iter_max,
+        l2_penalty=l2_penalty,
+        tv_penalty=tv_penalty,
+        l1_penalty=l1_penalty,
+        non_negative=non_negative,
+        unimodal=unimodal,
+        generalized_l2_penalty=generalized_l2_penalty,
+        l2_norm_bound=l2_norm_bound,
+        lower_bound=lower_bound,
+        upper_bound=upper_bound,
+        parafac2_constraint=True,
+        regs=regs,
+        feasibility_penalty_scale=feasibility_penalty_scale,
+        constant_feasibility_penalty=constant_feasibility_penalty,
+        aux_init=aux_init,
+        dual_init=dual_init,
+        svd=svd,
+        init_params=init,
+        random_state=random_state,
+        tol=tol,
+        absolute_tol=absolute_tol,
+        feasibility_tol=feasibility_tol,
+        inner_tol=inner_tol,
+        inner_n_iter_max=inner_n_iter_max,
+        return_errors=return_errors,
+        verbose=verbose,
+    )

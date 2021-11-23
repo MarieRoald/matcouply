@@ -680,7 +680,7 @@ class TestBoxConstraint(MixinTestHardConstraint, BaseTestRowVectorPenalty):
 
 class TestL2BallConstraint(MixinTestHardConstraint, BaseTestFactorMatrixPenalty):
     PenaltyType = penalties.L2Ball
-    penalty_default_kwargs = {"max_norm": 1}
+    penalty_default_kwargs = {"norm_bound": 1}
 
     def get_stationary_matrix(self, rng, shape):
         random_matrix = rng.random(shape)
@@ -689,6 +689,14 @@ class TestL2BallConstraint(MixinTestHardConstraint, BaseTestFactorMatrixPenalty)
     def get_non_stationary_matrix(self, rng, shape):
         random_matrix = rng.random(shape)
         return 10 + random_matrix / tl.sqrt(shape[0])
+
+    def test_input_is_checked(self):
+        with pytest.raises(ValueError):
+            tv_penalty = self.PenaltyType(norm_bound=0)
+        with pytest.raises(ValueError):
+            tv_penalty = self.PenaltyType(norm_bound=-1)
+
+        tv_penalty = self.PenaltyType(norm_bound=0.1)
 
 
 class TestUnitSimplex(MixinTestHardConstraint, BaseTestFactorMatrixPenalty):
@@ -849,6 +857,22 @@ class TestTotalVariationPenalty(BaseTestFactorMatrixPenalty):
         X_constant_columns = rng.uniform(shape[0]) * tl.ones(shape)
         assert tv_penalty_no_l1.penalty(X_constant_columns) == pytest.approx(0)
 
+    def test_input_is_checked(self):
+        with pytest.raises(ValueError):
+            tv_penalty = self.PenaltyType(reg_strength=0, l1_strength=1)
+        with pytest.raises(ValueError):
+            tv_penalty = self.PenaltyType(reg_strength=-1, l1_strength=1)
+        with pytest.raises(ValueError):
+            tv_penalty = self.PenaltyType(reg_strength=1, l1_strength=-1)
+
+        tv_penalty = self.PenaltyType(reg_strength=1, l1_strength=0)
+
+        HAS_TV = penalties.HAS_TV
+        penalties.HAS_TV = False
+        with pytest.raises(ModuleNotFoundError):
+            tv_penalty = self.PenaltyType(reg_strength=1, l1_strength=0)
+        penalties.HAS_TV = HAS_TV
+
 
 class TestNonNegativity(MixinTestHardConstraint, BaseTestRowVectorPenalty):
     PenaltyType = penalties.NonNegativity
@@ -865,6 +889,26 @@ class TestNonNegativity(MixinTestHardConstraint, BaseTestRowVectorPenalty):
 
 class TestParafac2(BaseTestFactorMatricesPenalty):
     PenaltyType = penalties.Parafac2
+
+    def test_projection_improves_with_num_iterations(self, random_rank5_ragged_cmf, rng):
+        cmf, shapes, rank = random_rank5_ragged_cmf
+        weights, (A, B_is, C) = cmf
+        matrices = cmf.to_matrices()
+        feasibility_penalties = rng.uniform(2, 3, size=len(B_is))
+
+        pf2_1it = self.PenaltyType(n_iter=1)
+        pf2_5it = self.PenaltyType(n_iter=5)
+
+        auxes_1it = pf2_1it.init_aux(matrices, rank, 1, rng)
+        auxes_5it = ([tl.copy(Pi) for Pi in auxes_1it[0]], tl.copy(auxes_1it[1]))
+
+        proj_1it = pf2_1it.factor_matrices_update(B_is, feasibility_penalties, auxes_1it)
+        proj_5it = pf2_5it.factor_matrices_update(B_is, feasibility_penalties, auxes_5it)
+
+        error_1it = sum(tl.sum(err ** 2) for err in pf2_1it.subtract_from_auxes(proj_1it, B_is))
+        error_5it = sum(tl.sum(err ** 2) for err in pf2_5it.subtract_from_auxes(proj_5it, B_is))
+
+        assert error_5it < error_1it
 
     def test_factor_matrices_update_stationary_point(self, rng):
         deltaB = rng.standard_normal((3, 3))

@@ -35,7 +35,12 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
+    "sphinxcontrib.bibtex",
+    "autodocsumm",
+    # "numpydoc",
 ]
+bibtex_bibfiles = ["references.bib"]
+autodoc_default_options = {"autosummary": True}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
