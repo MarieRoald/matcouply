@@ -699,9 +699,8 @@ def cmf_aoadmm(
     cmf = initialize_cmf(matrices, rank, init, svd_fun=svd_fun, random_state=random_state, init_params=init_params)
 
     # Parse constraints
-    if not is_iterable(l2_penalty):
-        l2_penalty = [l2_penalty] * 3
-    l2_penalty = [p if p is not None else 0 for p in l2_penalty]
+    l2_penalty = _listify(l2_penalty, "l2_penalty")  # TODO: Make test that checks that listify is called on l2_penalty
+    l2_penalty = [l2 if l2 is not None else 0 for l2 in l2_penalty]
 
     regs = _parse_all_penalties(
         non_negative=non_negative,
