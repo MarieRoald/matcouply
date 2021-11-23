@@ -6,7 +6,6 @@ sphinx
 sphinx-rtd-theme
 sphinx-gallery
 sphinxcontrib-bibtex
-numpydoc
 flake8
 black
 isort
