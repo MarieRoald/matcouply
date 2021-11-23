@@ -3,10 +3,12 @@ import itertools
 import numpy as np
 import pytest
 import tensorly as tl
+from tensorly.metrics.factors import congruence_coefficient
 from tensorly.testing import assert_array_almost_equal, assert_array_equal
 
 from matcouply import cmf_aoadmm, coupled_matrices, penalties, random
 from matcouply._utils import get_svd
+from matcouply.coupled_matrices import CoupledMatrixFactorization
 from matcouply.penalties import NonNegativity
 
 
@@ -1148,6 +1150,10 @@ def test_cmf_aoadmm(rng, random_ragged_cmf):
     out = cmf_aoadmm.cmf_aoadmm(matrices, rank, return_errors=True, tol=None, absolute_tol=None, verbose=False)
     assert len(out) == 5
 
+    # Check that we don't get errors out if we don't ask for it
+    out = cmf_aoadmm.cmf_aoadmm(matrices, rank, return_errors=False)
+    assert len(out) == 3
+
     # Check that we can add non-negativity constraints with list of regs.
     regs = [[NonNegativity()], [NonNegativity()], [NonNegativity()]]
     out_cmf, aux, dual, rec_errors, feasibility_gaps = cmf_aoadmm.cmf_aoadmm(
@@ -1164,5 +1170,46 @@ def test_cmf_aoadmm(rng, random_ragged_cmf):
         assert B_gap == pytest.approx(out_B_gap)
     for C_gap, out_C_gap in zip(C_gap_list, feasibility_gaps[-1][2]):
         assert C_gap == pytest.approx(out_C_gap)
-
     # TODO: Test that the code fails gracefully with list of regs not list of list of regs
+
+
+def test_cmf_aoadmm_verbose(rng, random_ragged_cmf, capfd):
+    # TODO: CHECK
+    cmf, shapes, rank = random_ragged_cmf
+    matrices = cmf.to_matrices()
+
+    out_cmf, aux, dual, rec_errors, feasibility_gaps = cmf_aoadmm.cmf_aoadmm(
+        matrices, rank, n_iter_max=1_000, return_errors=True, verbose=False
+    )
+    out, err = capfd.readouterr()
+    assert len(out) == 0
+
+    out_cmf, aux, dual, rec_errors, feasibility_gaps = cmf_aoadmm.cmf_aoadmm(
+        matrices, rank, n_iter_max=1_000, return_errors=True, verbose=True
+    )
+    out, err = capfd.readouterr()
+    assert len(out) > 0
+
+
+def test_parafac2_constraint_makes_nn_cmf_unique(rng):
+    rank = 2
+    A = rng.uniform(0.1, 1.1, size=(15, rank))
+    B_0 = rng.uniform(0, 1, size=(10, rank))
+    B_is = [tl.tensor(np.roll(B_0, i, axis=1)) for i in range(15)]
+    C = rng.uniform(0, 1, size=(20, rank))
+    weights = None
+
+    cmf = CoupledMatrixFactorization((weights, (A, B_is, C)))
+    matrices = cmf.to_matrices()
+
+    out_cmf, aux, dual, rec_errors, feasibility_gaps = cmf_aoadmm.cmf_aoadmm(
+        matrices, rank, n_iter_max=1_000, return_errors=True, non_negative=[True, True, True], parafac2_constraint=True
+    )
+
+    # Check that reconstruction error is low and that the correct factors are recovered
+    assert rec_errors[-1] < 1e-04
+    assert congruence_coefficient(A, out_cmf[1][0], absolute_value=True)[0] > 0.99
+    for B_i, out_B_i in zip(B_is, out_cmf[1][1]):
+        assert congruence_coefficient(B_i, out_B_i, absolute_value=True)[0] > 0.99
+    assert congruence_coefficient(C, out_cmf[1][2], absolute_value=True)[0] > 0.99
+
