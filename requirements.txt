@@ -15,3 +15,4 @@ numpy
 scipy
 tensorly
 autodocsumm
+matplotlib
