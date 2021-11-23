@@ -1,4 +1,7 @@
+import inspect
 import itertools
+from copy import copy
+from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -6,6 +9,7 @@ import tensorly as tl
 from tensorly.metrics.factors import congruence_coefficient
 from tensorly.testing import assert_array_almost_equal, assert_array_equal
 
+import matcouply
 from matcouply import cmf_aoadmm, coupled_matrices, penalties, random
 from matcouply._utils import get_svd
 from matcouply.coupled_matrices import CoupledMatrixFactorization
@@ -1191,7 +1195,7 @@ def test_cmf_aoadmm_verbose(rng, random_ragged_cmf, capfd):
     assert len(out) > 0
 
 
-def test_parafac2_constraint_makes_nn_cmf_unique(rng):
+def test_parafac2_makes_nn_cmf_unique(rng):
     rank = 2
     A = rng.uniform(0.1, 1.1, size=(15, rank))
     B_0 = rng.uniform(0, 1, size=(10, rank))
@@ -1202,9 +1206,14 @@ def test_parafac2_constraint_makes_nn_cmf_unique(rng):
     cmf = CoupledMatrixFactorization((weights, (A, B_is, C)))
     matrices = cmf.to_matrices()
 
-    out_cmf, aux, dual, rec_errors, feasibility_gaps = cmf_aoadmm.cmf_aoadmm(
-        matrices, rank, n_iter_max=1_000, return_errors=True, non_negative=[True, True, True], parafac2_constraint=True
-    )
+    rec_errors = [float("inf")]
+    for init in range(5):
+        out = cmf_aoadmm.cmf_aoadmm(
+            matrices, rank, n_iter_max=1_000, return_errors=True, non_negative=[True, True, True], parafac2=True
+        )
+
+        if out[3][-1] < rec_errors[-1]:
+            out_cmf, aux, dual, rec_errors, feasibility_gaps = out
 
     # Check that reconstruction error is low and that the correct factors are recovered
     assert rec_errors[-1] < 1e-04
@@ -1212,4 +1221,15 @@ def test_parafac2_constraint_makes_nn_cmf_unique(rng):
     for B_i, out_B_i in zip(B_is, out_cmf[1][1]):
         assert congruence_coefficient(B_i, out_B_i, absolute_value=True)[0] > 0.99
     assert congruence_coefficient(C, out_cmf[1][2], absolute_value=True)[0] > 0.99
+
+
+def test_parafac2_aoadmm(rng, random_ragged_cmf):
+    parafac2_argspecs = inspect.getfullargspec(matcouply.cmf_aoadmm.parafac2_aoadmm)
+    placeholder_args = {arg: f"PLACEHOLDERARG_{i}" for i, arg in enumerate(parafac2_argspecs.args)}
+    cmf_aoadmm_args = copy(placeholder_args)
+    cmf_aoadmm_args["parafac2"] = True
+    with patch("matcouply.cmf_aoadmm.cmf_aoadmm") as mock:
+        cmf_aoadmm.parafac2_aoadmm(**placeholder_args)
+        mock.assert_called_once()
+        mock.assert_called_once_with(**cmf_aoadmm_args)
 
