@@ -12,6 +12,7 @@ Welcome to MatCoupLy's documentation!
    
    installation
    optimization
+   auto_examples/index
    api
    references
 
