@@ -3,10 +3,6 @@ MatCoupLy
 =========
 *Learning coupled matrix factorizations with Python*
 
-.. image:: https://readthedocs.org/projects/matcouply/badge/?version=latest
-        :target: https://matcouply.readthedocs.io/en/latest/?badge=latest
-        :alt: Documentation Status
-
 .. image:: https://github.com/MarieRoald/matcouply/actions/workflows/Tests.yml/badge.svg
     :target: https://github.com/MarieRoald/matcouply/actions/workflows/Tests.yml
     :alt: Tests
@@ -14,6 +10,10 @@ MatCoupLy
 .. image:: https://codecov.io/gh/MarieRoald/matcouply/branch/main/graph/badge.svg?token=GDCXEF2MGE
     :target: https://codecov.io/gh/MarieRoald/matcouply
     :alt: Coverage
+
+.. image:: https://readthedocs.org/projects/matcouply/badge/?version=latest
+        :target: https://matcouply.readthedocs.io/en/latest/?badge=latest
+        :alt: Documentation Status
     
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
     :target: https://github.com/psf/black
