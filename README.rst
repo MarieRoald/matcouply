@@ -3,8 +3,8 @@ MatCoupLy
 =========
 *Learning coupled matrix factorizations with Python*
 
-.. image:: https://readthedocs.org/projects/cm-aoadmm/badge/?version=latest
-        :target: https://cm-aoadmm.readthedocs.io/en/latest/?badge=latest
+.. image:: https://readthedocs.org/projects/matcouply/badge/?version=latest
+        :target: https://matcouply.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
 
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
