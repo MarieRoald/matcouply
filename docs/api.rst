@@ -9,4 +9,5 @@ API Reference
    autodoc/cmf_aoadmm
    autodoc/penalties
    autodoc/random
+   autodoc/datasets
 
