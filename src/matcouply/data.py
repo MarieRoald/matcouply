@@ -11,10 +11,10 @@ DATASET_PARENT = Path(__file__).parent / "datasets"
 def get_bike_data():
     r"""Get bike sharing data from three major Norwegian cities
 
-    This dataset contain three matrices with bike sharing data from Oslo, Bergen and Trondheim,
+    This dataset contains three matrices with bike sharing data from Oslo, Bergen and Trondheim,
     :math:`\mathbf{X}^{(\text{Oslo})}, \mathbf{X}^{(\text{Bergen})}` and :math:`\mathbf{X}^{(\text{Trondheim})}`.
     Each row of these data matrices represent a station, and each column of the data matrices
-    represent an hour in 2021. The matrix element `x^{(\text{Oslo})}_{jk}` is the number of trips
+    represent an hour in 2021. The matrix element :math:`x^{(\text{Oslo})}_{jk}` is the number of trips
     that ended in station :math:`j` in Oslo during hour :math:`k`.
 
     The data was obtained using the open API of
