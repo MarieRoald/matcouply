@@ -18,4 +18,5 @@ autodocsumm
 matplotlib
 plotly
 pandas
+wordcloud
 https://github.com/MarieRoald/component-vis/archive/refs/heads/master.zip
