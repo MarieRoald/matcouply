@@ -20,6 +20,16 @@ def random_coupled_matrices(
         if True, a full tensor is returned otherwise,
         the decomposed tensor is returned
     random_state : `np.random.RandomState`
+
+    Examples
+    --------
+    Here is an example of how to generate a random coupled matrix factorization
+
+    >>> from matcouply.random import random_coupled_matrices
+    >>> shapes = ((5, 10), (6, 10), (7, 10))
+    >>> cmf = random_coupled_matrices(shapes, rank=4)
+    >>> print(cmf)
+    (weights, factors) : rank-4 CoupledMatrixFactorization of shape ((5, 10), (6, 10), (7, 10))
     """
     rns = tl.check_random_state(random_state)
     if not all(shape[1] == shapes[0][1] for shape in shapes):
