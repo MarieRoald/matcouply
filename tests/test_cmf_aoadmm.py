@@ -1231,4 +1231,3 @@ def test_parafac2_aoadmm(rng, random_ragged_cmf):
         cmf_aoadmm.parafac2_aoadmm(**placeholder_args)
         mock.assert_called_once()
         mock.assert_called_once_with(**cmf_aoadmm_args)
-
