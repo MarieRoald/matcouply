@@ -7,23 +7,30 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import plotly.express as px
-import tensorly as tl
 from component_vis.factor_tools import factor_match_score
 from wordcloud import WordCloud
 
 import matcouply.cmf_aoadmm as cmf_aoadmm
-from matcouply.coupled_matrices import CoupledMatrixFactorization
 from matcouply.data import get_bike_data
 
 ###############################################################################
 # Load the data
 # ^^^^^^^^^^^^^
+# This dataset contains three matrices with bike sharing data from three cities in Norway:
+# Oslo, Bergen and Trondheim. Each row of these data matrices represent a station, and each column
+# represent an hour in 2021. The matrix element :math:`x^{(\text{Oslo})}_{jk}` is the number of trips
+# that ended in station :math:`j` in Oslo during hour :math:`k`. More information about this dataset
+# is available in the documentation for the ``get_bike_data``-function.
+
 bike_data = get_bike_data()
 matrices = [bike_data["oslo"].values, bike_data["bergen"].values, bike_data["trondheim"].values]
 
 ###############################################################################
 # Fit non-negative PARAFAC2 models
 # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+# Let us fit a non-negative PARAFAC2 model to these matrices to extract underlying patterns.
+# We fit five models using different random initializations to avoid bad local minima and
+# to ensure that the model is unique.
 
 all_models = []
 all_errors = []
@@ -51,8 +58,10 @@ for init in range(5):
         lowest_error = out[3][-1]
 
 ###############################################################################
-# Check uniqueness of the NN-CMF models
-# ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+# Check uniqueness of the NN-PARAFAC2 models
+# ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+# To check that the model is unique, we check that the initialization runs that
+# reach the same loss also find the same components.
 
 
 def get_stacked_CP_tensor(cmf):
@@ -80,8 +89,9 @@ weights, (A, B_is, C) = all_models[selected_init]
 ###############################################################################
 # Convert factor matrices to DataFrame
 # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-# We also sort the components by weight and clip the factors at 0 since the AO-ADMM algorithm
-# may allow negative values with a very small magnitude
+# To make visualization easier, we convert the factor matrices to dataframes with interpretable indices.
+# We also sort the components by weight and clip the factors at 0 since the AO-ADMM algorithm may allow
+# negative values that are very close to 0.
 
 if weights is None:
     weights = 1
@@ -113,9 +123,6 @@ fig = px.line(
 fig
 
 ###############################################################################
-# Analysing the time-mode
-# ^^^^^^^^^^^^^^^^^^^^^^^^
-#
 # By briefly looking at the time-mode components, we immediately see that the fourth
 # component displays behaviour during summer, when people in Norway typically have
 # their vacation. If we zoom in a bit, we can see interesting behaviour for the first
@@ -123,8 +130,8 @@ fig
 # The first component likely represents travel home from work, as it is active in the
 # afternoon and the second component likely represents travel too work, as it is active
 # in the morning. The third component however, is active the whole day, but mostly
-# during the afternoon and the morning. Interestingly enough, the holiday component
-# does is most active during weekends instead of week days.
+# during the afternoon and the morning. Interestingly, the 'vacation' component
+# is most active during weekends instead of week days.
 
 
 ###############################################################################
@@ -137,9 +144,6 @@ fig = px.bar(A_melted, x="index", y="Value", facet_row="Component", color="Compo
 fig
 
 ###############################################################################
-# Analysing the city-mode components
-# ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-#
 # We see that most of the components are most prominant in Oslo (which is the
 # largest city too), except for the third component, which is mainly prominent
 # in Bergen instead.
@@ -147,6 +151,10 @@ fig
 ###############################################################################
 # Plot the Oslo-station components as a density-map
 # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#
+# We can visualize the station components as a density-map by first joining the station mode
+# factor matrices for each city with a dataframe constainting the station coordinates, and
+# then using the ``density_mapbox``-plot from PlotLy Express.
 
 B_0_melted = (
     B_is[0]
@@ -164,10 +172,20 @@ fig = px.density_mapbox(
     opacity=0.5,
     animation_frame="Component",
     animation_group="Arrival station ID",
+    hover_data=["Arrival station name"],
+    title="Oslo",
 )
 fig.update_layout(mapbox_style="carto-positron",)
 fig
 
+###############################################################################
+# By exploring the map, you can see that the first component (active at the end of workdays) is active in residential
+# areas in parts of the city that are fairly close to the centre. This pattern is expected as people living in these
+# areas are the most likely to have a bike-sharing station close and a short enough commute to bike home from work.
+# Furthermore, the second component (active at the beginning of workdays) is active in more central, high-density
+# areas where offices and universities are located. The third components activation (active during the whole day),
+# is spread throughout the city. Finally, the fourth component (active during weekends in the summer) has activation for
+# stations close to popular swimming areas and areas with a lot of restaurants with outdoor seating.
 
 ###############################################################################
 # Plot the Bergen-station components as a density-map
@@ -189,10 +207,19 @@ fig = px.density_mapbox(
     opacity=0.5,
     animation_frame="Component",
     animation_group="Arrival station ID",
+    hover_data=["Arrival station name"],
+    title="Bergen",
 )
 fig.update_layout(mapbox_style="carto-positron",)
 fig
 
+###############################################################################
+# Again, we see that the first component (active at the end of workdays) is active in residential areas
+# near the city centre. The second component (active at the beginning of workdays) is also clearly
+# active near offices and the universities. The third components activation (active during the whole day),
+# is spread throughout the city and residental areas. Finally, the fourth component (active during
+# weekends in the summer) has activation for stations close to popular swimming areas, parks and restaurants
+# with outdoor seating.
 
 ###############################################################################
 # Plot the Trondheim-station components as a density-map
@@ -214,9 +241,17 @@ fig = px.density_mapbox(
     opacity=0.5,
     animation_frame="Component",
     animation_group="Arrival station ID",
+    hover_data=["Arrival station name"],
+    title="Trondheim",
 )
 fig.update_layout(mapbox_style="carto-positron",)
 fig
+
+###############################################################################
+# Here, we see the same story as with Oslo and Bergen. Component one is active near
+# residental areas, component two near offices and universities, component three is
+# active throughout the city and component four is active in areas that are popular
+# during the summer.
 
 ###############################################################################
 # Plot the station components as word-clouds
@@ -242,3 +277,9 @@ axes[0, 2].set_title("Trondheim")
 for i in range(4):
     axes[i, 0].set_ylabel(f"Component {i}")
 plt.show()
+
+###############################################################################
+# These wordcloud plots confirm the patterns you see on the maps.
+# Stations such as "Bankplassen", "Nygårdsporten" and "Vollabekken" are close to high density areas with a lot of
+# workplaces for Oslo, Bergen and Trondheim, respectivly. While stations like "Rådhusbrygge 4", "Festplassen"
+# and "Lade idrettsannlegg vest" are close to popular summer activities.
