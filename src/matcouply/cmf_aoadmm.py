@@ -182,7 +182,6 @@ def admm_update_B(
         rhses.append(tl.dot(matrix, C * a_row))
         lhses.append(tl.transpose(tl.transpose(CtC * a_row) * a_row))
 
-    # TODO: trace in backends?
     feasibility_penalties = [tl.trace(lhs) * feasibility_penalty_scale for lhs in lhses]
     if constant_feasibility_penalty:
         max_feasibility_penalty = max(feasibility_penalties)
@@ -266,7 +265,6 @@ def admm_update_C(
         lhs += tl.dot(tl.transpose(B_iA_i), B_iA_i)
         rhs += tl.dot(tl.transpose(matrix), B_iA_i)
 
-    # TODO: trace in backends?
     feasibility_penalty = tl.trace(lhs) * feasibility_penalty_scale
     lhs += tl.eye(tl.shape(C)[1]) * 0.5 * (feasibility_penalty * len(reg) + l2_penalty)
     U, s, Uh = svd_fun(lhs)
