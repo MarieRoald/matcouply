@@ -1,4 +1,6 @@
 """
+.. _bike_example:
+
 Detecting behavioural patterns in bike sharing data
 ---------------------------------------------------
 """
