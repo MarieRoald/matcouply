@@ -150,7 +150,7 @@ class CoupledMatrixFactorization(FactorizedTensor):
         return 2
 
     def __repr__(self):  # pragma: nocover
-        message = "(weights, factors) : rank-{} CoupledMatrixFactorization of shape {} ".format(self.rank, self.shape)
+        message = "(weights, factors) : rank-{} CoupledMatrixFactorization of shape {}".format(self.rank, self.shape)
         return message
 
     def to_tensor(self):
