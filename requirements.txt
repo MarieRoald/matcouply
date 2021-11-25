@@ -17,4 +17,5 @@ tensorly
 autodocsumm
 matplotlib
 plotly
-git+https://github.com/marieroald/component_vis
+pandas
+https://github.com/MarieRoald/matcouply/archive/refs/heads/main.zip
