@@ -10,8 +10,9 @@ Welcome to MatCoupLy's documentation!
    :maxdepth: 2
    :caption: Contents:
    
-   installation
+   coupled_matrix_factorization
    optimization
+   installation
    auto_examples/index
    api
    references
