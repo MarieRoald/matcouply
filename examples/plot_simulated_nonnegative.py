@@ -71,8 +71,8 @@ plt.show()
 
 
 ###############################################################################
-# Create the coupled matrix factorization and simulated data matrices
-# ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+# Create the coupled matrix factorization, simulated data matrices and add noise
+# ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 cmf = CoupledMatrixFactorization((None, (A, B_is, C)))
 matrices = cmf.to_matrices()
