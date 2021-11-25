@@ -544,26 +544,25 @@ class L1Penalty(RowVectorPenalty):
 
     @copy_ancestor_docstring
     def factor_matrix_row_update(self, factor_matrix_row, feasibility_penalty, aux_row):
-        if not self.non_negativity:
-            sign = tl.sign(factor_matrix_row)
-            return sign * tl.clip(tl.abs(factor_matrix_row) - self.reg_strength / feasibility_penalty, 0)
-        else:
+        if self.non_negativity:
             return tl.clip(factor_matrix_row - self.reg_strength / feasibility_penalty, 0)
+
+        sign = tl.sign(factor_matrix_row)
+        return sign * tl.clip(tl.abs(factor_matrix_row) - self.reg_strength / feasibility_penalty, 0)
 
     @copy_ancestor_docstring
     def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
-        if not self.non_negativity:
-            sign = tl.sign(factor_matrix)
-            return sign * tl.clip(tl.abs(factor_matrix) - self.reg_strength / feasibility_penalty, 0)
-        else:
+        if self.non_negativity:
             return tl.clip(factor_matrix - self.reg_strength / feasibility_penalty, 0)
+
+        sign = tl.sign(factor_matrix)
+        return sign * tl.clip(tl.abs(factor_matrix) - self.reg_strength / feasibility_penalty, 0)
 
     @copy_ancestor_docstring
     def penalty(self, x):
         if tl.is_tensor(x):
             return tl.sum(tl.abs(x)) * self.reg_strength
-        else:
-            return sum(tl.sum(tl.abs(xi)) for xi in x) * self.reg_strength
+        return sum(tl.sum(tl.abs(xi)) for xi in x) * self.reg_strength
 
 
 class GeneralizedL2Penalty(MatrixPenalty):
@@ -1162,7 +1161,7 @@ class Parafac2(MatricesPenalty):
         basis_matrices, coordinate_matrix = auxes
         R = tl.shape(coordinate_matrix)[0]
 
-        for iter in range(self.n_iter):
+        for it in range(self.n_iter):
             # Update orthogonal basis matrices
             basis_matrices = []  # To prevent inplace editing of basis matrices
             for fm in factor_matrices:
