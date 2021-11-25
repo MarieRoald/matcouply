@@ -1178,7 +1178,6 @@ def test_cmf_aoadmm(rng, random_ragged_cmf):
 
 
 def test_cmf_aoadmm_verbose(rng, random_ragged_cmf, capfd):
-    # TODO: CHECK
     cmf, shapes, rank = random_ragged_cmf
     matrices = cmf.to_matrices()
 
