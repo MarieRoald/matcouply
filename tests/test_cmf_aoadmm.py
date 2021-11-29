@@ -33,7 +33,13 @@ def normalize(X):
     return X / tl.sqrt(tl.sum(X ** 2, axis=0, keepdims=True))
 
 
-@pytest.mark.parametrize("rank,init", all_combinations([1, 2, 5], ["random", "svd", "threshold_svd"]))
+@pytest.mark.parametrize(
+    "rank,init",
+    all_combinations(
+        [1, 2, 5],
+        ["random", "svd", "threshold_svd", "parafac2_als", "parafac_als", "cp_als", "parafac_hals", "cp_hals"],
+    ),
+)
 def test_initialize_cmf(rng, rank, init):
     shapes = ((5, 10), (10, 10), (15, 10))
     matrices = [rng.random_sample(shape) for shape in shapes]

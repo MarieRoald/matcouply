@@ -81,7 +81,7 @@ class CoupledMatrixFactorization(FactorizedTensor):
         self.rank = rank
 
     @classmethod
-    def from_CPTensor(cls, cp_tensor):
+    def from_CPTensor(cls, cp_tensor, shapes=None):
         """Convert a CP tensor into a coupled matrix factorization.
 
         Parameters
@@ -100,13 +100,25 @@ class CoupledMatrixFactorization(FactorizedTensor):
         ValueError
             If the CP tensor has more than tree modes.
         """
-
         cp_tensor = tl.cp_tensor.CPTensor(cp_tensor)
         weights, factors = cp_tensor
         if len(factors) != 3:
             raise ValueError("Must be a third order CP tensor to convert into a coupled matrix factorization")
         A, B, C = factors
-        B_is = [tl.copy(B) for i in range(tl.shape(A)[0])]
+
+        if shapes is not None:
+            B_is = []
+            if len(shapes) != tl.shape(A)[0]:
+                raise ValueError("The first mode has a different length than the shapes specify")
+            for shape in shapes:
+                J_i, K = shape
+                if K != tl.shape(C)[0]:
+                    raise ValueError("The third mode has a different length than the shapes specify")
+
+                B_is.append(tl.copy(B)[:J_i, :])
+        else:
+            B_is = [tl.copy(B) for i in range(tl.shape(A)[0])]
+
         return cls((tl.copy(weights), [tl.copy(A), B_is, tl.copy(C)]))
 
     @classmethod

@@ -1,8 +1,9 @@
 import numpy as np
 import tensorly as tl
+import tensorly.decomposition
 
 from . import penalties
-from ._utils import get_svd, is_iterable
+from ._utils import create_padded_tensor, get_shapes, get_svd, is_iterable
 from .coupled_matrices import CoupledMatrixFactorization, cmf_to_matrices
 
 # TODO: Document all update steps, they might be slightly different from paper (e.g. new transposes)
@@ -11,8 +12,12 @@ from .coupled_matrices import CoupledMatrixFactorization, cmf_to_matrices
 
 def initialize_cmf(matrices, rank, init, svd_fun, random_state=None, init_params=None):
     random_state = tl.check_random_state(random_state)
-    if init_params is None:
-        init_params = {}
+
+    # Start by checking if init is a valid factorization. If so, use it
+    if isinstance(init, (tuple, list, CoupledMatrixFactorization)):
+        return CoupledMatrixFactorization(init)
+
+    # Random uniform initialisation
     if init == "random":
         I = len(matrices)
         K = tl.shape(matrices[0])[1]
@@ -22,29 +27,40 @@ def initialize_cmf(matrices, rank, init, svd_fun, random_state=None, init_params
         B_is = [random_state.uniform(size=(matrix.shape[0], rank)) for matrix in matrices]
 
         return CoupledMatrixFactorization((None, [A, B_is, C]))
-    elif init == "svd":
-        # TODO: TEST SVD init
+
+    # SVD and thresholded SVD initialisation
+    if init == "svd" or init == "threshold_svd":
         I = len(matrices)
         A = tl.ones((I, rank))
         B_is = [svd_fun(matrix, n_eigenvecs=rank)[0] for matrix in matrices]
         C = tl.transpose(svd_fun(tl.concatenate(matrices, 0), n_eigenvecs=rank)[2])
-        return CoupledMatrixFactorization((None, [A, B_is, C]))
-    elif init == "threshold_svd":
-        # TODO: TEST Thresholded SVD init
-        # TODO: Before thresholding: fix SVD sign
-        I = len(matrices)
+        if init == "svd":
+            return CoupledMatrixFactorization((None, [A, B_is, C]))
+
         A = tl.ones((I, rank))
-        B_is = [tl.clip(svd_fun(matrix, n_eigenvecs=rank)[0], 0) for matrix in matrices]
-        C = tl.clip(tl.transpose(svd_fun(tl.concatenate(matrices, 0), n_eigenvecs=rank)[2]), 0)
+        B_is = [tl.clip(B_i, 0) for B_i in B_is]
+        C = tl.clip(C, 0)
         return CoupledMatrixFactorization((None, [A, B_is, C]))
-    elif init == "parafac2_als":
-        # TODO: PARAFAC2 init
-        pass
-    elif init == "cp_als":
-        # TODO: CP init
-        pass
-    elif isinstance(init, (tuple, list, CoupledMatrixFactorization)):
-        return CoupledMatrixFactorization(init)
+
+    # PARAFAC and PARAFAC2 initialisation:
+    if init_params is None:
+        init_params = {}
+    if "n_iter_max" not in init_params:
+        init_params["n_iter_max"] = 50
+
+    if init == "parafac2_als":
+        pf2 = tl.decomposition.parafac2(matrices, rank, **init_params, random_state=random_state)
+        return CoupledMatrixFactorization.from_Parafac2Tensor(pf2)
+
+    # PARAFAC init: Work with padded tensor
+    tensor = create_padded_tensor(matrices)
+    shapes = get_shapes(matrices)
+    if init == "cp_als" or init == "parafac_als":
+        cp = tl.decomposition.parafac(tensor, rank, **init_params, random_state=random_state)
+        return CoupledMatrixFactorization.from_CPTensor(cp, shapes=shapes)
+    if init == "cp_hals" or init == "parafac_hals":
+        cp = tl.decomposition.non_negative_parafac_hals(tensor, rank, **init_params, random_state=random_state)
+        return CoupledMatrixFactorization.from_CPTensor(cp, shapes=shapes)
 
     raise ValueError('Initialization method "{}" not recognized'.format(init))
 
@@ -530,9 +546,6 @@ def _parse_mode_penalties(
     if len(description_str) == 0:
         description_str += "\n (no additional regularisation added)"
     return regs, description_str
-
-
-# TODO: add alias for parafac2 decomposition
 
 
 def cmf_aoadmm(
