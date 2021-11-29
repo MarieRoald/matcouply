@@ -15,6 +15,7 @@ Welcome to MatCoupLy's documentation!
    installation
    auto_examples/index
    api
+   contributing
    references
 
 
