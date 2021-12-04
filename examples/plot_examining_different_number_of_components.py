@@ -63,7 +63,7 @@ A_gaps = []
 for num_components in range(2, 7):
     lowest_error = float("inf")
     for init in range(5):
-        out = cmf_aoadmm.parafac2_aoadmm(
+        cmf, diagnostics = cmf_aoadmm.parafac2_aoadmm(
             noisy_matrices,
             num_components,
             n_iter_max=1000,
@@ -71,14 +71,15 @@ for num_components in range(2, 7):
             return_errors=True,
             random_state=init,
         )
-        if out[3][-1] < lowest_error:
-            out_cmf, aux, dual, rec_errors, feasibility_gaps = out
-            lowest_error = rec_errors[-1]
+        if diagnostics.regularised_relative_sse[-1] < lowest_error:
+            selected_cmf = cmf
+            selected_diagnostics = diagnostics
+            lowest_error = diagnostics.regularised_relative_sse[-1]
 
     fit_score = 1 - lowest_error
     fit_scores.append(fit_score)
-    B_gaps.append(feasibility_gaps[-1][1][0])
-    A_gaps.append(feasibility_gaps[-1][0][0])
+    B_gaps.append(selected_diagnostics.feasibility_gaps[-1][1][0])
+    A_gaps.append(selected_diagnostics.feasibility_gaps[-1][0][0])
 
 
 ###############################################################################

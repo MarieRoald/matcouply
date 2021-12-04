@@ -41,7 +41,7 @@ for init in range(5):
     print("-" * 50)
     print("Init:", init)
     print("-" * 50)
-    out = cmf_aoadmm.parafac2_aoadmm(
+    cmf, diagnostics = cmf_aoadmm.parafac2_aoadmm(
         matrices,
         rank=4,
         non_negative=True,
@@ -52,12 +52,12 @@ for init in range(5):
         random_state=init,
     )
 
-    all_models.append(out[0])
-    all_errors.append(out[3])
+    all_models.append(cmf)
+    all_errors.append(diagnostics)
 
-    if out[3][-1] < lowest_error:
+    if diagnostics.regularised_relative_sse[-1] < lowest_error:
         selected_init = init
-        lowest_error = out[3][-1]
+        lowest_error = diagnostics.regularised_relative_sse[-1]
 
 ###############################################################################
 # Check uniqueness of the NN-PARAFAC2 models

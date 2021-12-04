@@ -86,11 +86,12 @@ noisy_matrices = [M + N * noise_level * tl.norm(M) / tl.norm(N) for M, N in zip(
 lowest_error = float("inf")
 for init in range(5):
     print("Init:", init)
-    out = cmf_aoadmm.parafac2_aoadmm(
+    out, diagnostics = cmf_aoadmm.parafac2_aoadmm(
         noisy_matrices, rank, n_iter_max=1000, non_negative=True, return_errors=True, random_state=init
     )
-    if out[3][-1] < lowest_error:
-        out_cmf, aux, dual, rec_errors, feasibility_gaps = out
+    if diagnostics.regularised_relative_sse[-1] < lowest_error:
+        out_cmf = cmf
+        rec_errors, feasibility_gaps, regularised_relative_sse = diagnostics
         lowest_error = rec_errors[-1]
 
 print("=" * 50)
