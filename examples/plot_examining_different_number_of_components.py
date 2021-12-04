@@ -71,10 +71,10 @@ for num_components in range(2, 7):
             return_errors=True,
             random_state=init,
         )
-        if diagnostics.regularised_relative_sse[-1] < lowest_error:
+        if diagnostics.regularised_loss[-1] < lowest_error:
             selected_cmf = cmf
             selected_diagnostics = diagnostics
-            lowest_error = diagnostics.regularised_relative_sse[-1]
+            lowest_error = diagnostics.regularised_loss[-1]
 
     fit_score = 1 - lowest_error
     fit_scores.append(fit_score)

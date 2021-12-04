@@ -558,7 +558,7 @@ class AdmmVars(NamedTuple):
 class DiagnosticMetrics(NamedTuple):
     rec_errors: List
     feasibility_gaps: Tuple
-    regularised_relative_sse: List
+    regularised_loss: List  # TODO: Loss not sse
 
 
 def cmf_aoadmm(
@@ -836,7 +836,7 @@ def cmf_aoadmm(
                             "Coupled matrix factorization iteration={}, ".format(it)
                             + "reconstruction error=NOT COMPUTED, "
                             + "regularised loss=NOT COMPUTED, "
-                            + "squared relative variation=NOT COMPUTED."
+                            + "regularised loss variation=NOT COMPUTED."
                         )
                         print("Duality gaps for A: {}".format(A_gaps))
                         print("Duality gaps for the Bi-matrices: {}".format(B_gaps))
@@ -861,7 +861,7 @@ def cmf_aoadmm(
                     "Coupled matrix factorization iteration={}, ".format(it)
                     + "reconstruction error={}, ".format(rec_errors[-1])
                     + "regularised loss={} ".format(losses[-1])
-                    + "squared relative variation={}.".format(abs(losses[-2] - losses[-1]) / losses[-2])
+                    + "regularised loss variation={}.".format(abs(losses[-2] - losses[-1]) / losses[-2])
                 )
                 print("Duality gaps for A: {}".format(A_gaps))
                 print("Duality gaps for the Bi-matrices: {}".format(B_gaps))
@@ -891,7 +891,7 @@ def cmf_aoadmm(
         out.append(admm_vars)
     if return_errors:
         diagnostic_metrics = DiagnosticMetrics(
-            rec_errors=rec_errors, feasibility_gaps=feasibility_gaps, regularised_relative_sse=losses
+            rec_errors=rec_errors, feasibility_gaps=feasibility_gaps, regularised_loss=losses
         )
         out.append(diagnostic_metrics)
 
