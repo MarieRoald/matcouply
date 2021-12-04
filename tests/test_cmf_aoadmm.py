@@ -1236,7 +1236,7 @@ def test_parafac2_makes_nn_cmf_unique(rng):
     rec_errors = [float("inf")]
     for init in range(5):
         out = cmf_aoadmm.cmf_aoadmm(
-            matrices, rank, n_iter_max=1_000, return_errors=True, non_negative=[True, True, True], parafac2=True
+            matrices, rank, n_iter_max=2_000, return_errors=True, non_negative=[True, True, True], parafac2=True
         )
 
         if out[1][0][-1] < rec_errors[-1]:
