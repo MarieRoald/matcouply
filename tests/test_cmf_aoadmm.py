@@ -10,7 +10,7 @@ from tensorly.metrics.factors import congruence_coefficient
 from tensorly.testing import assert_array_almost_equal, assert_array_equal
 
 import matcouply
-from matcouply import cmf_aoadmm, coupled_matrices, penalties, random
+from matcouply import cmf_aoadmm, coupled_matrices, penalties
 from matcouply._utils import get_svd
 from matcouply.coupled_matrices import CoupledMatrixFactorization
 from matcouply.penalties import NonNegativity
@@ -1141,33 +1141,49 @@ def test_cmf_aoadmm(rng, random_ragged_cmf):
     norm_matrices = tl.sqrt(sum(tl.sum(matrix ** 2) for matrix in matrices))
 
     # Decompose matrices with cmf_aoadmm with no constraints
-    out_cmf, aux, dual, rec_errors, feasibility_gaps = cmf_aoadmm.cmf_aoadmm(
-        matrices, rank, n_iter_max=10_000, return_errors=True
+    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = cmf_aoadmm.cmf_aoadmm(
+        matrices, rank, n_iter_max=10_000, return_errors=True, return_admm_vars=True,
     )
 
     # Check that reconstruction error is low
     assert rec_errors[-1] < 1e-02
 
     # Add non-negativity constraints on all modes
-    out_cmf, aux, dual, rec_errors, feasibility_gaps = cmf_aoadmm.cmf_aoadmm(
-        matrices, rank, n_iter_max=10_000, return_errors=True, non_negative=[True, True, True]
+    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = cmf_aoadmm.cmf_aoadmm(
+        matrices, rank, n_iter_max=10_000, return_errors=True, return_admm_vars=True, non_negative=[True, True, True]
     )
 
     # Check that reconstruction error is low
     assert rec_errors[-1] < 1e-02
 
     # Check that we get errors out when we ask for errors. Even if convergence checking is disabled and verbose=False
-    out = cmf_aoadmm.cmf_aoadmm(matrices, rank, return_errors=True, tol=None, absolute_tol=None, verbose=False)
-    assert len(out) == 5
+    out = cmf_aoadmm.cmf_aoadmm(matrices, rank, return_errors=True, return_admm_vars=False, tol=None, absolute_tol=None, verbose=False)
+    assert len(out) == 2
+    assert isinstance(out[0], CoupledMatrixFactorization)
+    assert isinstance(out[1], cmf_aoadmm.DiagnosticMetrics)
+
+    # Check that we get errors and ADMM-vars when we ask for errors. Even if convergence checking is disabled and verbose=False
+    out = cmf_aoadmm.cmf_aoadmm(matrices, rank, return_errors=True, return_admm_vars=True, tol=None, absolute_tol=None, verbose=False)
+    assert len(out) == 3
+    assert isinstance(out[0], CoupledMatrixFactorization)
+    assert isinstance(out[1], cmf_aoadmm.AdmmVars)
+    assert isinstance(out[2], cmf_aoadmm.DiagnosticMetrics)
+
+    # Check that we don't get errors but do get ADMM-vars when we ask for it. Even if convergence checking is disabled and verbose=False
+    out = cmf_aoadmm.cmf_aoadmm(matrices, rank, return_errors=False, return_admm_vars=True, tol=None, absolute_tol=None, verbose=False)
+    assert len(out) == 1
+    assert isinstance(out[0], CoupledMatrixFactorization)
+    assert isinstance(out[2], cmf_aoadmm.AdmmVars)
 
     # Check that we don't get errors out if we don't ask for it
-    out = cmf_aoadmm.cmf_aoadmm(matrices, rank, return_errors=False)
+    out = cmf_aoadmm.cmf_aoadmm(matrices, rank, return_errors=False, return_admm_vars=False)
     assert len(out) == 3
+    assert isinstance(out, CoupledMatrixFactorization)
 
     # Check that we can add non-negativity constraints with list of regs.
     regs = [[NonNegativity()], [NonNegativity()], [NonNegativity()]]
-    out_cmf, aux, dual, rec_errors, feasibility_gaps = cmf_aoadmm.cmf_aoadmm(
-        matrices, rank, n_iter_max=10_000, return_errors=True, regs=regs
+    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = cmf_aoadmm.cmf_aoadmm(
+        matrices, rank, n_iter_max=10_000, return_errors=True, return_admm_vars=True, regs=regs
     )
     # Check that final reconstruction error is the same as when we compute it with the returned decomposition and auxes
     assert cmf_aoadmm._cmf_reconstruction_error(matrices, out_cmf) / norm_matrices == pytest.approx(rec_errors[-1])
@@ -1187,14 +1203,14 @@ def test_cmf_aoadmm_verbose(rng, random_ragged_cmf, capfd):
     cmf, shapes, rank = random_ragged_cmf
     matrices = cmf.to_matrices()
 
-    out_cmf, aux, dual, rec_errors, feasibility_gaps = cmf_aoadmm.cmf_aoadmm(
-        matrices, rank, n_iter_max=1_000, return_errors=True, verbose=False
+    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = cmf_aoadmm.cmf_aoadmm(
+        matrices, rank, n_iter_max=1_000, return_errors=True, return_admm_vars=True, verbose=False
     )
     out, err = capfd.readouterr()
     assert len(out) == 0
 
-    out_cmf, aux, dual, rec_errors, feasibility_gaps = cmf_aoadmm.cmf_aoadmm(
-        matrices, rank, n_iter_max=1_000, return_errors=True, verbose=True
+    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = cmf_aoadmm.cmf_aoadmm(
+        matrices, rank, n_iter_max=1_000, return_errors=True, return_admm_vars=True, verbose=True
     )
     out, err = capfd.readouterr()
     assert len(out) > 0
@@ -1217,8 +1233,8 @@ def test_parafac2_makes_nn_cmf_unique(rng):
             matrices, rank, n_iter_max=1_000, return_errors=True, non_negative=[True, True, True], parafac2=True
         )
 
-        if out[3][-1] < rec_errors[-1]:
-            out_cmf, aux, dual, rec_errors, feasibility_gaps = out
+        if out[1][0][-1] < rec_errors[-1]:
+            out_cmf, (rec_errors, feasibility_gaps, loss) = out
 
     # Check that reconstruction error is low and that the correct factors are recovered
     assert rec_errors[-1] < 1e-04
