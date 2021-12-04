@@ -188,4 +188,4 @@ def get_semiconductor_etch_machine_data(download_data=True, save_data=True):
         metadata.columns.name = "Metadata"
         test_metadata[name] = metadata
 
-    return train_data, train_metadata
+    return train_data, train_metadata, test_data, test_metadata
