@@ -1,4 +1,4 @@
-from typing import List, Tuple, NamedTuple
+from typing import List, NamedTuple, Tuple
 
 import numpy as np
 import tensorly as tl
@@ -551,14 +551,14 @@ def _parse_mode_penalties(
 
 
 class AdmmVars(NamedTuple):
-    auxes : Tuple
-    duals : Tuple
+    auxes: Tuple
+    duals: Tuple
 
 
 class DiagnosticMetrics(NamedTuple):
-    rec_errors : List
-    feasibility_gaps : Tuple
-    regularised_rel_sse : List
+    rec_errors: List
+    feasibility_gaps: Tuple
+    regularised_relative_sse: List
 
 
 def cmf_aoadmm(
@@ -886,18 +886,15 @@ def cmf_aoadmm(
     out = [cmf]
     if return_admm_vars:
         admm_vars = AdmmVars(
-            auxes=(A_aux_list, B_is_aux_list, C_aux_list),
-            duals=(A_dual_list, B_is_dual_list, C_dual_list)
+            auxes=(A_aux_list, B_is_aux_list, C_aux_list), duals=(A_dual_list, B_is_dual_list, C_dual_list)
         )
         out.append(admm_vars)
     if return_errors:
         diagnostic_metrics = DiagnosticMetrics(
-            rec_errors=rec_errors,
-            feasibility_gaps=feasibility_gaps,
-            regularised_rel_sse=losses
+            rec_errors=rec_errors, feasibility_gaps=feasibility_gaps, regularised_relative_sse=losses
         )
         out.append(diagnostic_metrics)
-    
+
     if len(out) == 1:
         return out[0]
     else:
@@ -947,6 +944,7 @@ def parafac2_aoadmm(
     inner_tol=None,
     inner_n_iter_max=5,
     return_errors=False,
+    return_admm_vars=False,
     verbose=False,
 ):
     """Alias for cmf_aoadmm with PARAFAC2 constraint (constant cross-product) on mode 1 (B mode)  
@@ -986,5 +984,6 @@ def parafac2_aoadmm(
         inner_tol=inner_tol,
         inner_n_iter_max=inner_n_iter_max,
         return_errors=return_errors,
+        return_admm_vars=return_admm_vars,
         verbose=verbose,
     )

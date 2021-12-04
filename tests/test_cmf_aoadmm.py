@@ -1157,27 +1157,33 @@ def test_cmf_aoadmm(rng, random_ragged_cmf):
     assert rec_errors[-1] < 1e-02
 
     # Check that we get errors out when we ask for errors. Even if convergence checking is disabled and verbose=False
-    out = cmf_aoadmm.cmf_aoadmm(matrices, rank, return_errors=True, return_admm_vars=False, tol=None, absolute_tol=None, verbose=False)
+    out = cmf_aoadmm.cmf_aoadmm(
+        matrices, rank, return_errors=True, return_admm_vars=False, tol=None, absolute_tol=None, verbose=False
+    )
     assert len(out) == 2
     assert isinstance(out[0], CoupledMatrixFactorization)
     assert isinstance(out[1], cmf_aoadmm.DiagnosticMetrics)
 
     # Check that we get errors and ADMM-vars when we ask for errors. Even if convergence checking is disabled and verbose=False
-    out = cmf_aoadmm.cmf_aoadmm(matrices, rank, return_errors=True, return_admm_vars=True, tol=None, absolute_tol=None, verbose=False)
+    out = cmf_aoadmm.cmf_aoadmm(
+        matrices, rank, return_errors=True, return_admm_vars=True, tol=None, absolute_tol=None, verbose=False
+    )
     assert len(out) == 3
     assert isinstance(out[0], CoupledMatrixFactorization)
     assert isinstance(out[1], cmf_aoadmm.AdmmVars)
     assert isinstance(out[2], cmf_aoadmm.DiagnosticMetrics)
 
     # Check that we don't get errors but do get ADMM-vars when we ask for it. Even if convergence checking is disabled and verbose=False
-    out = cmf_aoadmm.cmf_aoadmm(matrices, rank, return_errors=False, return_admm_vars=True, tol=None, absolute_tol=None, verbose=False)
-    assert len(out) == 1
+    out = cmf_aoadmm.cmf_aoadmm(
+        matrices, rank, return_errors=False, return_admm_vars=True, tol=None, absolute_tol=None, verbose=False
+    )
+    assert len(out) == 2
     assert isinstance(out[0], CoupledMatrixFactorization)
-    assert isinstance(out[2], cmf_aoadmm.AdmmVars)
+    assert isinstance(out[1], cmf_aoadmm.AdmmVars)
 
     # Check that we don't get errors out if we don't ask for it
     out = cmf_aoadmm.cmf_aoadmm(matrices, rank, return_errors=False, return_admm_vars=False)
-    assert len(out) == 3
+    assert len(out) == 2
     assert isinstance(out, CoupledMatrixFactorization)
 
     # Check that we can add non-negativity constraints with list of regs.
