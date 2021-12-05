@@ -3,7 +3,7 @@ from tensorly._factorized_tensor import FactorizedTensor
 
 
 class CoupledMatrixFactorization(FactorizedTensor):
-    """Class wrapper for coupled matrix factorizations.
+    r"""Class wrapper for coupled matrix factorizations.
 
     This class validates the decomposition and provides conversion to
     dense formats via methods.
