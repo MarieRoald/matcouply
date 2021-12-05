@@ -1250,6 +1250,92 @@ def test_parafac2_makes_nn_cmf_unique(rng):
     assert congruence_coefficient(C, out_cmf[1][2], absolute_value=True)[0] > 0.99
 
 
+def test_cmf_aoadmm_not_updating_A_works(rng, random_ragged_cmf):
+    cmf, shapes, rank = random_ragged_cmf
+    weights, (A, B_is, C) = cmf
+    wrong_A = rng.random_sample(tl.shape(A))
+    wrong_A_copy = tl.copy(wrong_A)
+    B_is_copy = [tl.copy(B_i) for B_i in B_is]
+    C_copy = tl.copy(C)
+
+    # Construct matrices and compute their norm
+    matrices = cmf.to_matrices()
+
+    # Decompose matrices with cmf_aoadmm with no constraints
+    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = cmf_aoadmm.cmf_aoadmm(
+        matrices,
+        rank,
+        n_iter_max=5,
+        return_errors=True,
+        return_admm_vars=True,
+        update_A=False,
+        init=(None, (wrong_A_copy, B_is_copy, C_copy)),
+    )
+
+    out_weights, (out_A, out_B_is, out_C) = out_cmf
+    assert_array_almost_equal(wrong_A, out_A)
+    assert not tl.all(out_C == C)
+    for B_i, out_B_i in zip(B_is, out_B_is):
+        assert not tl.all(B_i == out_B_i)
+
+
+def test_cmf_aoadmm_not_updating_C_works(rng, random_ragged_cmf):
+    cmf, shapes, rank = random_ragged_cmf
+    weights, (A, B_is, C) = cmf
+    A_copy = tl.copy(A)
+    B_is_copy = [tl.copy(B_i) for B_i in B_is]
+    wrong_C = rng.random_sample(tl.shape(C))
+    wrong_C_copy = tl.copy(wrong_C)
+
+    # Construct matrices and compute their norm
+    matrices = cmf.to_matrices()
+
+    # Decompose matrices with cmf_aoadmm with no constraints
+    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = cmf_aoadmm.cmf_aoadmm(
+        matrices,
+        rank,
+        n_iter_max=5,
+        return_errors=True,
+        return_admm_vars=True,
+        update_C=False,
+        init=(None, (A_copy, B_is_copy, wrong_C_copy)),
+    )
+
+    out_weights, (out_A, out_B_is, out_C) = out_cmf
+    assert_array_almost_equal(wrong_C, out_C)
+    assert not tl.all(out_A == A)
+    for B_i, out_B_i in zip(B_is, out_B_is):
+        assert not tl.all(B_i == out_B_i)
+
+
+def test_cmf_aoadmm_not_updating_B_is_works(rng, random_ragged_cmf):
+    cmf, shapes, rank = random_ragged_cmf
+    weights, (A, B_is, C) = cmf
+    A_copy = tl.copy(A)
+    wrong_B_is = [rng.standard_normal(size=tl.shape(B_i)) for B_i in B_is]
+    wrong_B_is_copy = [tl.copy(B_i) for B_i in wrong_B_is]
+    C_copy = tl.copy(C)
+    # Construct matrices and compute their norm
+    matrices = cmf.to_matrices()
+
+    # Decompose matrices with cmf_aoadmm with no constraints
+    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = cmf_aoadmm.cmf_aoadmm(
+        matrices,
+        rank,
+        n_iter_max=5,
+        return_errors=True,
+        return_admm_vars=True,
+        update_B_is=False,
+        init=(None, (A_copy, wrong_B_is_copy, C_copy)),
+    )
+
+    out_weights, (out_A, out_B_is, out_C) = out_cmf
+    assert not tl.all(out_A == A)
+    assert not tl.all(out_C == C)
+    for B_i, out_B_i in zip(wrong_B_is, out_B_is):
+        assert_array_almost_equal(B_i, out_B_i)
+
+
 def test_parafac2_aoadmm(rng, random_ragged_cmf):
     parafac2_argspecs = inspect.getfullargspec(matcouply.cmf_aoadmm.parafac2_aoadmm)
     placeholder_args = {arg: f"PLACEHOLDERARG_{i}" for i, arg in enumerate(parafac2_argspecs.args)}

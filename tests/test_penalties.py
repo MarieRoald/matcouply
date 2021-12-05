@@ -912,22 +912,51 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
 
     def test_factor_matrices_update_stationary_point(self, rng):
         deltaB = rng.standard_normal((3, 3))
-        Pks = [np.linalg.qr(rng.standard_normal(size=(10, 3)))[0] for _ in range(5)]
-        auxes = Pks, deltaB
-        stationary_matrices = [Pk @ deltaB for Pk in Pks]
+        P_is = [np.linalg.qr(rng.standard_normal(size=(10, 3)))[0] for _ in range(5)]
+        auxes = P_is, deltaB
+        stationary_matrices = [P_i @ deltaB for P_i in P_is]
 
         feasibility_penalties = [10] * len(stationary_matrices)
         pf2_penalty = penalties.Parafac2()
 
         out = pf2_penalty.factor_matrices_update(stationary_matrices, feasibility_penalties, auxes)
         assert_array_almost_equal(deltaB, out[1])
-        for Pk, out_matrix in zip(Pks, out[0]):
-            assert_array_almost_equal(Pk, out_matrix)
+        for P_i, out_matrix in zip(P_is, out[0]):
+            assert_array_almost_equal(P_i, out_matrix)
+
+    def test_not_updating_basis_matrices_works(self, rng):
+        deltaB = rng.standard_normal((3, 3))
+        P_is = [np.linalg.qr(rng.standard_normal(size=(10, 3)))[0] for _ in range(5)]
+        wrong_P_is = [np.linalg.qr(rng.standard_normal(size=(10, 3)))[0] for _ in range(5)]
+        B_is = [P_i @ deltaB for P_i in P_is]
+        auxes = wrong_P_is, deltaB
+
+        feasibility_penalties = [10] * len(B_is)
+        pf2_penalty = penalties.Parafac2(update_basis_matrices=False)
+
+        out = pf2_penalty.factor_matrices_update(B_is, feasibility_penalties, auxes)
+        assert not tl.all(deltaB == out[1])
+        for P_i, out_matrix in zip(wrong_P_is, out[0]):
+            assert_array_almost_equal(P_i, out_matrix)
+
+    def test_not_updating_coordinate_matrix_works(self, rng):
+        deltaB = rng.standard_normal((3, 3))
+        wrong_deltaB = rng.standard_normal((3, 3))
+        P_is = [np.linalg.qr(rng.standard_normal(size=(10, 3)))[0] for _ in range(5)]
+        B_is = [P_i @ deltaB for P_i in P_is]
+        auxes = P_is, wrong_deltaB
+
+        feasibility_penalties = [10] * len(B_is)
+        pf2_penalty = penalties.Parafac2(update_coordinate_matrix=False)
+        out = pf2_penalty.factor_matrices_update(B_is, feasibility_penalties, auxes)
+        assert_array_almost_equal(wrong_deltaB, out[1])
+        for P_i, out_matrix in zip(P_is, out[0]):
+            assert not tl.all(P_i == out_matrix)
 
     def test_factor_matrices_update_reduces_penalty(self, rng, random_matrices):
         deltaB = rng.standard_normal((3, 3))
-        Pks = [np.linalg.qr(rng.standard_normal(size=(10, 3)))[0] for _ in range(5)]
-        auxes = Pks, deltaB
+        P_is = [np.linalg.qr(rng.standard_normal(size=(10, 3)))[0] for _ in range(5)]
+        auxes = P_is, deltaB
 
         feasibility_penalties = [10] * len(random_matrices)
         pf2_penalty = penalties.Parafac2()
@@ -938,14 +967,14 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
 
     def test_factor_matrices_update_changes_input(self, random_matrices, rng):
         deltaB = rng.standard_normal((3, 3))
-        Pks = [np.linalg.qr(rng.standard_normal(size=(10, 3)))[0] for _ in range(5)]
-        auxes = Pks, deltaB
+        P_is = [np.linalg.qr(rng.standard_normal(size=(10, 3)))[0] for _ in range(5)]
+        auxes = P_is, deltaB
 
         feasibility_penalties = [10] * len(random_matrices)
         pf2_penalty = penalties.Parafac2()
 
         out = pf2_penalty.factor_matrices_update(random_matrices, feasibility_penalties, auxes)
-        constructed_out = [Pk @ out[1] for Pk in out[0]]
+        constructed_out = [P_i @ out[1] for P_i in out[0]]
         for random_matrix, out_matrix in zip(random_matrices, constructed_out):
             assert not np.allclose(random_matrix, out_matrix)
 

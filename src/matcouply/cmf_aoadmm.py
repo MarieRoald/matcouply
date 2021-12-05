@@ -8,6 +8,8 @@ from . import penalties
 from ._utils import create_padded_tensor, get_shapes, get_svd, is_iterable
 from .coupled_matrices import CoupledMatrixFactorization, cmf_to_matrices
 
+__all__ = ["compute_feasibility_gaps", "AdmmVars", "DiagnosticMetrics", "cmf_aoadmm", "parafac2_aoadmm"]
+
 # TODO: Document all update steps, they might be slightly different from paper (e.g. new transposes)
 # TODO: Document l2_penalty as 0.5||A||^2, etc. Not ||A||^2
 
@@ -26,7 +28,7 @@ def initialize_cmf(matrices, rank, init, svd_fun, random_state=None, init_params
 
         A = random_state.uniform(size=(I, rank))
         C = random_state.uniform(size=(K, rank))
-        B_is = [random_state.uniform(size=(matrix.shape[0], rank)) for matrix in matrices]
+        B_is = [random_state.uniform(size=(tl.shape(matrix)[0], rank)) for matrix in matrices]
 
         return CoupledMatrixFactorization((None, [A, B_is, C]))
 
@@ -81,7 +83,6 @@ def initialize_dual(matrices, rank, reg, random_state):
     return A_dual_list, B_dual_list, C_dual_list
 
 
-# TODO: For all updates: add l2_penalty. When computing svd, add 0.5*l2_penalty*identity_matrix
 # TODO: Document the loss function we are optinmising, l2_penalty half its value in the paper
 # TODO: Add option to scale the l2_penalty
 def admm_update_A(
@@ -558,9 +559,11 @@ class AdmmVars(NamedTuple):
 class DiagnosticMetrics(NamedTuple):
     rec_errors: List
     feasibility_gaps: Tuple
-    regularised_loss: List  # TODO: Loss not sse
+    regularised_loss: List
 
 
+# TODO: Write what loss we minimise
+# TODO: Test for update_A, update_B_is and update_C
 def cmf_aoadmm(
     matrices,
     rank,
@@ -589,6 +592,9 @@ def cmf_aoadmm(
     feasibility_tol=1e-4,
     inner_tol=None,
     inner_n_iter_max=5,
+    update_A=True,
+    update_B_is=True,
+    update_C=True,
     return_errors=False,
     return_admm_vars=False,
     verbose=False,
@@ -773,44 +779,47 @@ def cmf_aoadmm(
         print("Duality gaps for C: {}".format(C_gaps))
 
     for it in range(n_iter_max):
-        cmf, B_is_aux_list, B_is_dual_list = admm_update_B(
-            matrices=matrices,
-            reg=regs[1],
-            cmf=cmf,
-            B_is_aux_list=B_is_aux_list,
-            B_is_dual_list=B_is_dual_list,
-            l2_penalty=l2_penalty[1],
-            inner_n_iter_max=inner_n_iter_max,
-            inner_tol=inner_tol,
-            feasibility_penalty_scale=feasibility_penalty_scale,
-            constant_feasibility_penalty=constant_feasibility_penalty,
-            svd_fun=svd_fun,
-        )
-        cmf, A_aux_list, A_dual_list = admm_update_A(
-            matrices=matrices,
-            reg=regs[0],
-            cmf=cmf,
-            A_aux_list=A_aux_list,
-            A_dual_list=A_dual_list,
-            l2_penalty=l2_penalty[0],
-            inner_n_iter_max=inner_n_iter_max,
-            inner_tol=inner_tol,
-            feasibility_penalty_scale=feasibility_penalty_scale,
-            constant_feasibility_penalty=constant_feasibility_penalty,
-            svd_fun=svd_fun,
-        )
-        cmf, C_aux_list, C_dual_list = admm_update_C(
-            matrices=matrices,
-            reg=regs[2],
-            cmf=cmf,
-            C_aux_list=C_aux_list,
-            C_dual_list=C_dual_list,
-            l2_penalty=l2_penalty[2],
-            inner_n_iter_max=inner_n_iter_max,
-            inner_tol=inner_tol,
-            feasibility_penalty_scale=feasibility_penalty_scale,
-            svd_fun=svd_fun,
-        )
+        if update_B_is:
+            cmf, B_is_aux_list, B_is_dual_list = admm_update_B(
+                matrices=matrices,
+                reg=regs[1],
+                cmf=cmf,
+                B_is_aux_list=B_is_aux_list,
+                B_is_dual_list=B_is_dual_list,
+                l2_penalty=l2_penalty[1],
+                inner_n_iter_max=inner_n_iter_max,
+                inner_tol=inner_tol,
+                feasibility_penalty_scale=feasibility_penalty_scale,
+                constant_feasibility_penalty=constant_feasibility_penalty,
+                svd_fun=svd_fun,
+            )
+        if update_A:
+            cmf, A_aux_list, A_dual_list = admm_update_A(
+                matrices=matrices,
+                reg=regs[0],
+                cmf=cmf,
+                A_aux_list=A_aux_list,
+                A_dual_list=A_dual_list,
+                l2_penalty=l2_penalty[0],
+                inner_n_iter_max=inner_n_iter_max,
+                inner_tol=inner_tol,
+                feasibility_penalty_scale=feasibility_penalty_scale,
+                constant_feasibility_penalty=constant_feasibility_penalty,
+                svd_fun=svd_fun,
+            )
+        if update_C:
+            cmf, C_aux_list, C_dual_list = admm_update_C(
+                matrices=matrices,
+                reg=regs[2],
+                cmf=cmf,
+                C_aux_list=C_aux_list,
+                C_dual_list=C_dual_list,
+                l2_penalty=l2_penalty[2],
+                inner_n_iter_max=inner_n_iter_max,
+                inner_tol=inner_tol,
+                feasibility_penalty_scale=feasibility_penalty_scale,
+                svd_fun=svd_fun,
+            )
 
         # TODO: Do we want normalisation?
         if tol or return_errors:
@@ -943,6 +952,9 @@ def parafac2_aoadmm(
     feasibility_tol=1e-4,
     inner_tol=None,
     inner_n_iter_max=5,
+    update_A=True,
+    update_B_is=True,
+    update_C=True,
     return_errors=False,
     return_admm_vars=False,
     verbose=False,
@@ -983,6 +995,9 @@ def parafac2_aoadmm(
         feasibility_tol=feasibility_tol,
         inner_tol=inner_tol,
         inner_n_iter_max=inner_n_iter_max,
+        update_A=update_A,
+        update_B_is=update_B_is,
+        update_C=update_C,
         return_errors=return_errors,
         return_admm_vars=return_admm_vars,
         verbose=verbose,

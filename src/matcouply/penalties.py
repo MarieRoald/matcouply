@@ -961,6 +961,7 @@ class UnitSimplex(HardConstraintMixin, MatrixPenalty):
         return output_factor_matrix
 
 
+# TODO: Test for update_basis_matrices and update_coordinate_matrix
 class Parafac2(MatricesPenalty):
     r"""Impose the PARAFAC2 constraint on the uncoupled factor matrices.
 
@@ -1037,10 +1038,20 @@ class Parafac2(MatricesPenalty):
     """
     # TODO: Update cite once proceedings is published
 
-    def __init__(self, svd="truncated_svd", n_iter=1, aux_init="random_uniform", dual_init="random_uniform"):
+    def __init__(
+        self,
+        svd="truncated_svd",
+        n_iter=1,
+        update_basis_matrices=True,
+        update_coordinate_matrix=True,
+        aux_init="random_uniform",
+        dual_init="random_uniform",
+    ):
         self.svd_fun = get_svd(svd)
         self.aux_init = aux_init
         self.dual_init = dual_init
+        self.update_basis_matrices = update_basis_matrices
+        self.update_coordinate_matrix = update_coordinate_matrix
         self.n_iter = n_iter
 
     def init_aux(self, matrices, rank, mode, random_state=None):
@@ -1163,16 +1174,23 @@ class Parafac2(MatricesPenalty):
 
         for it in range(self.n_iter):
             # Update orthogonal basis matrices
-            basis_matrices = []  # To prevent inplace editing of basis matrices
-            for fm in factor_matrices:
-                U, s, Vh = self.svd_fun(fm @ coordinate_matrix.T, n_eigenvecs=R)
-                basis_matrices.append(U @ Vh)
+            if self.update_basis_matrices:
+                basis_matrices = []  # To prevent inplace editing of basis matrices
+                for fm in factor_matrices:
+                    U, s, Vh = self.svd_fun(fm @ coordinate_matrix.T, n_eigenvecs=R)
+                    basis_matrices.append(U @ Vh)
 
-            # Project all factor matrices onto the space spanned by the orthogonal basis matrices and compute weighted mean
-            coordinate_matrix = 0
-            for fm, basis_matrix, feasibility_penalty in zip(factor_matrices, basis_matrices, feasibility_penalties):
-                coordinate_matrix += feasibility_penalty * basis_matrix.T @ fm
-            coordinate_matrix /= sum(feasibility_penalties)
+            if self.update_coordinate_matrix:
+                # Project all factor matrices onto the space spanned by the orthogonal basis matrices and compute weighted mean
+                coordinate_matrix = 0
+                for fm, basis_matrix, feasibility_penalty in zip(
+                    factor_matrices, basis_matrices, feasibility_penalties
+                ):
+                    coordinate_matrix += feasibility_penalty * basis_matrix.T @ fm
+                coordinate_matrix /= sum(feasibility_penalties)
+
+            if (not self.update_coordinate_matrix) or (not self.update_basis_matrices):
+                break
 
         return basis_matrices, coordinate_matrix
 
