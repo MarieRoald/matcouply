@@ -59,3 +59,21 @@ def test_get_svd(rng, svd):
 def test_get_svd_fails_with_invalid_svd_name():
     with pytest.raises(ValueError):
         utils.get_svd("THIS_IS_NOT_A_VALID_SVD")
+
+
+def test_get_padded_tensor_shape(rng, random_ragged_cmf):
+    cmf, shapes, rank = random_ragged_cmf
+
+    I = len(shapes)
+    J = max([shape[0] for shape in shapes])
+    K = shapes[0][1]
+
+    assert (I, J, K) == utils.get_padded_tensor_shape(cmf.to_matrices())
+
+    matrices_different_columns = [
+        rng.standard_normal(size=(3, 4)),
+        rng.standard_normal(size=(5, 6)),
+        rng.standard_normal(size=(5, 6)),
+    ]
+    with pytest.raises(ValueError):
+        utils.get_padded_tensor_shape(matrices_different_columns)
