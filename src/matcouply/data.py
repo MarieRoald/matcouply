@@ -68,7 +68,7 @@ def get_bike_data():
     return out
 
 
-def get_raw_semiconductor_etch_data(download_data=True, save_data=True):
+def get_semiconductor_etch_raw_data(download_data=True, save_data=True):
     """Load semiconductor etch data from :cite:p:`wise1999comparison`.
 
     If the dataset is already downloaded on your computer, then the local files will be
@@ -106,7 +106,7 @@ def get_raw_semiconductor_etch_data(download_data=True, save_data=True):
         elif download_data:
             request = requests.get(url)
             if request.status_code != 200:
-                raise ValueError(f"Cannot download file {url} - Response: {request.status_code} {request.reason}")
+                raise RuntimeError(f"Cannot download file {url} - Response: {request.status_code} {request.reason}")
 
             if save_data:
                 DOWNLOADED_PARENT.mkdir(exist_ok=True, parents=True)
@@ -115,7 +115,7 @@ def get_raw_semiconductor_etch_data(download_data=True, save_data=True):
 
             data_raw_mat[file] = loadmat(BytesIO(request.content))
         else:
-            raise ValueError("The semiconductor etch data is not yet downloaded, and ``download_data=False``.")
+            raise RuntimeError("The semiconductor etch data is not yet downloaded, and ``download_data=False``.")
     return data_raw_mat
 
 
@@ -144,7 +144,7 @@ def get_semiconductor_etch_machine_data(download_data=True, save_data=True):
         of the MATLAB files.
     """
     # Get raw MATLAB data and parse into Python dict
-    data = get_raw_semiconductor_etch_data(download_data=download_data, save_data=save_data)["MACHINE_Data.mat"][
+    data = get_semiconductor_etch_raw_data(download_data=download_data, save_data=save_data)["MACHINE_Data.mat"][
         "LAMDATA"
     ]
     data = {key: data[key].squeeze().item().squeeze() for key in data.dtype.fields}
@@ -184,6 +184,7 @@ def get_semiconductor_etch_machine_data(download_data=True, save_data=True):
         metadata = pd.DataFrame(data["test"][i][:-1, [0, 1]], columns=["Time", "Step number"])
         metadata["Experiment"] = int(name[:2])
         metadata["Sample"] = int(name[2:])
+        metadata["Fault name"] = data["fault_names"][i]
         metadata.index.name = "Time point"
         metadata.columns.name = "Metadata"
         test_metadata[name] = metadata
