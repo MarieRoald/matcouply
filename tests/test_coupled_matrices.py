@@ -315,3 +315,30 @@ def test_cmf_to_vec(rng, random_ragged_cmf):
         mock.assert_not_called()
         coupled_matrices.cmf_to_vec(cmf, validate=True)
         mock.assert_called()
+
+
+def test_from_CPTensor_with_shapes(rng):
+    A = rng.standard_normal(size=(5, 4))
+    B = rng.standard_normal(size=(10, 4))
+    C = rng.standard_normal(size=(15, 4))
+
+    # Check that we get decomposition with the correct shape
+    cp_tensor = tl.cp_tensor.CPTensor((None, (A, B, C)))
+    full_shapes = ((10, 15), (10, 15), (10, 15), (10, 15), (10, 15))
+    cmf_full = coupled_matrices.CoupledMatrixFactorization.from_CPTensor(cp_tensor, shapes=full_shapes)
+    assert full_shapes == cmf_full.shape
+
+    ragged_shapes = ((9, 15), (10, 15), (8, 15), (10, 15), (10, 15))
+    cmf_ragged = coupled_matrices.CoupledMatrixFactorization.from_CPTensor(cp_tensor, shapes=ragged_shapes)
+    assert ragged_shapes == cmf_ragged.shape
+
+    # Check that invalid shapes yields valueerror
+    shapes_invalid_I = ((10, 15), (10, 15), (10, 15), (10, 15), (10, 15), (10, 15))
+    with pytest.raises(ValueError):
+        coupled_matrices.CoupledMatrixFactorization.from_CPTensor(cp_tensor, shapes=shapes_invalid_I)
+    shapes_invalid_J = ((10, 15), (10, 15), (10, 15), (11, 15), (10, 15))
+    with pytest.raises(ValueError):
+        coupled_matrices.CoupledMatrixFactorization.from_CPTensor(cp_tensor, shapes=shapes_invalid_J)
+    shapes_invalid_K = ((10, 16), (10, 16), (10, 16), (10, 16), (10, 16))
+    with pytest.raises(ValueError):
+        coupled_matrices.CoupledMatrixFactorization.from_CPTensor(cp_tensor, shapes=shapes_invalid_K)
