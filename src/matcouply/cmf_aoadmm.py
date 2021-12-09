@@ -563,7 +563,6 @@ class DiagnosticMetrics(NamedTuple):
 
 
 # TODO: Write what loss we minimise
-# TODO: Test for update_A, update_B_is and update_C
 def cmf_aoadmm(
     matrices,
     rank,
@@ -749,6 +748,13 @@ def cmf_aoadmm(
         aux_init=aux_init,
         verbose=verbose,
     )
+
+    if not update_A:
+        regs[0] = []
+    if not update_B_is:
+        regs[1] = []
+    if not update_C:
+        regs[2] = []
 
     A_aux_list, B_is_aux_list, C_aux_list, = initialize_aux(
         matrices, rank, regs, random_state=random_state
