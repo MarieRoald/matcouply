@@ -109,11 +109,22 @@ class CoupledMatrixFactorization(FactorizedTensor):
         if shapes is not None:
             B_is = []
             if len(shapes) != tl.shape(A)[0]:
-                raise ValueError("The first mode has a different length than the shapes specify")
-            for shape in shapes:
+                raise ValueError(
+                    f"The first mode has length {tl.shape(A)[0]}, which is different "
+                    f"than the length indicated by the shapes argument ({len(shapes)})"
+                )
+            for i, shape in enumerate(shapes):
                 J_i, K = shape
                 if K != tl.shape(C)[0]:
-                    raise ValueError("The third mode has a different length than the shapes specify")
+                    raise ValueError(
+                        f"The third mode has length {tl.shape(C)[0]}, which is different "
+                        f"than the length indicated by the shapes argument ({K})"
+                    )
+                if J_i > tl.shape(B)[0]:
+                    raise ValueError(
+                        f"The second mode of the CP tensor mode has length {tl.shape(B)[0]}, which "
+                        f"is smaller than the length indicated by the shape ({J_i}) of matrix"
+                    )
 
                 B_is.append(tl.copy(B)[:J_i, :])
         else:
