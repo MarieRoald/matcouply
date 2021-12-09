@@ -1181,7 +1181,8 @@ class Parafac2(MatricesPenalty):
                     basis_matrices.append(U @ Vh)
 
             if self.update_coordinate_matrix:
-                # Project all factor matrices onto the space spanned by the orthogonal basis matrices and compute weighted mean
+                # Project all factor matrices onto the space spanned by the orthogonal basis matrices
+                # and compute weighted mean
                 coordinate_matrix = 0
                 for fm, basis_matrix, feasibility_penalty in zip(
                     factor_matrices, basis_matrices, feasibility_penalties
