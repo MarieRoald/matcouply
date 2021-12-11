@@ -12,7 +12,7 @@ import plotly.express as px
 from component_vis.factor_tools import factor_match_score
 from wordcloud import WordCloud
 
-import matcouply.cmf_aoadmm as cmf_aoadmm
+import matcouply.decomposition as decomposition
 from matcouply.data import get_bike_data
 
 ###############################################################################
@@ -41,7 +41,7 @@ for init in range(5):
     print("-" * 50)
     print("Init:", init)
     print("-" * 50)
-    cmf, diagnostics = cmf_aoadmm.parafac2_aoadmm(
+    cmf, diagnostics = decomposition.parafac2_aoadmm(
         matrices,
         rank=4,
         non_negative=True,

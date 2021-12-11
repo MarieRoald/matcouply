@@ -1,5 +1,5 @@
 Factorizing a dataset
 ---------------------
 
-.. automodule:: matcouply.cmf_aoadmm
+.. automodule:: matcouply.decomposition
     :members:

@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import tensorly as tl
 
-import matcouply.cmf_aoadmm as cmf_aoadmm
+import matcouply.decomposition as decomposition
 from matcouply.coupled_matrices import CoupledMatrixFactorization
 
 ###############################################################################
@@ -63,7 +63,7 @@ A_gaps = []
 for num_components in range(2, 7):
     lowest_error = float("inf")
     for init in range(5):
-        cmf, diagnostics = cmf_aoadmm.parafac2_aoadmm(
+        cmf, diagnostics = decomposition.parafac2_aoadmm(
             noisy_matrices,
             num_components,
             n_iter_max=1000,

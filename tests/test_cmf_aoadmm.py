@@ -10,7 +10,7 @@ from tensorly.metrics.factors import congruence_coefficient
 from tensorly.testing import assert_array_almost_equal, assert_array_equal
 
 import matcouply
-from matcouply import cmf_aoadmm, coupled_matrices, penalties
+from matcouply import coupled_matrices, decomposition, penalties
 from matcouply._utils import get_svd
 from matcouply.coupled_matrices import CoupledMatrixFactorization
 from matcouply.penalties import NonNegativity
@@ -45,7 +45,7 @@ def test_initialize_cmf(rng, rank, init):
     matrices = [rng.random_sample(shape) for shape in shapes]
 
     svd_fun = get_svd("truncated_svd")
-    cmf = cmf_aoadmm.initialize_cmf(matrices, rank, init, svd_fun, random_state=None, init_params=None)
+    cmf = decomposition.initialize_cmf(matrices, rank, init, svd_fun, random_state=None, init_params=None)
     init_matrices = coupled_matrices.cmf_to_matrices(cmf)
     for matrix, init_matrix in zip(matrices, init_matrices):
         assert matrix.shape == init_matrix.shape
@@ -59,7 +59,7 @@ def test_initialize_aux(rng, rank):
     matrices = [rng.random(shape) for shape in shapes]
 
     reg = [[NonNegativity(), NonNegativity(), NonNegativity()], [NonNegativity()], []]
-    A_aux_list, B_aux_list, C_aux_list = cmf_aoadmm.initialize_aux(matrices, rank, reg, rng)
+    A_aux_list, B_aux_list, C_aux_list = decomposition.initialize_aux(matrices, rank, reg, rng)
     assert len(A_aux_list) == 3
     assert len(B_aux_list) == 1
     assert len(C_aux_list) == 0
@@ -82,7 +82,7 @@ def test_initialize_dual(rng, rank):
     matrices = [rng.random(shape) for shape in shapes]
 
     reg = [[NonNegativity(), NonNegativity(), NonNegativity()], [NonNegativity()], []]
-    A_dual_list, B_dual_list, C_dual_list = cmf_aoadmm.initialize_dual(matrices, rank, reg, rng)
+    A_dual_list, B_dual_list, C_dual_list = decomposition.initialize_dual(matrices, rank, reg, rng)
     assert len(A_dual_list) == 3
     assert len(B_dual_list) == 1
     assert len(C_dual_list) == 0
@@ -107,7 +107,7 @@ def test_cmf_reconstruction_error(rng, random_ragged_cmf):
     noise_norm = tl.sqrt(sum(tl.sum(n ** 2) for n in noise))
 
     # Check that the error is equal to the noise magnitude
-    error = cmf_aoadmm._cmf_reconstruction_error(noisy_matrices, cmf)
+    error = decomposition._cmf_reconstruction_error(noisy_matrices, cmf)
     assert error == pytest.approx(noise_norm)
 
 
@@ -116,7 +116,7 @@ def test_listify(rng):
 
     # Check that you can send in iterable of length 3
     three_elements_list = [1, 2, 3]
-    out = cmf_aoadmm._listify(three_elements_list, param_name)
+    out = decomposition._listify(three_elements_list, param_name)
     assert len(out) == 3
     assert out[0] == 1
     assert out[1] == 2
@@ -124,26 +124,26 @@ def test_listify(rng):
 
     # Check that when given an iterable with missnig modes, it returns a list with None for missing modes
     just_two_elements_dict = {0: 1, 2: 2}
-    out = cmf_aoadmm._listify(just_two_elements_dict, param_name)
+    out = decomposition._listify(just_two_elements_dict, param_name)
     assert len(out) == 3
     assert out[0] == 1
     assert out[1] is None
     assert out[2] == 2
 
     just_one_elements_dict = {1: 1}
-    out = cmf_aoadmm._listify(just_one_elements_dict, param_name)
+    out = decomposition._listify(just_one_elements_dict, param_name)
     assert len(out) == 3
     assert out[0] is None
     assert out[1] == 1
     assert out[2] is None
 
     # Check that you can send in a non-iterable
-    out = cmf_aoadmm._listify(1, param_name)  # int
+    out = decomposition._listify(1, param_name)  # int
     assert len(out) == 3
     assert out[0] == 1
     assert out[1] == 1
     assert out[2] == 1
-    out = cmf_aoadmm._listify(0.33, param_name)  # float
+    out = decomposition._listify(0.33, param_name)  # float
     assert len(out) == 3
     assert out[0] == 0.33
     assert out[1] == 0.33
@@ -152,11 +152,11 @@ def test_listify(rng):
     # Check that you cannot send in an non-dictonary iterable of length other than 3
     just_two_elements_list = [1, 2]
     with pytest.raises(ValueError):
-        out = cmf_aoadmm._listify(just_two_elements_list, param_name)
+        out = decomposition._listify(just_two_elements_list, param_name)
 
     four_elements_list = [1, 2, 3, 4]
     with pytest.raises(ValueError):
-        out = cmf_aoadmm._listify(four_elements_list, param_name)
+        out = decomposition._listify(four_elements_list, param_name)
 
 
 def test_compute_feasibility_gaps(rng, random_ragged_cmf):
@@ -179,7 +179,7 @@ def test_compute_feasibility_gaps(rng, random_ragged_cmf):
         [NonNegativity() for _ in B_is_noise_list],
         [NonNegativity() for _ in C_noise_list],
     ]
-    A_gap_list, B_gap_list, C_gap_list = cmf_aoadmm.compute_feasibility_gaps(
+    A_gap_list, B_gap_list, C_gap_list = decomposition.compute_feasibility_gaps(
         cmf, regs, A_aux_list, B_aux_list, C_aux_list
     )
 
@@ -195,7 +195,7 @@ def test_compute_feasibility_gaps(rng, random_ragged_cmf):
 
 def test_parse_all_penalties():
     # Check that regularisation is added
-    regs = cmf_aoadmm._parse_all_penalties(
+    regs = decomposition._parse_all_penalties(
         non_negative=1,
         lower_bound=2,
         upper_bound=3,
@@ -216,7 +216,7 @@ def test_parse_all_penalties():
         assert len(reg_list) == num_reg
 
     # Check that parafac2 is only applied on second mode
-    regs = cmf_aoadmm._parse_all_penalties(
+    regs = decomposition._parse_all_penalties(
         non_negative=1,
         lower_bound=2,
         upper_bound=3,
@@ -237,7 +237,7 @@ def test_parse_all_penalties():
     assert len(regs[2]) == num_reg
 
     # Check that we only have one reg when only non-negativity is imposed
-    regs = cmf_aoadmm._parse_all_penalties(
+    regs = decomposition._parse_all_penalties(
         non_negative=[True, True, True],
         lower_bound=None,
         upper_bound=None,
@@ -262,7 +262,7 @@ def test_parse_all_penalties():
     assert isinstance(regs[2][0], NonNegativity)
 
     # Check that we can impose non-negativity on only two modes
-    regs = cmf_aoadmm._parse_all_penalties(
+    regs = decomposition._parse_all_penalties(
         non_negative=[True, False, True],
         lower_bound=None,
         upper_bound=None,
@@ -286,7 +286,7 @@ def test_parse_all_penalties():
     assert isinstance(regs[2][0], NonNegativity)
 
     # Check that we can use dict also
-    regs = cmf_aoadmm._parse_all_penalties(
+    regs = decomposition._parse_all_penalties(
         non_negative={0: True, 2: True},
         lower_bound=None,
         upper_bound=None,
@@ -309,7 +309,7 @@ def test_parse_all_penalties():
     assert isinstance(regs[0][0], NonNegativity)
     assert isinstance(regs[2][0], NonNegativity)
 
-    regs = cmf_aoadmm._parse_all_penalties(
+    regs = decomposition._parse_all_penalties(
         non_negative={2: True},
         lower_bound=None,
         upper_bound=None,
@@ -331,7 +331,7 @@ def test_parse_all_penalties():
 
     assert isinstance(regs[2][0], NonNegativity)
 
-    regs = cmf_aoadmm._parse_all_penalties(
+    regs = decomposition._parse_all_penalties(
         non_negative={0: True, 1: True, 2: True},
         lower_bound=None,
         upper_bound=None,
@@ -356,7 +356,7 @@ def test_parse_all_penalties():
     assert isinstance(regs[2][0], NonNegativity)
 
     # Check that we can change the init methods
-    regs = cmf_aoadmm._parse_all_penalties(
+    regs = decomposition._parse_all_penalties(
         non_negative=[True, True, True],
         lower_bound=None,
         upper_bound=None,
@@ -379,7 +379,7 @@ def test_parse_all_penalties():
 
 def test_parse_all_penalties_verbose(capfd):
     # Check nothing is printed without verbose
-    _ = cmf_aoadmm._parse_all_penalties(
+    _ = decomposition._parse_all_penalties(
         non_negative=[None, None, None],
         lower_bound=1,
         upper_bound=2,
@@ -399,7 +399,7 @@ def test_parse_all_penalties_verbose(capfd):
     assert len(out) == 0
 
     # Check that text is printed out when verbose is True
-    _ = cmf_aoadmm._parse_all_penalties(
+    _ = decomposition._parse_all_penalties(
         non_negative=[None, None, None],
         lower_bound=1,
         upper_bound=2,
@@ -419,7 +419,7 @@ def test_parse_all_penalties_verbose(capfd):
     assert len(out) > 0
 
     # Check excact output for a small testcase with one penalty
-    _ = cmf_aoadmm._parse_all_penalties(
+    _ = decomposition._parse_all_penalties(
         non_negative={2: True},
         lower_bound=None,
         upper_bound=None,
@@ -457,7 +457,7 @@ def test_parse_all_penalties_verbose(capfd):
 )
 def test_parse_mode_penalties(dual_init, aux_init):
     # Check that dual and aux init is set correctly
-    out, verbosity_str = cmf_aoadmm._parse_mode_penalties(
+    out, verbosity_str = decomposition._parse_mode_penalties(
         non_negative=True,
         lower_bound=0,
         upper_bound=1,
@@ -476,7 +476,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
         assert reg.aux_init == aux_init
 
     for svd in ["truncated_svd", "numpy_svd"]:
-        out, verbosity_str = cmf_aoadmm._parse_mode_penalties(
+        out, verbosity_str = decomposition._parse_mode_penalties(
             non_negative=None,
             lower_bound=None,
             upper_bound=None,
@@ -494,7 +494,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
             assert reg.svd_fun == get_svd(svd)
 
     # Check that no penalty gives length 0
-    out, verbosity_str = cmf_aoadmm._parse_mode_penalties(
+    out, verbosity_str = decomposition._parse_mode_penalties(
         non_negative=None,
         lower_bound=None,
         upper_bound=None,
@@ -512,7 +512,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
     assert verbosity_str == "\n (no additional regularisation added)"
 
     # Check that non-negativity gives length one
-    out, verbosity_str = cmf_aoadmm._parse_mode_penalties(
+    out, verbosity_str = decomposition._parse_mode_penalties(
         non_negative=True,
         lower_bound=None,
         upper_bound=None,
@@ -532,7 +532,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
     # Test parsing of NN
     # ------------------
     # NN + lower bound
-    out, verbosity_str = cmf_aoadmm._parse_mode_penalties(
+    out, verbosity_str = decomposition._parse_mode_penalties(
         non_negative=True,
         lower_bound=5,
         upper_bound=None,
@@ -550,7 +550,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
     assert isinstance(out[0], penalties.BoxConstraint)
     assert out[0].min_val == 5
 
-    out, verbosity_str = cmf_aoadmm._parse_mode_penalties(
+    out, verbosity_str = decomposition._parse_mode_penalties(
         non_negative=True,
         lower_bound=-1,
         upper_bound=None,
@@ -569,7 +569,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
     assert out[0].min_val == 0
 
     # NN + upper bound
-    out, verbosity_str = cmf_aoadmm._parse_mode_penalties(
+    out, verbosity_str = decomposition._parse_mode_penalties(
         non_negative=True,
         lower_bound=None,
         upper_bound=5,
@@ -589,7 +589,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
     assert out[0].min_val == 0
 
     # NN + lower and upper bound
-    out, verbosity_str = cmf_aoadmm._parse_mode_penalties(
+    out, verbosity_str = decomposition._parse_mode_penalties(
         non_negative=True,
         lower_bound=-1,
         upper_bound=5,
@@ -609,7 +609,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
     assert out[0].min_val == 0
 
     # NN + L1
-    out, verbosity_str = cmf_aoadmm._parse_mode_penalties(
+    out, verbosity_str = decomposition._parse_mode_penalties(
         non_negative=True,
         lower_bound=None,
         upper_bound=None,
@@ -629,7 +629,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
     assert out[0].reg_strength == 42
 
     # NN + L1 + lower bound
-    out, verbosity_str = cmf_aoadmm._parse_mode_penalties(
+    out, verbosity_str = decomposition._parse_mode_penalties(
         non_negative=True,
         lower_bound=-1,
         upper_bound=None,
@@ -658,7 +658,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
     # NN + ball
 
     # NN + L1 + lower bound
-    out, verbosity_str = cmf_aoadmm._parse_mode_penalties(
+    out, verbosity_str = decomposition._parse_mode_penalties(
         non_negative=True,
         lower_bound=None,
         upper_bound=None,
@@ -678,7 +678,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
 
     # Test parsing of Parafac2
     # Parafac2
-    out, verbosity_str = cmf_aoadmm._parse_mode_penalties(
+    out, verbosity_str = decomposition._parse_mode_penalties(
         non_negative=None,
         lower_bound=None,
         upper_bound=None,
@@ -695,7 +695,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
     assert len(out) == 1
     assert isinstance(out[0], penalties.Parafac2)
     # NN + Parafac2 (len=2, contains both a NN and a Parafac2)
-    out, verbosity_str = cmf_aoadmm._parse_mode_penalties(
+    out, verbosity_str = decomposition._parse_mode_penalties(
         non_negative=True,
         lower_bound=None,
         upper_bound=None,
@@ -719,7 +719,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
 
     # Test parsing of L1
     # L1
-    out, verbosity_str = cmf_aoadmm._parse_mode_penalties(
+    out, verbosity_str = decomposition._parse_mode_penalties(
         non_negative=None,
         lower_bound=None,
         upper_bound=None,
@@ -736,7 +736,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
     assert len(out) == 1
     assert isinstance(out[0], penalties.L1Penalty)
     # L1 + TV
-    out, verbosity_str = cmf_aoadmm._parse_mode_penalties(
+    out, verbosity_str = decomposition._parse_mode_penalties(
         non_negative=None,
         lower_bound=None,
         upper_bound=None,
@@ -756,7 +756,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
     assert out[0].l1_strength == 1
     assert verbosity_str == "\n * Total Variation penalty (with L1)"
     # L1 + upper bound
-    out, verbosity_str = cmf_aoadmm._parse_mode_penalties(
+    out, verbosity_str = decomposition._parse_mode_penalties(
         non_negative=None,
         lower_bound=None,
         upper_bound=10,
@@ -781,7 +781,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
 
     # Test parsing of TV
     # TV
-    out, verbosity_str = cmf_aoadmm._parse_mode_penalties(
+    out, verbosity_str = decomposition._parse_mode_penalties(
         non_negative=None,
         lower_bound=None,
         upper_bound=None,
@@ -800,7 +800,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
     assert out[0].reg_strength == 1
     assert verbosity_str == "\n * Total Variation penalty"
     # TV + Parafac2
-    out, verbosity_str = cmf_aoadmm._parse_mode_penalties(
+    out, verbosity_str = decomposition._parse_mode_penalties(
         non_negative=None,
         lower_bound=None,
         upper_bound=None,
@@ -825,7 +825,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
 
     # Test parsing of ball constraints
     # Ball
-    out, verbosity_str = cmf_aoadmm._parse_mode_penalties(
+    out, verbosity_str = decomposition._parse_mode_penalties(
         non_negative=None,
         lower_bound=None,
         upper_bound=None,
@@ -843,7 +843,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
     assert isinstance(out[0], penalties.L2Ball)
     assert out[0].norm_bound == 1
     # Ball + TV
-    out, verbosity_str = cmf_aoadmm._parse_mode_penalties(
+    out, verbosity_str = decomposition._parse_mode_penalties(
         non_negative=None,
         lower_bound=None,
         upper_bound=None,
@@ -869,7 +869,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
 
     # Test parsing of generalized L2
     # Generalized L2
-    out, verbosity_str = cmf_aoadmm._parse_mode_penalties(
+    out, verbosity_str = decomposition._parse_mode_penalties(
         non_negative=None,
         lower_bound=None,
         upper_bound=None,
@@ -887,7 +887,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
     assert isinstance(out[0], penalties.GeneralizedL2Penalty)
     assert_array_equal(out[0].norm_matrix, tl.eye(10))
     # Generalized L2 + L1
-    out, verbosity_str = cmf_aoadmm._parse_mode_penalties(
+    out, verbosity_str = decomposition._parse_mode_penalties(
         non_negative=None,
         lower_bound=None,
         upper_bound=None,
@@ -924,7 +924,7 @@ def test_admm_update_A(rng, random_ragged_cmf, feasibility_penalty_scale, consta
     A2 = rng.uniform(size=tl.shape(A))
     modified_cmf = coupled_matrices.CoupledMatrixFactorization((weights, (A2, B_is, C)))
 
-    out = cmf_aoadmm.admm_update_A(
+    out = decomposition.admm_update_A(
         matrices=cmf.to_matrices(),
         reg=[],
         cmf=modified_cmf,
@@ -954,7 +954,7 @@ def test_admm_update_A(rng, random_ragged_cmf, feasibility_penalty_scale, consta
     nn = NonNegativity()
     aux = nn.init_aux(nn_cmf.to_matrices(), rank, 0, rng)
     dual = nn.init_dual(nn_cmf.to_matrices(), rank, 0, rng)
-    out = cmf_aoadmm.admm_update_A(
+    out = decomposition.admm_update_A(
         matrices=nn_cmf.to_matrices(),
         reg=[nn],
         cmf=modified_cmf,
@@ -998,7 +998,7 @@ def test_admm_update_B(rng, random_ragged_cmf, feasibility_penalty_scale, consta
     B_is2 = [rng.uniform(size=tl.shape(B_i)) for B_i in B_is]
     modified_cmf = coupled_matrices.CoupledMatrixFactorization((weights, (A, B_is2, C)))
 
-    out = cmf_aoadmm.admm_update_B(
+    out = decomposition.admm_update_B(
         matrices=cmf.to_matrices(),
         reg=[],
         cmf=modified_cmf,
@@ -1032,7 +1032,7 @@ def test_admm_update_B(rng, random_ragged_cmf, feasibility_penalty_scale, consta
     nn = NonNegativity()
     aux = nn.init_aux(nn_cmf.to_matrices(), rank, 1, rng)
     dual = nn.init_dual(nn_cmf.to_matrices(), rank, 1, rng)
-    out = cmf_aoadmm.admm_update_B(
+    out = decomposition.admm_update_B(
         matrices=nn_cmf.to_matrices(),
         reg=[nn],
         cmf=modified_cmf,
@@ -1072,7 +1072,7 @@ def test_admm_update_C(rng, random_ragged_cmf, feasibility_penalty_scale):
     C2 = rng.uniform(size=tl.shape(C))
     modified_cmf = coupled_matrices.CoupledMatrixFactorization((weights, (A, B_is, C2)))
 
-    out = cmf_aoadmm.admm_update_C(
+    out = decomposition.admm_update_C(
         matrices=cmf.to_matrices(),
         reg=[],
         cmf=modified_cmf,
@@ -1101,7 +1101,7 @@ def test_admm_update_C(rng, random_ragged_cmf, feasibility_penalty_scale):
     nn = NonNegativity()
     aux = nn.init_aux(nn_cmf.to_matrices(), rank, 2, rng)
     dual = nn.init_dual(nn_cmf.to_matrices(), rank, 2, rng)
-    out = cmf_aoadmm.admm_update_C(
+    out = decomposition.admm_update_C(
         matrices=nn_cmf.to_matrices(),
         reg=[nn],
         cmf=modified_cmf,
@@ -1141,7 +1141,7 @@ def test_cmf_aoadmm(rng, random_ragged_cmf):
     norm_matrices = tl.sqrt(sum(tl.sum(matrix ** 2) for matrix in matrices))
 
     # Decompose matrices with cmf_aoadmm with no constraints
-    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = cmf_aoadmm.cmf_aoadmm(
+    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = decomposition.cmf_aoadmm(
         matrices, rank, n_iter_max=10_000, return_errors=True, return_admm_vars=True,
     )
 
@@ -1149,7 +1149,7 @@ def test_cmf_aoadmm(rng, random_ragged_cmf):
     assert rec_errors[-1] < 1e-02
 
     # Add non-negativity constraints on all modes
-    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = cmf_aoadmm.cmf_aoadmm(
+    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = decomposition.cmf_aoadmm(
         matrices, rank, n_iter_max=10_000, return_errors=True, return_admm_vars=True, non_negative=[True, True, True]
     )
 
@@ -1157,45 +1157,45 @@ def test_cmf_aoadmm(rng, random_ragged_cmf):
     assert rec_errors[-1] < 1e-02
 
     # Check that we get errors out when we ask for errors. Even if convergence checking is disabled and verbose=False
-    out = cmf_aoadmm.cmf_aoadmm(
+    out = decomposition.cmf_aoadmm(
         matrices, rank, return_errors=True, return_admm_vars=False, tol=None, absolute_tol=None, verbose=False
     )
     assert len(out) == 2
     assert isinstance(out[0], CoupledMatrixFactorization)
-    assert isinstance(out[1], cmf_aoadmm.DiagnosticMetrics)
+    assert isinstance(out[1], decomposition.DiagnosticMetrics)
 
     # Check that we get errors and ADMM-vars when we ask for errors. Even if convergence checking is disabled and verbose=False
-    out = cmf_aoadmm.cmf_aoadmm(
+    out = decomposition.cmf_aoadmm(
         matrices, rank, return_errors=True, return_admm_vars=True, tol=None, absolute_tol=None, verbose=False
     )
     assert len(out) == 3
     assert isinstance(out[0], CoupledMatrixFactorization)
-    assert isinstance(out[1], cmf_aoadmm.AdmmVars)
-    assert isinstance(out[2], cmf_aoadmm.DiagnosticMetrics)
+    assert isinstance(out[1], decomposition.AdmmVars)
+    assert isinstance(out[2], decomposition.DiagnosticMetrics)
 
     # Check that we don't get errors but do get ADMM-vars when we ask for it. Even if convergence checking is disabled and verbose=False
-    out = cmf_aoadmm.cmf_aoadmm(
+    out = decomposition.cmf_aoadmm(
         matrices, rank, return_errors=False, return_admm_vars=True, tol=None, absolute_tol=None, verbose=False
     )
     assert len(out) == 2
     assert isinstance(out[0], CoupledMatrixFactorization)
-    assert isinstance(out[1], cmf_aoadmm.AdmmVars)
+    assert isinstance(out[1], decomposition.AdmmVars)
 
     # Check that we don't get errors out if we don't ask for it
-    out = cmf_aoadmm.cmf_aoadmm(matrices, rank, return_errors=False, return_admm_vars=False)
+    out = decomposition.cmf_aoadmm(matrices, rank, return_errors=False, return_admm_vars=False)
     assert len(out) == 2
     assert isinstance(out, CoupledMatrixFactorization)
 
     # Check that we can add non-negativity constraints with list of regs.
     regs = [[NonNegativity()], [NonNegativity()], [NonNegativity()]]
-    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = cmf_aoadmm.cmf_aoadmm(
+    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = decomposition.cmf_aoadmm(
         matrices, rank, n_iter_max=10_000, return_errors=True, return_admm_vars=True, regs=regs
     )
     # Check that final reconstruction error is the same as when we compute it with the returned decomposition and auxes
-    assert cmf_aoadmm._cmf_reconstruction_error(matrices, out_cmf) / norm_matrices == pytest.approx(rec_errors[-1])
+    assert decomposition._cmf_reconstruction_error(matrices, out_cmf) / norm_matrices == pytest.approx(rec_errors[-1])
 
     # Check that feasibility gaps are the same as when we compute it with the returned decomposition and auxes
-    A_gap_list, B_gap_list, C_gap_list = cmf_aoadmm.compute_feasibility_gaps(out_cmf, regs, *aux)
+    A_gap_list, B_gap_list, C_gap_list = decomposition.compute_feasibility_gaps(out_cmf, regs, *aux)
     for A_gap, out_A_gap in zip(A_gap_list, feasibility_gaps[-1][0]):
         assert A_gap == pytest.approx(out_A_gap)
     for B_gap, out_B_gap in zip(B_gap_list, feasibility_gaps[-1][1]):
@@ -1209,13 +1209,13 @@ def test_cmf_aoadmm_verbose(rng, random_ragged_cmf, capfd):
     cmf, shapes, rank = random_ragged_cmf
     matrices = cmf.to_matrices()
 
-    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = cmf_aoadmm.cmf_aoadmm(
+    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = decomposition.cmf_aoadmm(
         matrices, rank, n_iter_max=1_000, return_errors=True, return_admm_vars=True, verbose=False
     )
     out, err = capfd.readouterr()
     assert len(out) == 0
 
-    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = cmf_aoadmm.cmf_aoadmm(
+    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = decomposition.cmf_aoadmm(
         matrices, rank, n_iter_max=1_000, return_errors=True, return_admm_vars=True, verbose=True
     )
     out, err = capfd.readouterr()
@@ -1235,7 +1235,7 @@ def test_parafac2_makes_nn_cmf_unique(rng):
 
     rec_errors = [float("inf")]
     for init in range(5):
-        out = cmf_aoadmm.cmf_aoadmm(
+        out = decomposition.cmf_aoadmm(
             matrices, rank, n_iter_max=2_000, return_errors=True, non_negative=[True, True, True], parafac2=True
         )
 
@@ -1262,7 +1262,7 @@ def test_cmf_aoadmm_not_updating_A_works(rng, random_ragged_cmf):
     matrices = cmf.to_matrices()
 
     # Decompose matrices with cmf_aoadmm with no constraints
-    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = cmf_aoadmm.cmf_aoadmm(
+    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = decomposition.cmf_aoadmm(
         matrices,
         rank,
         n_iter_max=5,
@@ -1291,7 +1291,7 @@ def test_cmf_aoadmm_not_updating_C_works(rng, random_ragged_cmf):
     matrices = cmf.to_matrices()
 
     # Decompose matrices with cmf_aoadmm with no constraints
-    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = cmf_aoadmm.cmf_aoadmm(
+    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = decomposition.cmf_aoadmm(
         matrices,
         rank,
         n_iter_max=5,
@@ -1319,7 +1319,7 @@ def test_cmf_aoadmm_not_updating_B_is_works(rng, random_ragged_cmf):
     matrices = cmf.to_matrices()
 
     # Decompose matrices with cmf_aoadmm with no constraints
-    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = cmf_aoadmm.cmf_aoadmm(
+    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = decomposition.cmf_aoadmm(
         matrices,
         rank,
         n_iter_max=5,
@@ -1337,11 +1337,11 @@ def test_cmf_aoadmm_not_updating_B_is_works(rng, random_ragged_cmf):
 
 
 def test_parafac2_aoadmm(rng, random_ragged_cmf):
-    parafac2_argspecs = inspect.getfullargspec(matcouply.cmf_aoadmm.parafac2_aoadmm)
+    parafac2_argspecs = inspect.getfullargspec(matcouply.decomposition.parafac2_aoadmm)
     placeholder_args = {arg: f"PLACEHOLDERARG_{i}" for i, arg in enumerate(parafac2_argspecs.args)}
     cmf_aoadmm_args = copy(placeholder_args)
     cmf_aoadmm_args["parafac2"] = True
-    with patch("matcouply.cmf_aoadmm.cmf_aoadmm") as mock:
-        cmf_aoadmm.parafac2_aoadmm(**placeholder_args)
+    with patch("matcouply.decomposition.cmf_aoadmm") as mock:
+        decomposition.parafac2_aoadmm(**placeholder_args)
         mock.assert_called_once()
         mock.assert_called_once_with(**cmf_aoadmm_args)

@@ -23,8 +23,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tensorly.decomposition import parafac2
 
-from matcouply.cmf_aoadmm import parafac2_aoadmm
 from matcouply.data import get_semiconductor_etch_machine_data
+from matcouply.decomposition import parafac2_aoadmm
 
 ###############################################################################
 # Data loading and preprocessing

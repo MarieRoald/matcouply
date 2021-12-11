@@ -8,7 +8,7 @@ import numpy as np
 import tensorly as tl
 from component_vis.factor_tools import factor_match_score
 
-import matcouply.cmf_aoadmm as cmf_aoadmm
+import matcouply.decomposition as decomposition
 from matcouply.coupled_matrices import CoupledMatrixFactorization
 
 ###############################################################################
@@ -86,7 +86,7 @@ noisy_matrices = [M + N * noise_level * tl.norm(M) / tl.norm(N) for M, N in zip(
 lowest_error = float("inf")
 for init in range(5):
     print("Init:", init)
-    out, diagnostics = cmf_aoadmm.parafac2_aoadmm(
+    out, diagnostics = decomposition.parafac2_aoadmm(
         noisy_matrices, rank, n_iter_max=1000, non_negative=True, return_errors=True, random_state=init
     )
     if diagnostics.regularised_loss[-1] < lowest_error:

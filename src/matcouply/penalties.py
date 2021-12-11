@@ -676,8 +676,8 @@ class GeneralizedL2Penalty(MatrixPenalty):
     >>> M = tl.tensor(M)
     >>> penalty = GeneralizedL2Penalty(M)
 
-    This penalty can now be added to ``matcouply.cmf_aoadmm`` via the ``regs``-parameter.
-    Alternatively, if the ``generalized_l2_penalty``-argument of ``matcouply.cmf_aoadmm`` is
+    This penalty can now be added to ``matcouply.decomposition.cmf_aoadmm`` via the ``regs``-parameter.
+    Alternatively, if the ``generalized_l2_penalty``-argument of ``matcouply.decomposition.cmf_aoadmm`` is
     used, then a ``GeneralizedL2Penalty`` is added with ``method="svd"``.
     """
     # TODO: Consider the preconditioner

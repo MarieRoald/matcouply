@@ -6,7 +6,7 @@ API Reference
    :caption: Contents:
    
    autodoc/coupled_matrices
-   autodoc/cmf_aoadmm
+   autodoc/decomposition
    autodoc/penalties
    autodoc/random
    autodoc/datasets
