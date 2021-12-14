@@ -1,3 +1,5 @@
+.. _regularization:
+
 Regularization penalties and constraints
 ----------------------------------------
 
