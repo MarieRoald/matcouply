@@ -696,7 +696,7 @@ class TestL2BallConstraint(MixinTestHardConstraint, BaseTestFactorMatrixPenalty)
         with pytest.raises(ValueError):
             tv_penalty = self.PenaltyType(norm_bound=-1)
 
-        tv_penalty = self.PenaltyType(norm_bound=0.1)
+        tv_penalty = self.PenaltyType(norm_bound=0.1)  # pragma: noqa
 
 
 class TestUnitSimplex(MixinTestHardConstraint, BaseTestFactorMatrixPenalty):
@@ -870,7 +870,7 @@ class TestTotalVariationPenalty(BaseTestFactorMatrixPenalty):
         HAS_TV = penalties.HAS_TV
         penalties.HAS_TV = False
         with pytest.raises(ModuleNotFoundError):
-            tv_penalty = self.PenaltyType(reg_strength=1, l1_strength=0)
+            tv_penalty = self.PenaltyType(reg_strength=1, l1_strength=0)  # pragma: noqa
         penalties.HAS_TV = HAS_TV
 
 
