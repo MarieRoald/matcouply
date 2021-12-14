@@ -20,7 +20,7 @@ def rng(seed):
 @pytest.fixture
 def random_ragged_shapes(rng):
     I = rng.randint(1, 20)
-    K = rng.randint(1, 20)
+    K = rng.randint(2, 20)
     shapes = tuple((rng.randint(1, 20), K) for i in range(I))
     return shapes
 
@@ -29,7 +29,7 @@ def random_ragged_shapes(rng):
 def random_regular_shapes(rng):
     I = rng.randint(1, 20)
     J = rng.randint(1, 20)
-    K = rng.randint(1, 20)
+    K = rng.randint(2, 20)
     shapes = tuple((J, K) for i in range(I))
     return shapes
 
@@ -47,7 +47,7 @@ def random_ragged_cmf(
 @pytest.fixture
 def random_rank5_ragged_cmf(rng):
     I = rng.randint(1, 20)
-    K = rng.randint(1, 20)
+    K = rng.randint(2, 20)
     random_ragged_shapes = tuple((rng.randint(5, 20), K) for i in range(I))
     rank = 5
     cmf = random_coupled_matrices(random_ragged_shapes, rank, random_state=rng)
@@ -58,6 +58,6 @@ def random_rank5_ragged_cmf(rng):
 def random_regular_cmf(
     rng, random_regular_shapes,
 ):
-    rank = rng.randint(1, random_regular_shapes[0][0])
+    rank = rng.randint(1, random_regular_shapes[0][0] + 1)
     cmf = random_coupled_matrices(random_regular_shapes, rank, random_state=rng)
     return cmf, random_regular_shapes, rank
