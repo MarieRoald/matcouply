@@ -13,7 +13,7 @@ __all__ = ["compute_feasibility_gaps", "AdmmVars", "DiagnosticMetrics", "cmf_aoa
 # TODO: Document all update steps, they might be slightly different from paper (e.g. new transposes)
 # TODO: Document l2_penalty as 0.5||A||^2, etc. Not ||A||^2
 
-# If using precomputed decomposition, check weights
+# TODO: If using precomputed decomposition, check weights
 def initialize_cmf(matrices, rank, init, svd_fun, random_state=None, init_params=None):
     random_state = tl.check_random_state(random_state)
 
