@@ -51,6 +51,17 @@ def test_initialize_cmf(rng, rank, init):
         assert matrix.shape == init_matrix.shape
 
 
+def test_initialize_cmf_invalid_init(rng):
+    shapes = ((5, 10), (10, 10), (15, 10))
+    rank = 3
+    matrices = [rng.random_sample(shape) for shape in shapes]
+
+    svd_fun = get_svd("truncated_svd")
+    init = "INVALID INITIALIZATION"
+    with pytest.raises(ValueError):
+        decomposition.initialize_cmf(matrices, rank, init, svd_fun, random_state=None, init_params=None)
+
+
 @pytest.mark.parametrize(
     "rank", [1, 2, 5],
 )
@@ -168,6 +179,10 @@ def test_compute_feasibility_gaps(rng, random_ragged_cmf):
     C_noise_list = [rng.standard_normal(C.shape) for _ in range(3)]
     B_is_noise_list = [[rng.standard_normal(B_i.shape) for B_i in B_is] for _ in range(2)]
 
+    A_norm = tl.norm(A)
+    B_norm = tl.norm(tl.concatenate(B_is))
+    C_norm = tl.norm(C)
+
     # Create copy of factors with noise added
     A_aux_list = [A + A_noise for A_noise in A_noise_list]
     C_aux_list = [C + C_noise for C_noise in C_noise_list]
@@ -185,12 +200,12 @@ def test_compute_feasibility_gaps(rng, random_ragged_cmf):
 
     # Check that feasibility gap is correct
     for A_noise, A_gap in zip(A_noise_list, A_gap_list):
-        assert tl.norm(A_noise) == pytest.approx(A_gap)
+        assert tl.norm(A_noise) / A_norm == pytest.approx(A_gap)
     for C_noise, C_gap in zip(C_noise_list, C_gap_list):
-        assert tl.norm(C_noise) == pytest.approx(C_gap)
+        assert tl.norm(C_noise) / C_norm == pytest.approx(C_gap)
     B_concatenated_noise_list = [tl.concatenate(B_is_noise) for B_is_noise in B_is_noise_list]
     for B_noise, B_gap in zip(B_concatenated_noise_list, B_gap_list):
-        assert tl.norm(B_noise) == pytest.approx(B_gap)
+        assert tl.norm(B_noise) / B_norm == pytest.approx(B_gap)
 
 
 def test_parse_all_penalties():
@@ -1058,7 +1073,7 @@ def test_admm_update_B(rng, random_ragged_cmf, feasibility_penalty_scale, consta
         assert_array_almost_equal(aux_B_i, out_B_i, decimal=3)
 
     # TODO: Test for l2_penalty > 0
-    ## For l2_penalty, compute linear system and solve using SVD to obtain regularised components.
+    # For l2_penalty, compute linear system and solve using SVD to obtain regularised components.
     # This will work with NN constraints too
 
 
@@ -1122,7 +1137,7 @@ def test_admm_update_C(rng, random_ragged_cmf, feasibility_penalty_scale):
     assert_array_almost_equal(out_cmf[1][2], out_C_auxes[0])
 
     # TODO: Test for l2_penalty > 0
-    ## For l2_penalty, compute linear system and solve using SVD to obtain regularised components.
+    # For l2_penalty, compute linear system and solve using SVD to obtain regularised components.
     # This will work with NN constraints too
 
 
@@ -1142,7 +1157,7 @@ def test_cmf_aoadmm(rng, random_ragged_cmf):
 
     # Decompose matrices with cmf_aoadmm with no constraints
     out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = decomposition.cmf_aoadmm(
-        matrices, rank, n_iter_max=10_000, return_errors=True, return_admm_vars=True,
+        matrices, rank, n_iter_max=5_000, return_errors=True, return_admm_vars=True,
     )
 
     # Check that reconstruction error is low
@@ -1150,7 +1165,7 @@ def test_cmf_aoadmm(rng, random_ragged_cmf):
 
     # Add non-negativity constraints on all modes
     out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = decomposition.cmf_aoadmm(
-        matrices, rank, n_iter_max=10_000, return_errors=True, return_admm_vars=True, non_negative=[True, True, True]
+        matrices, rank, n_iter_max=5_000, return_errors=True, return_admm_vars=True, non_negative=[True, True, True]
     )
 
     # Check that reconstruction error is low
@@ -1164,7 +1179,8 @@ def test_cmf_aoadmm(rng, random_ragged_cmf):
     assert isinstance(out[0], CoupledMatrixFactorization)
     assert isinstance(out[1], decomposition.DiagnosticMetrics)
 
-    # Check that we get errors and ADMM-vars when we ask for errors. Even if convergence checking is disabled and verbose=False
+    # Check that we get errors and ADMM-vars when we ask for errors.
+    # Even if convergence checking is disabled and verbose=False
     out = decomposition.cmf_aoadmm(
         matrices, rank, return_errors=True, return_admm_vars=True, tol=None, absolute_tol=None, verbose=False
     )
@@ -1173,7 +1189,8 @@ def test_cmf_aoadmm(rng, random_ragged_cmf):
     assert isinstance(out[1], decomposition.AdmmVars)
     assert isinstance(out[2], decomposition.DiagnosticMetrics)
 
-    # Check that we don't get errors but do get ADMM-vars when we ask for it. Even if convergence checking is disabled and verbose=False
+    # Check that we don't get errors but do get ADMM-vars when we ask for it.
+    # Even if convergence checking is disabled and verbose=False
     out = decomposition.cmf_aoadmm(
         matrices, rank, return_errors=False, return_admm_vars=True, tol=None, absolute_tol=None, verbose=False
     )
@@ -1189,7 +1206,7 @@ def test_cmf_aoadmm(rng, random_ragged_cmf):
     # Check that we can add non-negativity constraints with list of regs.
     regs = [[NonNegativity()], [NonNegativity()], [NonNegativity()]]
     out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = decomposition.cmf_aoadmm(
-        matrices, rank, n_iter_max=10_000, return_errors=True, return_admm_vars=True, regs=regs
+        matrices, rank, n_iter_max=10, return_errors=True, return_admm_vars=True, regs=regs
     )
     # Check that final reconstruction error is the same as when we compute it with the returned decomposition and auxes
     assert decomposition._cmf_reconstruction_error(matrices, out_cmf) / norm_matrices == pytest.approx(rec_errors[-1])
@@ -1202,21 +1219,50 @@ def test_cmf_aoadmm(rng, random_ragged_cmf):
         assert B_gap == pytest.approx(out_B_gap)
     for C_gap, out_C_gap in zip(C_gap_list, feasibility_gaps[-1][2]):
         assert C_gap == pytest.approx(out_C_gap)
-    # TODO: Test that the code fails gracefully with list of regs not list of list of regs
+
+    # Test that the code fails gracefully with list of regs not list of list of regs
+    list_of_regs = [0.1, 0.1, 0.1]
+    with pytest.raises(TypeError):
+        out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = decomposition.cmf_aoadmm(
+            matrices, rank, n_iter_max=1, return_errors=True, return_admm_vars=True, regs=list_of_regs
+        )
+
+    # Test that the code fails gracefully with list of lists containting something other than ADMMPenalty
+    list_of_regs = [[1], [], []]
+    with pytest.raises(TypeError):
+        out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = decomposition.cmf_aoadmm(
+            matrices, rank, n_iter_max=1, return_errors=True, return_admm_vars=True, regs=list_of_regs
+        )
 
 
 def test_cmf_aoadmm_verbose(rng, random_ragged_cmf, capfd):
     cmf, shapes, rank = random_ragged_cmf
     matrices = cmf.to_matrices()
 
+    # Check that verbose = False results in no print
     out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = decomposition.cmf_aoadmm(
-        matrices, rank, n_iter_max=1_000, return_errors=True, return_admm_vars=True, verbose=False
+        matrices, rank, n_iter_max=10, return_errors=True, return_admm_vars=True, verbose=False
     )
     out, err = capfd.readouterr()
     assert len(out) == 0
 
+    # Check that verbose = True results in print when return_errors = True
     out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = decomposition.cmf_aoadmm(
-        matrices, rank, n_iter_max=1_000, return_errors=True, return_admm_vars=True, verbose=True
+        matrices, rank, n_iter_max=10, return_errors=True, return_admm_vars=True, verbose=True
+    )
+    out, err = capfd.readouterr()
+    assert len(out) > 0
+
+    # Check that verbose = True results in print when return_errors = False and
+    out_cmf, (aux, dual) = decomposition.cmf_aoadmm(
+        matrices,
+        rank,
+        n_iter_max=10,
+        return_errors=False,
+        return_admm_vars=True,
+        verbose=True,
+        feasibility_tol=-1,
+        non_negative=True,
     )
     out, err = capfd.readouterr()
     assert len(out) > 0
@@ -1224,8 +1270,8 @@ def test_cmf_aoadmm_verbose(rng, random_ragged_cmf, capfd):
 
 def test_parafac2_makes_nn_cmf_unique(rng):
     rank = 2
-    A = rng.uniform(0.1, 1.1, size=(15, rank))
-    B_0 = rng.uniform(0, 1, size=(10, rank))
+    A = rng.uniform(0.1, 1.1, size=(5, rank))
+    B_0 = rng.uniform(0, 1, size=(7, rank))
     B_is = [tl.tensor(np.roll(B_0, i, axis=1)) for i in range(15)]
     C = rng.uniform(0, 1, size=(20, rank))
     weights = None
@@ -1234,9 +1280,9 @@ def test_parafac2_makes_nn_cmf_unique(rng):
     matrices = cmf.to_matrices()
 
     rec_errors = [float("inf")]
-    for init in range(5):
+    for init in range(3):
         out = decomposition.cmf_aoadmm(
-            matrices, rank, n_iter_max=2_000, return_errors=True, non_negative=[True, True, True], parafac2=True
+            matrices, rank, n_iter_max=3_000, return_errors=True, non_negative=[True, True, True], parafac2=True,
         )
 
         if out[1][0][-1] < rec_errors[-1]:
@@ -1345,3 +1391,60 @@ def test_parafac2_aoadmm(rng, random_ragged_cmf):
         decomposition.parafac2_aoadmm(**placeholder_args)
         mock.assert_called_once()
         mock.assert_called_once_with(**cmf_aoadmm_args)
+
+
+def test_compute_l2_penalty(rng, random_ragged_cmf):
+    cmf, shapes, rank = random_ragged_cmf
+    weights, (A, B_is, C) = cmf
+
+    SS_A = tl.sum(A ** 2)
+    SS_B = sum(tl.sum(B_i ** 2) for B_i in B_is)
+    SS_C = tl.sum(C ** 2)
+
+    assert decomposition._compute_l2_penalty(cmf, [0, 0, 0]) == 0
+    assert decomposition._compute_l2_penalty(cmf, [1, 0, 0]) == pytest.approx(0.5 * SS_A)
+    assert decomposition._compute_l2_penalty(cmf, [0, 1, 0]) == pytest.approx(0.5 * SS_B)
+    assert decomposition._compute_l2_penalty(cmf, [0, 0, 1]) == pytest.approx(0.5 * SS_C)
+    assert decomposition._compute_l2_penalty(cmf, [1, 1, 1]) == pytest.approx(0.5 * (SS_A + SS_B + SS_C))
+    assert decomposition._compute_l2_penalty(cmf, [1, 2, 3]) == pytest.approx(0.5 * (SS_A + 2 * SS_B + 3 * SS_C))
+
+
+def test_l2_penalty_is_included(rng, random_ragged_cmf):
+    cmf, shapes, rank = random_ragged_cmf
+    matrices = cmf.to_matrices()
+
+    # Decompose matrices with cmf_aoadmm with no constraints
+    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = decomposition.cmf_aoadmm(
+        matrices, rank, n_iter_max=5, return_errors=True, return_admm_vars=True, update_B_is=False,
+    )
+
+    rel_sse = rec_errors[-1] ** 2
+    assert losses[-1] == pytest.approx(0.5 * rel_sse)
+
+    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = decomposition.cmf_aoadmm(
+        matrices, rank, n_iter_max=5, l2_penalty=1, return_errors=True, return_admm_vars=True, update_B_is=False,
+    )
+
+    out_weights, (out_A, out_B_is, out_C) = out_cmf
+    rel_sse = rec_errors[-1] ** 2
+    SS_A = tl.sum(out_A ** 2)
+    SS_B = sum(tl.sum(out_B_i ** 2) for out_B_i in out_B_is)
+    SS_C = tl.sum(out_C ** 2)
+    assert losses[-1] == pytest.approx(0.5 * rel_sse + 0.5 * (SS_A + SS_B + SS_C))
+
+    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = decomposition.cmf_aoadmm(
+        matrices,
+        rank,
+        n_iter_max=5,
+        l2_penalty=[1, 2, 3],
+        return_errors=True,
+        return_admm_vars=True,
+        update_B_is=False,
+    )
+
+    out_weights, (out_A, out_B_is, out_C) = out_cmf
+    rel_sse = rec_errors[-1] ** 2
+    SS_A = tl.sum(out_A ** 2)
+    SS_B = sum(tl.sum(out_B_i ** 2) for out_B_i in out_B_is)
+    SS_C = tl.sum(out_C ** 2)
+    assert losses[-1] == pytest.approx(0.5 * rel_sse + 0.5 * (1 * SS_A + 2 * SS_B + 3 * SS_C))
