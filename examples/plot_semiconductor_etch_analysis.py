@@ -115,13 +115,15 @@ for i, B_i in enumerate(B_is):
     axes[1].plot(B_i[:, permutation[1]], color="k", alpha=0.3)
 
 ###############################################################################
-# We see that the components are similar to those in :cite:p:`wise2001application`. We can see an overall shape, but they
-# are fairly noisy.
+# We see that the components are similar to those in :cite:p:`wise2001application`. We can see an overall shape, but
+# they are fairly noisy.
 #
 # .. note::
 #
-#     In this simple example, we only use one random initialisation. For a more thorough analysis, you should fit several
-#     models with different random initialisations and select the model with the lowest SSE :cite:p:`yu2021parafac2`.
+#     In this simple example, we only use one random initialisation. For a more thorough analysis, you should fit
+#     several models with different random initialisations and select the model with the lowest SSE
+#     :cite:p:`yu2021parafac2`.
+#
 
 ###############################################################################
 # Next we use PARAFAC2 ADMM to apply a TV penalty
@@ -135,10 +137,10 @@ for i, B_i in enumerate(B_is):
 #
 # .. note::
 #
-#     The proximal operator for the total variation penalty is computed using the C-implementation for the improved version
-# of the direct TV algorithm presented in :cite:p:`condat2013direct`. The C-implementation is CeCILL lisenced and is available
-# `here <https://lcondat.github.io/software.html>`_, and the Python-wrapper, `condat-tv`, is GPL-3 lisenced and is available
-# `here <https://github.com/MarieRoald/condat_tv>`_.
+#     The proximal operator for the total variation penalty is computed using the C-implementation for the improved
+#     version of the direct TV algorithm presented in :cite:p:`condat2013direct`. The C-implementation is CeCILL
+#     lisenced and is available `here <https://lcondat.github.io/software.html>`__, and the Python-wrapper,
+#     `condat-tv`, is GPL-3 lisenced and is available `here <https://github.com/MarieRoald/condat_tv>`__.
 #
 
 cmf, diagnostics = parafac2_aoadmm(
@@ -147,7 +149,7 @@ cmf, diagnostics = parafac2_aoadmm(
     n_iter_max=10_000,
     non_negative={0: True},
     l2_norm_bound=[1, None, 1],
-    tv_penalty={1: 0.2},
+    tv_penalty={1: 0.1},
     verbose=100,
     return_errors=True,
     init_params={"nn_modes": [0]},
@@ -218,6 +220,15 @@ for i, B_i in enumerate(B_is):
 # with transitions that are easy to identify.
 
 ###############################################################################
+# Comparing with unregularised PARAFAC2
+print("Relative SSE with unregularised PARAFAC2: ", rec_err[-1] ** 2)
+print("Relative SSE with TV regularised PARAFAC2:", diagnostics.rec_errors[-1] ** 2)
+
+###############################################################################
+# We see that there is only a small change in the relative SSE, but the components are much smoother and
+# the transitions are clearer.
+
+###############################################################################
 # License
 # ^^^^^^^
 #
@@ -228,7 +239,7 @@ for i, B_i in enumerate(B_is):
 #                       Version 3, 29 June 2007
 #
 #     Example demonstrating TV regularised PARAFAC2
-#     Copyright (C) 2021  Marie Roald
+#     Copyright (C) 2021 Marie Roald
 #
 #     This program is free software: you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by
