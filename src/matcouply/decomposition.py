@@ -109,7 +109,9 @@ def admm_update_A(
         rhses.append(tl.diag(tl.dot(BtX, C)))
         lhses.append(tl.dot(tl.transpose(B_i), B_i) * CtC)
 
-    feasibility_penalties = [tl.trace(lhs) * feasibility_penalty_scale for lhs in lhses]
+    # Multiply with 0.5 since this function minimizes 0.5||Ax - b||^2
+    # while in the PARAFAC2 AO-ADMM paper ||Ax - b||^2 is minimzed
+    feasibility_penalties = [0.5 * tl.trace(lhs) * feasibility_penalty_scale for lhs in lhses]
     if constant_feasibility_penalty:
         max_feasibility_penalty = max(feasibility_penalties)
         feasibility_penalties = [max_feasibility_penalty for _ in feasibility_penalties]
@@ -197,7 +199,9 @@ def admm_update_B(
         rhses.append(tl.dot(matrix, C * a_row))
         lhses.append(tl.transpose(tl.transpose(CtC * a_row) * a_row))
 
-    feasibility_penalties = [tl.trace(lhs) * feasibility_penalty_scale for lhs in lhses]
+    # Multiply with 0.5 since this function minimizes 0.5||Ax - b||^2
+    # while in the PARAFAC2 AO-ADMM paper ||Ax - b||^2 is minimzed
+    feasibility_penalties = [0.5 * tl.trace(lhs) * feasibility_penalty_scale for lhs in lhses]
     if constant_feasibility_penalty:
         max_feasibility_penalty = max(feasibility_penalties)
         feasibility_penalties = [max_feasibility_penalty for _ in feasibility_penalties]
@@ -274,7 +278,9 @@ def admm_update_C(
         lhs += tl.dot(tl.transpose(B_iA_i), B_iA_i)
         rhs += tl.dot(tl.transpose(matrix), B_iA_i)
 
-    feasibility_penalty = tl.trace(lhs) * feasibility_penalty_scale
+    # Multiply with 0.5 since this function minimizes 0.5||Ax - b||^2
+    # while in the PARAFAC2 AO-ADMM paper ||Ax - b||^2 is minimzed
+    feasibility_penalty = 0.5 * tl.trace(lhs) * feasibility_penalty_scale
     lhs += tl.eye(tl.shape(C)[1]) * (feasibility_penalty * len(reg) + l2_penalty)
     U, s, Uh = svd_fun(lhs)
 
