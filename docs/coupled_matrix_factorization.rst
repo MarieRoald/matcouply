@@ -51,8 +51,9 @@ PARAFAC2 model (therefore also called the *PARAFAC2 constraint*).
 
     {\mathbf{B}^{(i_1)}}^\mathsf{T}{\mathbf{B}^{(i_1)}} = {\mathbf{B}^{(i_2)}}^\mathsf{T}{\mathbf{B}^{(i_2)}}.
 
-Models with this constraint are named PARAFAC2 models, and they are commonly used in data mining [TODO: CITE],
-chemometrics [TODO: CITE], and analysis of electronic health records [TODO: CITE]. 
+Models with this constraint are named PARAFAC2 models, and they are commonly used in data mining
+:cite:p:`chew2007cross,gujral2020spade`, chemometrics :cite:p:`amigo2008solving`, and analysis of
+electronic health records :cite:p:`afshar2018copa`. 
 
 Non-negativity
 ^^^^^^^^^^^^^^
@@ -61,5 +62,19 @@ Another popular constraint is non-negativity constraints, which are commonly imp
 the model. Non-negativity constraints are commonly used for non-negative data, where we want non-negative
 components. While this constraint doesn't necessarily provide a unique model, it does improve the uniqueness
 properties of coupled matrix factorization models. Lately, it has also been a focus on adding non-negativity 
-constraints to PARAFAC2, which often provides a unique model [TODO: CITE]. The added non-negativity constraints
-improves PARAFAC2 model's numerical properties and it can also make the components more interpretable[TODO: CITE].
+constraints to PARAFAC2, which often provides a unique model :cite:p:`cohen2018nonnegative,van2020getting,roald2021admm`.
+The added non-negativity constraints improves PARAFAC2 model's numerical properties and it can also make
+the components more interpretable :cite:p:`roald2021admm`.
+
+Other constraints and regularization penalties
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+MatCoupLy supports a wide array of possible constraints and regularization penalties. For a full list
+of the implemented constraints and penalties, see :doc:`autodoc/penalties`.
+
+.. note::
+
+    If you use penalty based regularisation that scales with the norm of one of the parameters, then
+    norm-based regularisation should be imposed on all modes. This can, for example, be L2 regularisation,
+    max- and min-bound constraints, L1 penalties or hard L2 norm constraints. See :cite:p:`roald2021admm`
+    for more details.
