@@ -13,7 +13,7 @@ from matcouply.coupled_matrices import CoupledMatrixFactorization
 ###############################################################################
 # Setup
 # ^^^^^
-I, J, K = 10, 20, 30
+I, J, K = 10, 15, 20
 rank = 4
 noise_level = 0.1
 rng = np.random.default_rng(0)
@@ -61,6 +61,7 @@ fit_scores = []
 B_gaps = []
 A_gaps = []
 for num_components in range(2, 7):
+    print(num_components, "components")
     lowest_error = float("inf")
     for init in range(5):
         cmf, diagnostics = decomposition.parafac2_aoadmm(
