@@ -1,7 +1,15 @@
 import pytest
 import tensorly as tl
 
-from matcouply.random import random_coupled_matrices
+# We import matcouply only inside the fixtures to avoid any import-time
+# side-effects before pytest_configure is ran. This is necessary to disable
+# jitting of the tests.
+
+
+def pytest_configure(config):
+    import os
+
+    os.environ["NUMBA_DISABLE_JIT"] = "1"
 
 
 @pytest.fixture
@@ -38,6 +46,8 @@ def random_regular_shapes(rng):
 def random_ragged_cmf(
     rng, random_ragged_shapes,
 ):
+    from matcouply.random import random_coupled_matrices
+
     smallest_J = min(shape[0] for shape in random_ragged_shapes)
     rank = rng.randint(1, smallest_J + 1)
     cmf = random_coupled_matrices(random_ragged_shapes, rank, random_state=rng)
@@ -46,6 +56,8 @@ def random_ragged_cmf(
 
 @pytest.fixture
 def random_rank5_ragged_cmf(rng):
+    from matcouply.random import random_coupled_matrices
+
     I = rng.randint(1, 20)
     K = rng.randint(2, 20)
     random_ragged_shapes = tuple((rng.randint(5, 20), K) for i in range(I))
@@ -58,6 +70,8 @@ def random_rank5_ragged_cmf(rng):
 def random_regular_cmf(
     rng, random_regular_shapes,
 ):
+    from matcouply.random import random_coupled_matrices
+
     rank = rng.randint(1, random_regular_shapes[0][0] + 1)
     cmf = random_coupled_matrices(random_regular_shapes, rank, random_state=rng)
     return cmf, random_regular_shapes, rank

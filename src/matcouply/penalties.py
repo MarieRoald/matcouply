@@ -11,6 +11,7 @@ import tensorly as tl
 from scipy.optimize import bisect
 
 from ._doc_utils import InheritableDocstrings, copy_ancestor_docstring
+from ._unimodal_regression import unimodal_regression
 from ._utils import get_svd
 
 
@@ -913,7 +914,7 @@ class L2Ball(HardConstraintMixin, MatrixPenalty):
 
 
 class UnitSimplex(HardConstraintMixin, MatrixPenalty):
-    """Constraint the component-vectors so they are non-negative and sum to 1.
+    """Constrain the component-vectors so they are non-negative and sum to 1.
 
     This is a hard constraint which is useful when the component-vectors represent
     probabilities.
@@ -961,7 +962,39 @@ class UnitSimplex(HardConstraintMixin, MatrixPenalty):
         return output_factor_matrix
 
 
-# TODO: Test for update_basis_matrices and update_coordinate_matrix
+class Unimodality(HardConstraintMixin, MatrixPenalty):
+    r"""Constrain the component-vectors so they are unimodal.
+
+    Unimodal vectors :math:`\mathbf{u} \in \mathbb{R}^n` have the property that
+
+    .. math::
+        u_1 \leq u_2 \leq ... \leq u_{t-1} \leq u_t \geq u_{t+1} \geq ... \geq u_{n-1} \geq u_n
+
+    Projecting a general vector into the set of unimodal vectors (called unimodal regression) requires solving
+    a set of isotonic regression problems (i.e. projections onto monotincally increasing or decreasing vectors).
+    Two isotonic regression problems for each element in the vector. However, there is an incremental algorithm
+    for fitting isotonic regression problems called *prefix isotonic regression* :cite:p:`stout2008unimodal`,
+    which can be used to solve unimodal problems in linear time :cite:p:`stout2008unimodal`.
+
+    Parameters
+    ----------
+    non_negativity : bool
+        If True, then the components will also be non-negative
+    aux_init : {"random_uniform", "random_standard_normal", "zeros", tl.tensor(ndim=2), list of tl.tensor(ndim=2)}
+        Initialisation method for the auxiliary variables
+    dual_init : {"random_uniform", "random_standard_normal", "zeros", tl.tensor(ndim=2), list of tl.tensor(ndim=2)}
+        Initialisation method for the auxiliary variables
+    """
+
+    def __init__(self, non_negativity=False, aux_init="random_uniform", dual_init="random_uniform"):
+        super().__init__(aux_init, dual_init)
+        self.non_negativity = non_negativity
+
+    @copy_ancestor_docstring
+    def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
+        return unimodal_regression(factor_matrix, non_negativity=self.non_negativity)
+
+
 class Parafac2(MatricesPenalty):
     r"""Impose the PARAFAC2 constraint on the uncoupled factor matrices.
 

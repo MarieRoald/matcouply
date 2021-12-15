@@ -8,9 +8,11 @@
 #   * Non-negative: Non-negative components
 # Test that nonstationary points move
 from copy import copy
+from unittest.mock import patch
 
 import numpy as np
 import pytest
+import scipy.stats as stats
 import tensorly as tl
 from pytest import fixture
 from tensorly.testing import assert_array_almost_equal, assert_array_equal
@@ -885,6 +887,46 @@ class TestNonNegativity(MixinTestHardConstraint, BaseTestRowVectorPenalty):
         random_row = rng.uniform(size=(1, n_columns))
         random_row[0] = -1
         return random_row
+
+
+class TestUnimodality(MixinTestHardConstraint, BaseTestFactorMatrixPenalty):
+    PenaltyType = penalties.Unimodality
+    penalty_default_kwargs = {}
+
+    def get_stationary_matrix(self, rng, shape):
+        matrix = tl.zeros(shape)
+        I, J = shape
+        t = np.linspace(-10, 10, I)
+        for j in range(J):
+            sigma = rng.uniform(0.5, 1)
+            mu = rng.uniform(-5, 5)
+            matrix[:, j] = stats.norm.pdf(t, loc=mu, scale=sigma)
+        return matrix
+
+    def get_non_stationary_matrix(self, rng, shape):
+        return rng.uniform(size=shape)
+
+    @pytest.fixture
+    def non_stationary_matrix(self, rng):
+        n_columns = rng.randint(1, 10)
+        n_rows = rng.randint(3, 20)
+        shape = (n_rows, n_columns)
+        return self.get_non_stationary_matrix(rng, shape)
+
+    @pytest.fixture
+    def non_stationary_matrices(self, rng):
+        n_rows = rng.randint(3, 20)
+        n_matrices = rng.randint(1, 10)
+        shapes = tuple((n_rows, rng.randint(1, 10)) for k in range(n_matrices))
+        return self.get_non_stationary_matrices(rng, shapes)
+
+    @pytest.mark.parametrize("non_negativity", [True, False])
+    def test_non_negativity_used(self, non_stationary_matrix, non_negativity):
+        # Check that non_negativity is used
+        with patch("matcouply.penalties.unimodal_regression") as mock:
+            unimodality_constaint = self.PenaltyType(non_negativity=non_negativity)
+            unimodality_constaint.factor_matrix_update(non_stationary_matrix, 1, None)
+            mock.assert_called_once_with(non_stationary_matrix, non_negativity=non_negativity)
 
 
 class TestParafac2(BaseTestFactorMatricesPenalty):
