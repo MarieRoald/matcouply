@@ -4,7 +4,7 @@ Example with custom penalty class for unimodality for all but one component
 
 In this example, we first demonstrate how to specify exactly how the penalties are imposed in the AO-ADMM fitting
 procedure. Then, we create a custom penalty that imposes non-negativity on all component vectors and unimodality on all
-but one of the component vectors. 
+but one of the component vectors.
 """
 
 import matplotlib.pyplot as plt
