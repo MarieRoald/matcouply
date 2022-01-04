@@ -90,7 +90,7 @@ for init in range(5):
         noisy_matrices, rank, n_iter_max=1000, non_negative=True, return_errors=True, random_state=init
     )
     if diagnostics.regularised_loss[-1] < lowest_error:
-        out_cmf = cmf
+        out_cmf = out
         rec_errors, feasibility_gaps, regularised_loss = diagnostics
         lowest_error = rec_errors[-1]
 
