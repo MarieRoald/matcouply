@@ -21,12 +21,10 @@ def get_svd(svd):
 
 
 def get_shapes(matrices):
-    # TODO: Add test
     return [tl.shape(matrix) for matrix in matrices]
 
 
 def get_padded_tensor_shape(matrices):
-    # TODO: Add test
     I = len(matrices)
     K = tl.shape(matrices[0])[1]
 
@@ -43,7 +41,6 @@ def get_padded_tensor_shape(matrices):
 
 
 def create_padded_tensor(matrices):
-    # TODO: Add test
     tensor = tl.zeros(get_padded_tensor_shape(matrices), **tl.context(matrices[0]))
     for i, matrix in enumerate(matrices):
         length = tl.shape(matrix)[0]
