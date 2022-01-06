@@ -82,25 +82,25 @@ class ADMMPenalty(ABC, metaclass=InheritableDocstrings):
             )
         elif self.aux_init == "random_uniform":
             if mode == 0:
-                return random_state.uniform(size=(len(matrices), rank))
+                return tl.tensor(random_state.uniform(size=(len(matrices), rank)))
             elif mode == 1:
-                return [random_state.uniform(size=(matrix.shape[0], rank)) for matrix in matrices]
+                return [tl.tensor(random_state.uniform(size=(matrix.shape[0], rank))) for matrix in matrices]
             elif mode == 2:
-                return random_state.uniform(size=(matrices[0].shape[1], rank))
+                return tl.tensor(random_state.uniform(size=(matrices[0].shape[1], rank)))
         elif self.aux_init == "random_standard_normal":
             if mode == 0:
-                return random_state.standard_normal(size=(len(matrices), rank))
+                return tl.tensor(random_state.standard_normal(size=(len(matrices), rank)))
             elif mode == 1:
-                return [random_state.standard_normal(size=(matrix.shape[0], rank)) for matrix in matrices]
+                return [tl.tensor(random_state.standard_normal(size=(matrix.shape[0], rank))) for matrix in matrices]
             elif mode == 2:
-                return random_state.standard_normal(size=(matrices[0].shape[1], rank))
+                return tl.tensor(random_state.standard_normal(size=(matrices[0].shape[1], rank)))
         elif self.aux_init == "zeros":
             if mode == 0:
-                return tl.zeros(shape=(len(matrices), rank))
+                return tl.zeros((len(matrices), rank))
             elif mode == 1:
-                return [tl.zeros(shape=(matrix.shape[0], rank)) for matrix in matrices]
+                return [tl.zeros((matrix.shape[0], rank)) for matrix in matrices]
             elif mode == 2:
-                return tl.zeros(shape=(matrices[0].shape[1], rank))
+                return tl.zeros((matrices[0].shape[1], rank))
         else:
             if mode in {0, 2} and tl.is_tensor(self.aux_init):
                 length_, rank_ = tl.shape(self.aux_init)
@@ -193,25 +193,25 @@ class ADMMPenalty(ABC, metaclass=InheritableDocstrings):
             )
         if self.dual_init == "random_uniform":
             if mode == 0:
-                return random_state.uniform(size=(len(matrices), rank))
+                return tl.tensor(random_state.uniform(size=(len(matrices), rank)))
             elif mode == 1:
-                return [random_state.uniform(size=(matrix.shape[0], rank)) for matrix in matrices]
+                return [tl.tensor(random_state.uniform(size=(matrix.shape[0], rank))) for matrix in matrices]
             elif mode == 2:
-                return random_state.uniform(size=(matrices[0].shape[1], rank))
+                return tl.tensor(random_state.uniform(size=(matrices[0].shape[1], rank)))
         elif self.dual_init == "random_standard_normal":
             if mode == 0:
-                return random_state.standard_normal(size=(len(matrices), rank))
+                return tl.tensor(random_state.standard_normal(size=(len(matrices), rank)))
             elif mode == 1:
-                return [random_state.standard_normal(size=(matrix.shape[0], rank)) for matrix in matrices]
+                return [tl.tensor(random_state.standard_normal(size=(matrix.shape[0], rank))) for matrix in matrices]
             elif mode == 2:
-                return random_state.standard_normal(size=(matrices[0].shape[1], rank))
+                return tl.tensor(random_state.standard_normal(size=(matrices[0].shape[1], rank)))
         elif self.dual_init == "zeros":
             if mode == 0:
-                return tl.zeros(shape=(len(matrices), rank))
+                return tl.zeros((len(matrices), rank))
             elif mode == 1:
-                return [tl.zeros(shape=(matrix.shape[0], rank)) for matrix in matrices]
+                return [tl.zeros((matrix.shape[0], rank)) for matrix in matrices]
             elif mode == 2:
-                return tl.zeros(shape=(matrices[0].shape[1], rank))
+                return tl.zeros((matrices[0].shape[1], rank))
         else:
             if mode in {0, 2} and tl.is_tensor(self.dual_init):
                 length_, rank_ = tl.shape(self.dual_init)
@@ -475,11 +475,11 @@ class NonNegativity(HardConstraintMixin, RowVectorPenalty):
 
     @copy_ancestor_docstring
     def factor_matrix_row_update(self, factor_matrix_row, feasibility_penalty, aux_row):
-        return tl.clip(factor_matrix_row, 0)
+        return tl.clip(factor_matrix_row, 0, float("inf"))
 
     @copy_ancestor_docstring
     def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
-        return tl.clip(factor_matrix, 0)
+        return tl.clip(factor_matrix, 0, float("inf"))
 
 
 class BoxConstraint(HardConstraintMixin, RowVectorPenalty):
@@ -546,18 +546,18 @@ class L1Penalty(RowVectorPenalty):
     @copy_ancestor_docstring
     def factor_matrix_row_update(self, factor_matrix_row, feasibility_penalty, aux_row):
         if self.non_negativity:
-            return tl.clip(factor_matrix_row - self.reg_strength / feasibility_penalty, 0)
+            return tl.clip(factor_matrix_row - self.reg_strength / feasibility_penalty, 0, float("inf"))
 
         sign = tl.sign(factor_matrix_row)
-        return sign * tl.clip(tl.abs(factor_matrix_row) - self.reg_strength / feasibility_penalty, 0)
+        return sign * tl.clip(tl.abs(factor_matrix_row) - self.reg_strength / feasibility_penalty, 0, float("inf"))
 
     @copy_ancestor_docstring
     def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
         if self.non_negativity:
-            return tl.clip(factor_matrix - self.reg_strength / feasibility_penalty, 0)
+            return tl.clip(factor_matrix - self.reg_strength / feasibility_penalty, 0, float("inf"))
 
         sign = tl.sign(factor_matrix)
-        return sign * tl.clip(tl.abs(factor_matrix) - self.reg_strength / feasibility_penalty, 0)
+        return sign * tl.clip(tl.abs(factor_matrix) - self.reg_strength / feasibility_penalty, 0, float("inf"))
 
     @copy_ancestor_docstring
     def penalty(self, x):
@@ -815,9 +815,9 @@ class TotalVariationPenalty(MatrixPenalty):
             return X
 
     def _penalty(self, x):
-        penalty = self.reg_strength * tl.sum(tl.abs(np.diff(x, axis=0)))
+        penalty = self.reg_strength * tl.sum(tl.abs(np.diff(x, axis=0)))  # TODO: add diff to tl backend
         if self.l1_strength:
-            penalty = penalty + self.l1_strength * tl.sum(tl.abs(x))
+            penalty = penalty + self.l1_strength * tl.sum(tl.abs(x))  # TODO: test this
         return penalty
 
     @copy_ancestor_docstring
@@ -907,9 +907,9 @@ class L2Ball(HardConstraintMixin, MatrixPenalty):
     @copy_ancestor_docstring
     def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
         if self.non_negativity:
-            factor_matrix = tl.clip(factor_matrix, 0)
+            factor_matrix = tl.clip(factor_matrix, 0, float("inf"))  # TODO: test this
         column_norms = tl.sqrt(tl.sum(factor_matrix ** 2, axis=0))
-        column_norms = tl.clip(column_norms, self.norm_bound, None)
+        column_norms = tl.clip(column_norms, self.norm_bound, float("inf"))
         return factor_matrix * self.norm_bound / column_norms
 
 
@@ -1138,17 +1138,17 @@ class Parafac2(MatricesPenalty):
             raise ValueError("PARAFAC2 constraint can only be imposed with mode=1")
 
         if self.aux_init == "random_uniform":
-            coordinate_matrix = random_state.uniform(size=(rank, rank))
+            coordinate_matrix = tl.tensor(random_state.uniform(size=(rank, rank)))
             basis_matrices = [tl.eye(M.shape[0], rank) for M in matrices]
 
             return basis_matrices, coordinate_matrix
         if self.aux_init == "random_standard_normal":
-            coordinate_matrix = random_state.standard_normal(size=(rank, rank))
+            coordinate_matrix = tl.tensor(random_state.standard_normal(size=(rank, rank)))
             basis_matrices = [tl.eye(M.shape[0], rank) for M in matrices]
 
             return basis_matrices, coordinate_matrix
         if self.aux_init == "zeros":
-            coordinate_matrix = tl.zeros(shape=(rank, rank))
+            coordinate_matrix = tl.zeros((rank, rank))
             basis_matrices = [tl.eye(M.shape[0], rank) for M in matrices]
 
             return basis_matrices, coordinate_matrix
@@ -1210,8 +1210,8 @@ class Parafac2(MatricesPenalty):
             if self.update_basis_matrices:
                 basis_matrices = []  # To prevent inplace editing of basis matrices
                 for fm in factor_matrices:
-                    U, s, Vh = self.svd_fun(fm @ coordinate_matrix.T, n_eigenvecs=R)
-                    basis_matrices.append(U @ Vh)
+                    U, s, Vh = self.svd_fun(tl.matmul(fm, tl.transpose(coordinate_matrix)), n_eigenvecs=R)
+                    basis_matrices.append(tl.matmul(U, Vh))
 
             if self.update_coordinate_matrix:
                 # Project all factor matrices onto the space spanned by the orthogonal basis matrices

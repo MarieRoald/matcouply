@@ -9,7 +9,11 @@ import tensorly as tl
 def pytest_configure(config):
     import os
 
+    # Disable JIT for unit tests
     os.environ["NUMBA_DISABLE_JIT"] = "1"
+
+    # Anaconda on Windows can have problems with multiple linked OpenMP dlls. This (unsafe) workaround makes it possible to run code with multiple linked OpenMP dlls.
+    os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 
 @pytest.fixture

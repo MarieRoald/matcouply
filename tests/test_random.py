@@ -17,7 +17,8 @@ def test_random_coupled_matrices():
     assert len(coupled_matrices) == len(shapes)
     for matrix, shape in zip(coupled_matrices, shapes):
         assert tl.shape(matrix) == shape
-        assert matrix_rank(matrix) == rank
+        array = tl.to_numpy(matrix)
+        assert matrix_rank(array) == rank
 
     # Check that factor matrices have correct shape
     weights, (A, B_is, C) = random_coupled_matrices(shapes, rank, full=False)

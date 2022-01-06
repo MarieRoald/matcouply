@@ -26,9 +26,9 @@ def initialize_cmf(matrices, rank, init, svd_fun, random_state=None, init_params
         I = len(matrices)
         K = tl.shape(matrices[0])[1]
 
-        A = random_state.uniform(size=(I, rank))
-        C = random_state.uniform(size=(K, rank))
-        B_is = [random_state.uniform(size=(tl.shape(matrix)[0], rank)) for matrix in matrices]
+        A = tl.tensor(random_state.uniform(size=(I, rank)))
+        C = tl.tensor(random_state.uniform(size=(K, rank)))
+        B_is = [tl.tensor(random_state.uniform(size=(tl.shape(matrix)[0], rank))) for matrix in matrices]
 
         return CoupledMatrixFactorization((None, [A, B_is, C]))
 
@@ -42,8 +42,8 @@ def initialize_cmf(matrices, rank, init, svd_fun, random_state=None, init_params
             return CoupledMatrixFactorization((None, [A, B_is, C]))
 
         A = tl.ones((I, rank))
-        B_is = [tl.clip(B_i, 0) for B_i in B_is]
-        C = tl.clip(C, 0)
+        B_is = [tl.clip(B_i, 0, float("inf")) for B_i in B_is]
+        C = tl.clip(C, 0, float("inf"))
         return CoupledMatrixFactorization((None, [A, B_is, C]))
 
     # PARAFAC and PARAFAC2 initialisation:
@@ -212,7 +212,7 @@ def admm_update_B(
     ]
     svds = [svd_fun(lhs) for lhs in lhses]
 
-    old_B_is = [B_i.copy() for B_i in B_is]
+    old_B_is = [tl.copy(B_i) for B_i in B_is]
     for inner_it in range(inner_n_iter_max):
 
         old_B_is, B_is = B_is, old_B_is
@@ -492,8 +492,7 @@ def _parse_mode_penalties(
     dual_init,
     aux_init,
 ):
-    if unimodal:
-        raise NotImplementedError("Unimodality is not yet implemented")
+
     if not l1_penalty:
         l1_penalty = 0
 
@@ -505,6 +504,14 @@ def _parse_mode_penalties(
     if parafac2:
         regs.append(penalties.Parafac2(svd=svd, aux_init=aux_init, dual_init=dual_init))
         description_str += "\n * PARAFAC2"
+
+    if unimodal:
+        regs.append(penalties.Unimodality(non_negativity=non_negative, aux_init=aux_init, dual_init=dual_init))
+        if non_negative:
+            description_str += "\n * Unimodality constraint (with non-negativity)"
+        else:
+            description_str += "\n * Unimodality constraint "
+        skip_non_negative = True
 
     if (
         generalized_l2_penalty is not None and generalized_l2_penalty is not False
@@ -538,7 +545,10 @@ def _parse_mode_penalties(
         regs.append(
             penalties.L1Penalty(l1_penalty, non_negativity=non_negative, aux_init=aux_init, dual_init=dual_init)
         )
-        description_str += "\n * L1 penalty"
+        if non_negative:
+            description_str += "\n * L1 penalty (with non-negativity)"
+        else:
+            description_str += "\n * L1 penalty"
         skip_non_negative = True
 
     if lower_bound is not None or upper_bound is not None:
@@ -859,7 +869,7 @@ def cmf_aoadmm(
             feasibility_gaps.append((A_gaps, B_gaps, C_gaps))
 
             if tol:
-                max_feasibility_gap = -np.inf
+                max_feasibility_gap = -float("inf")
                 if len(A_gaps):
                     max_feasibility_gap = max((max(A_gaps), max_feasibility_gap))
                 if len(B_gaps):

@@ -1,3 +1,4 @@
+import decimal
 import inspect
 import itertools
 from copy import copy
@@ -30,7 +31,8 @@ def all_combinations(*args):
 
 
 def normalize(X):
-    return X / tl.sqrt(tl.sum(X ** 2, axis=0, keepdims=True))
+    # return X / tl.sqrt(tl.sum(X ** 2, axis=0, keepdims=True))  # TODO: which backends support keepdims?
+    return X / tl.sqrt(tl.sum(X ** 2, 0, True))  # TODO: CHECK which backends support keepdims?
 
 
 @pytest.mark.parametrize(
@@ -42,7 +44,7 @@ def normalize(X):
 )
 def test_initialize_cmf(rng, rank, init):
     shapes = ((5, 10), (10, 10), (15, 10))
-    matrices = [rng.random_sample(shape) for shape in shapes]
+    matrices = [tl.tensor(rng.random_sample(shape)) for shape in shapes]
 
     svd_fun = get_svd("truncated_svd")
     cmf = decomposition.initialize_cmf(matrices, rank, init, svd_fun, random_state=None, init_params=None)
@@ -54,7 +56,7 @@ def test_initialize_cmf(rng, rank, init):
 def test_initialize_cmf_invalid_init(rng):
     shapes = ((5, 10), (10, 10), (15, 10))
     rank = 3
-    matrices = [rng.random_sample(shape) for shape in shapes]
+    matrices = [tl.tensor(rng.random_sample(shape)) for shape in shapes]
 
     svd_fun = get_svd("truncated_svd")
     init = "INVALID INITIALIZATION"
@@ -113,7 +115,7 @@ def test_cmf_reconstruction_error(rng, random_ragged_cmf):
     matrices = cmf.to_matrices()
 
     # Add random noise
-    noise = [rng.standard_normal(size=shape) for shape in shapes]
+    noise = [tl.tensor(rng.standard_normal(size=shape)) for shape in shapes]
     noisy_matrices = [matrix + n for matrix, n in zip(matrices, noise)]
     noise_norm = tl.sqrt(sum(tl.sum(n ** 2) for n in noise))
 
@@ -215,7 +217,7 @@ def test_parse_all_penalties():
         lower_bound=2,
         upper_bound=3,
         l2_norm_bound=4,
-        unimodal=None,  # TODO: FIXME
+        unimodal=5,
         parafac2=False,
         l1_penalty=7,
         tv_penalty=8,
@@ -236,7 +238,7 @@ def test_parse_all_penalties():
         lower_bound=2,
         upper_bound=3,
         l2_norm_bound=4,
-        unimodal=None,  # TODO: FIXME
+        unimodal=5,
         parafac2=True,
         l1_penalty=7,
         tv_penalty=8,
@@ -399,11 +401,11 @@ def test_parse_all_penalties_verbose(capfd):
         lower_bound=1,
         upper_bound=2,
         l2_norm_bound=3,
-        unimodal=None,
+        unimodal=4,
         parafac2=True,
-        l1_penalty=4,
-        tv_penalty=5,
-        generalized_l2_penalty=[None, np.eye(10), None],
+        l1_penalty=5,
+        tv_penalty=6,
+        generalized_l2_penalty=[None, tl.eye(10), None],
         svd="truncated_svd",
         dual_init="random_uniform",
         aux_init="random_uniform",
@@ -419,11 +421,11 @@ def test_parse_all_penalties_verbose(capfd):
         lower_bound=1,
         upper_bound=2,
         l2_norm_bound=3,
-        unimodal=None,
+        unimodal=4,
         parafac2=True,
-        l1_penalty=4,
-        tv_penalty=5,
-        generalized_l2_penalty=[None, np.eye(10), None],
+        l1_penalty=5,
+        tv_penalty=6,
+        generalized_l2_penalty=[None, tl.eye(10), None],
         svd="truncated_svd",
         dual_init="random_uniform",
         aux_init="random_uniform",
@@ -926,6 +928,68 @@ def test_parse_mode_penalties(dual_init, aux_init):
     assert isinstance(l1, penalties.L1Penalty)
     assert l1.reg_strength == 2
 
+    # Unimodality
+    out, verbosity_str = decomposition._parse_mode_penalties(
+        non_negative=False,
+        lower_bound=None,
+        upper_bound=None,
+        l2_norm_bound=None,
+        unimodal=True,
+        parafac2=None,
+        l1_penalty=None,
+        tv_penalty=None,
+        generalized_l2_penalty=None,
+        svd="truncated_svd",
+        dual_init=dual_init,
+        aux_init=aux_init,
+    )
+    assert len(out) == 1
+    assert isinstance(out[0], penalties.Unimodality)
+    assert not out[0].non_negativity
+
+    # Unimodality + NN
+    out, verbosity_str = decomposition._parse_mode_penalties(
+        non_negative=True,
+        lower_bound=None,
+        upper_bound=None,
+        l2_norm_bound=None,
+        unimodal=True,
+        parafac2=None,
+        l1_penalty=None,
+        tv_penalty=None,
+        generalized_l2_penalty=None,
+        svd="truncated_svd",
+        dual_init=dual_init,
+        aux_init=aux_init,
+    )
+    assert len(out) == 1
+    assert isinstance(out[0], penalties.Unimodality)
+    assert out[0].non_negativity
+
+    # Unimodality + NN + TV
+    out, verbosity_str = decomposition._parse_mode_penalties(
+        non_negative=True,
+        lower_bound=None,
+        upper_bound=None,
+        l2_norm_bound=None,
+        unimodal=True,
+        parafac2=None,
+        l1_penalty=None,
+        tv_penalty=1,
+        generalized_l2_penalty=None,
+        svd="truncated_svd",
+        dual_init=dual_init,
+        aux_init=aux_init,
+    )
+    assert len(out) == 2
+    if isinstance(out[0], penalties.Unimodality):
+        u, tv = out
+    else:
+        tv, u = out
+    assert isinstance(tv, penalties.TotalVariationPenalty)
+    assert isinstance(u, penalties.Unimodality)
+    assert out[0].non_negativity
+
 
 @pytest.mark.parametrize(
     "feasibility_penalty_scale,constant_feasibility_penalty", all_combinations([0.5, 1, 10], [True, False])
@@ -936,7 +1000,7 @@ def test_admm_update_A(rng, random_ragged_cmf, feasibility_penalty_scale, consta
 
     # Test that ADMM update with no constraints finds the correct A-matrix
     # when Bi-s and C is correct but A is incorrect
-    A2 = rng.uniform(size=tl.shape(A))
+    A2 = tl.tensor(rng.uniform(size=tl.shape(A)))
     modified_cmf = coupled_matrices.CoupledMatrixFactorization((weights, (A2, B_is, C)))
 
     out = decomposition.admm_update_A(
@@ -959,22 +1023,22 @@ def test_admm_update_A(rng, random_ragged_cmf, feasibility_penalty_scale, consta
 
     # Test that ADMM update with NN constraints finds the correct A-matrix
     # when Bi-s and C is correct but A is incorrect
-    A = tl.clip(A, 0, None)
-    B_is = [tl.clip(B_i, 0, None) for B_i in B_is]
-    C = tl.clip(C, 0, None)
+    nn_A = tl.clip(A, 0, float("inf"))
+    nn_B_is = [tl.clip(B_i, 0, float("inf")) for B_i in B_is]
+    nn_C = tl.clip(C, 0, float("inf"))
 
-    A2 = rng.uniform(size=tl.shape(A))
-    modified_cmf = coupled_matrices.CoupledMatrixFactorization((weights, (A2, B_is, C)))
-    nn_cmf = coupled_matrices.CoupledMatrixFactorization((weights, (A, B_is, C)))
+    nn_A2 = tl.tensor(rng.uniform(size=tl.shape(nn_A)))
+    nn_modified_cmf = coupled_matrices.CoupledMatrixFactorization((weights, (nn_A2, nn_B_is, nn_C)))
+    nn_cmf = coupled_matrices.CoupledMatrixFactorization((weights, (nn_A, nn_B_is, nn_C)))
     nn = NonNegativity()
-    aux = nn.init_aux(nn_cmf.to_matrices(), rank, 0, rng)
-    dual = nn.init_dual(nn_cmf.to_matrices(), rank, 0, rng)
+    nn_aux = nn.init_aux(nn_cmf.to_matrices(), rank, 0, rng)
+    nn_dual = nn.init_dual(nn_cmf.to_matrices(), rank, 0, rng)
     out = decomposition.admm_update_A(
         matrices=nn_cmf.to_matrices(),
         reg=[nn],
-        cmf=modified_cmf,
-        A_aux_list=[aux],
-        A_dual_list=[dual],
+        cmf=nn_modified_cmf,
+        A_aux_list=[nn_aux],
+        A_dual_list=[nn_dual],
         l2_penalty=0,
         inner_n_iter_max=1_000,
         inner_tol=-1,
@@ -982,17 +1046,35 @@ def test_admm_update_A(rng, random_ragged_cmf, feasibility_penalty_scale, consta
         constant_feasibility_penalty=constant_feasibility_penalty,
         svd_fun=get_svd("truncated_svd"),
     )
-    out_cmf, out_A_auxes, out_A_duals = out
-    out_A_normalized = normalize(out_cmf[1][0])
-    A_normalized = normalize(A)
-    assert_array_almost_equal(out_A_normalized, A_normalized, decimal=3)
+    out_nn_cmf, out_nn_A_auxes, out_nn_A_duals = out
+    out_nn_A_normalized = normalize(out_nn_cmf[1][0])
+    nn_A_normalized = normalize(nn_A)
+    assert_array_almost_equal(out_nn_A_normalized, nn_A_normalized, decimal=3)
 
     # Check that the feasibility gap is low
-    assert_array_almost_equal(out_cmf[1][0], out_A_auxes[0])
+    assert_array_almost_equal(out_nn_cmf[1][0], out_nn_A_auxes[0])
 
-    # TODO: Test for l2_penalty > 0
-    # # For l2_penalty, compute linear system and solve using SVD to obtain regularised components.
-    # This will work with NN constraints too
+    # Test for l2_penalty > 0 by constructing and solving the regularised normal equations
+    X = cmf.to_matrices()
+    out = decomposition.admm_update_A(
+        matrices=X,
+        reg=[],
+        cmf=modified_cmf,
+        A_aux_list=[],
+        A_dual_list=[],
+        l2_penalty=1,
+        inner_n_iter_max=1000,
+        inner_tol=-1,
+        feasibility_penalty_scale=feasibility_penalty_scale,
+        constant_feasibility_penalty=constant_feasibility_penalty,
+        svd_fun=get_svd("truncated_svd"),
+    )
+    out_cmf, out_A_auxes, out_A_duals = out
+    out_A = out_cmf[1][0]
+    for a_i, X_i, B_i in zip(out_A, X, B_is):
+        lhs = tl.dot(tl.transpose(B_i), B_i) * tl.dot(tl.transpose(C), C) + tl.eye(rank)
+        rhs = tl.diag(tl.dot(tl.dot(tl.transpose(B_i), X_i), C))
+        assert_array_almost_equal(a_i, tl.solve(lhs, rhs), decimal=3)
 
 
 @pytest.mark.parametrize(
@@ -1004,13 +1086,13 @@ def test_admm_update_B(rng, random_ragged_cmf, feasibility_penalty_scale, consta
 
     # Expand the C-matrix to have enough measurements per element of B (this makes the system easier to solve)
     new_K = 10 * (rank + max(shape[0] for shape in shapes) + A.shape[0])
-    C = rng.standard_normal((new_K, rank))
+    C = tl.tensor(rng.standard_normal((new_K, rank)))
     shapes = [(shape[0], new_K) for shape in shapes]
     cmf = coupled_matrices.CoupledMatrixFactorization((weights, (A, B_is, C)))
 
     # Test that ADMM update with no constraints finds the correct B_i-matrices
     # when A and C is correct but B_is is incorrect
-    B_is2 = [rng.uniform(size=tl.shape(B_i)) for B_i in B_is]
+    B_is2 = [tl.tensor(rng.uniform(size=tl.shape(B_i))) for B_i in B_is]
     modified_cmf = coupled_matrices.CoupledMatrixFactorization((weights, (A, B_is2, C)))
 
     out = decomposition.admm_update_B(
@@ -1038,23 +1120,50 @@ def test_admm_update_B(rng, random_ragged_cmf, feasibility_penalty_scale, consta
     # WITH NON NEGATIVITY
     # Test that ADMM update with NN constraints finds the correct B_i-matrices
     # when A and C is correct but B_is is incorrect
-    A = tl.clip(A, 0.1, None)  # Increasing A improves the conditioning of the system
-    B_is = [tl.clip(B_i, 0, None) for B_i in B_is]
-    C = tl.clip(C, 0, None)
+    nn_A = tl.clip(A, 0.1, float("inf"))  # Increasing A improves the conditioning of the system
+    nn_B_is = [tl.clip(B_i, 0, float("inf")) for B_i in B_is]
+    nn_C = tl.clip(C, 0, float("inf"))
 
-    nn_cmf = coupled_matrices.CoupledMatrixFactorization((weights, (A, B_is, C)))
-    modified_cmf = coupled_matrices.CoupledMatrixFactorization((weights, (A, B_is2, C)))
+    nn_cmf = coupled_matrices.CoupledMatrixFactorization((weights, (nn_A, nn_B_is, nn_C)))
+    nn_modified_cmf = coupled_matrices.CoupledMatrixFactorization((weights, (nn_A, B_is2, nn_C)))
     nn = NonNegativity()
-    aux = nn.init_aux(nn_cmf.to_matrices(), rank, 1, rng)
-    dual = nn.init_dual(nn_cmf.to_matrices(), rank, 1, rng)
+    nn_aux = nn.init_aux(nn_cmf.to_matrices(), rank, 1, rng)
+    nn_dual = nn.init_dual(nn_cmf.to_matrices(), rank, 1, rng)
     out = decomposition.admm_update_B(
         matrices=nn_cmf.to_matrices(),
         reg=[nn],
-        cmf=modified_cmf,
-        B_is_aux_list=[aux],
-        B_is_dual_list=[dual],
+        cmf=nn_modified_cmf,
+        B_is_aux_list=[nn_aux],
+        B_is_dual_list=[nn_dual],
         l2_penalty=0,
         inner_n_iter_max=5_000,
+        inner_tol=-1,
+        feasibility_penalty_scale=feasibility_penalty_scale,
+        constant_feasibility_penalty=constant_feasibility_penalty,
+        svd_fun=get_svd("truncated_svd"),
+    )
+    out_nn_cmf, out_nn_B_auxes, out_nn_B_duals = out
+    out_nn_B_is = out_nn_cmf[1][1]
+    out_nn_B_is_normalized = [normalize(B_i) for B_i in out_nn_B_is]
+    nn_B_is_normalized = [normalize(B_i) for B_i in nn_B_is]
+
+    for B_i, out_B_i in zip(nn_B_is_normalized, out_nn_B_is_normalized):
+        assert_array_almost_equal(B_i, out_B_i, decimal=3)
+
+    # Check that the feasibility gap is low
+    for aux_B_i, out_B_i in zip(out_nn_B_auxes[0], out_nn_B_is):
+        assert_array_almost_equal(aux_B_i, out_B_i, decimal=3)
+
+    # Test for l2_penalty > 0 by constructing and solving the regularised normal equations
+    X = cmf.to_matrices()
+    out = decomposition.admm_update_B(
+        matrices=X,
+        reg=[],
+        cmf=modified_cmf,
+        B_is_aux_list=[],
+        B_is_dual_list=[],
+        l2_penalty=1,
+        inner_n_iter_max=1000,
         inner_tol=-1,
         feasibility_penalty_scale=feasibility_penalty_scale,
         constant_feasibility_penalty=constant_feasibility_penalty,
@@ -1063,28 +1172,21 @@ def test_admm_update_B(rng, random_ragged_cmf, feasibility_penalty_scale, consta
     out_cmf, out_B_auxes, out_B_duals = out
     out_B_is = out_cmf[1][1]
     out_B_is_normalized = [normalize(B_i) for B_i in out_B_is]
-    B_is_normalized = [normalize(B_i) for B_i in B_is]
 
-    for B_i, out_B_i in zip(B_is_normalized, out_B_is_normalized):
-        assert_array_almost_equal(B_i, out_B_i, decimal=3)
-
-    # Check that the feasibility gap is low
-    for aux_B_i, out_B_i in zip(out_B_auxes[0], out_B_is):
-        assert_array_almost_equal(aux_B_i, out_B_i, decimal=3)
-
-    # TODO: Test for l2_penalty > 0
-    # For l2_penalty, compute linear system and solve using SVD to obtain regularised components.
-    # This will work with NN constraints too
+    for a_i, X_i, B_i in zip(A, X, out_B_is):
+        lhs = tl.dot(tl.transpose(a_i * C), (a_i * C)) + tl.eye(rank)
+        rhs = tl.transpose(tl.dot(X_i, a_i * C))
+        assert_array_almost_equal(B_i, tl.transpose(tl.solve(lhs, rhs)), decimal=3)
 
 
-@pytest.mark.parametrize("feasibility_penalty_scale", [True, False])
+@pytest.mark.parametrize("feasibility_penalty_scale", [0.5, 1, 10])
 def test_admm_update_C(rng, random_ragged_cmf, feasibility_penalty_scale):
     cmf, shapes, rank = random_ragged_cmf
     weights, (A, B_is, C) = cmf
 
     # Test that ADMM update with no constraints finds the correct C-matrix
     # when Bi-s and A is correct but C is incorrect
-    C2 = rng.uniform(size=tl.shape(C))
+    C2 = tl.tensor(rng.uniform(size=tl.shape(C)))
     modified_cmf = coupled_matrices.CoupledMatrixFactorization((weights, (A, B_is, C2)))
 
     out = decomposition.admm_update_C(
@@ -1105,40 +1207,58 @@ def test_admm_update_C(rng, random_ragged_cmf, feasibility_penalty_scale):
 
     # Test that ADMM update with NN constraints finds the correct C-matrix
     # when Bi-s and A is correct but C is incorrect
-    A = tl.clip(A, 0, None)
-    B_is = [tl.clip(B_i, 0, None) for B_i in B_is]
-    C = tl.clip(C, 0, None)
-    nn_cmf = coupled_matrices.CoupledMatrixFactorization((weights, (A, B_is, C)))
+    nn_A = tl.clip(A, 0, float("inf"))
+    nn_B_is = [tl.clip(B_i, 0, float("inf")) for B_i in B_is]
+    nn_C = tl.clip(C, 0, float("inf"))
+    nn_cmf = coupled_matrices.CoupledMatrixFactorization((weights, (nn_A, nn_B_is, nn_C)))
 
-    C2 = rng.uniform(size=tl.shape(C))
-    modified_cmf = coupled_matrices.CoupledMatrixFactorization((weights, (A, B_is, C2)))
+    nn_C2 = rng.uniform(size=tl.shape(nn_C))
+    nn_modified_cmf = coupled_matrices.CoupledMatrixFactorization((weights, (nn_A, nn_B_is, nn_C2)))
 
     nn = NonNegativity()
-    aux = nn.init_aux(nn_cmf.to_matrices(), rank, 2, rng)
-    dual = nn.init_dual(nn_cmf.to_matrices(), rank, 2, rng)
+    nn_aux = nn.init_aux(nn_cmf.to_matrices(), rank, 2, rng)
+    nn_dual = nn.init_dual(nn_cmf.to_matrices(), rank, 2, rng)
     out = decomposition.admm_update_C(
         matrices=nn_cmf.to_matrices(),
         reg=[nn],
-        cmf=modified_cmf,
-        C_aux_list=[aux],
-        C_dual_list=[dual],
+        cmf=nn_modified_cmf,
+        C_aux_list=[nn_aux],
+        C_dual_list=[nn_dual],
         l2_penalty=0,
         inner_n_iter_max=1_000,
         inner_tol=-1,
         feasibility_penalty_scale=feasibility_penalty_scale,
         svd_fun=get_svd("truncated_svd"),
     )
-    out_cmf, out_C_auxes, out_C_duals = out
-    out_C_normalized = out_cmf[1][2] / tl.sqrt(tl.sum(out_cmf[1][2] ** 2, axis=0, keepdims=True))
-    C_normalized = C / tl.sqrt(tl.sum(C ** 2, axis=0, keepdims=True))
-    assert_array_almost_equal(out_C_normalized, C_normalized, decimal=3)
+    nn_out_cmf, nn_out_C_auxes, nn_out_C_duals = out
+    out_nn_C_normalized = nn_out_cmf[1][2] / tl.sqrt(tl.sum(nn_out_cmf[1][2] ** 2, axis=0, keepdims=True))
+    nn_C_normalized = nn_C / tl.sqrt(tl.sum(nn_C ** 2, axis=0, keepdims=True))
+    assert_array_almost_equal(out_nn_C_normalized, nn_C_normalized, decimal=3)
 
     # Check that the feasibility gap is low
-    assert_array_almost_equal(out_cmf[1][2], out_C_auxes[0])
+    assert_array_almost_equal(nn_out_cmf[1][2], nn_out_C_auxes[0])
 
-    # TODO: Test for l2_penalty > 0
-    # For l2_penalty, compute linear system and solve using SVD to obtain regularised components.
-    # This will work with NN constraints too
+    # Test for l2_penalty > 0 by constructing and solving the regularised normal equations
+    X = cmf.to_matrices()
+    out = decomposition.admm_update_C(
+        matrices=X,
+        reg=[],
+        cmf=modified_cmf,
+        C_aux_list=[],
+        C_dual_list=[],
+        l2_penalty=1,
+        inner_n_iter_max=1000,
+        inner_tol=-1,
+        feasibility_penalty_scale=feasibility_penalty_scale,
+        svd_fun=get_svd("truncated_svd"),
+    )
+    out_C = out[0][1][2]
+    lhs = tl.eye(rank)
+    rhs = 0
+    for a_i, X_i, B_i in zip(A, X, B_is):
+        lhs += tl.dot(tl.transpose(a_i * B_i), a_i * B_i)
+        rhs += tl.dot(tl.transpose(a_i * B_i), X_i)
+    assert_array_almost_equal(out_C, tl.transpose(tl.solve(lhs, rhs)), decimal=3)
 
 
 def test_cmf_aoadmm(rng, random_ragged_cmf):
@@ -1270,10 +1390,10 @@ def test_cmf_aoadmm_verbose(rng, random_ragged_cmf, capfd):
 
 def test_parafac2_makes_nn_cmf_unique(rng):
     rank = 2
-    A = rng.uniform(0.1, 1.1, size=(5, rank))
+    A = tl.tensor(rng.uniform(0.1, 1.1, size=(5, rank)))
     B_0 = rng.uniform(0, 1, size=(7, rank))
     B_is = [tl.tensor(np.roll(B_0, i, axis=1)) for i in range(15)]
-    C = rng.uniform(0, 1, size=(20, rank))
+    C = tl.tensor(rng.uniform(0, 1, size=(20, rank)))
     weights = None
 
     cmf = CoupledMatrixFactorization((weights, (A, B_is, C)))
@@ -1299,7 +1419,7 @@ def test_parafac2_makes_nn_cmf_unique(rng):
 def test_cmf_aoadmm_not_updating_A_works(rng, random_ragged_cmf):
     cmf, shapes, rank = random_ragged_cmf
     weights, (A, B_is, C) = cmf
-    wrong_A = rng.random_sample(tl.shape(A))
+    wrong_A = tl.tensor(rng.random_sample(tl.shape(A)))
     wrong_A_copy = tl.copy(wrong_A)
     B_is_copy = [tl.copy(B_i) for B_i in B_is]
     C_copy = tl.copy(C)
@@ -1320,9 +1440,9 @@ def test_cmf_aoadmm_not_updating_A_works(rng, random_ragged_cmf):
 
     out_weights, (out_A, out_B_is, out_C) = out_cmf
     assert_array_almost_equal(wrong_A, out_A)
-    assert not tl.all(out_C == C)
+    assert not np.all(tl.to_numpy(out_C) == tl.to_numpy(C))
     for B_i, out_B_i in zip(B_is, out_B_is):
-        assert not tl.all(B_i == out_B_i)
+        assert not np.all(tl.to_numpy(B_i) == tl.to_numpy(out_B_i))
 
 
 def test_cmf_aoadmm_not_updating_C_works(rng, random_ragged_cmf):
@@ -1330,7 +1450,7 @@ def test_cmf_aoadmm_not_updating_C_works(rng, random_ragged_cmf):
     weights, (A, B_is, C) = cmf
     A_copy = tl.copy(A)
     B_is_copy = [tl.copy(B_i) for B_i in B_is]
-    wrong_C = rng.random_sample(tl.shape(C))
+    wrong_C = tl.tensor(rng.random_sample(tl.shape(C)))
     wrong_C_copy = tl.copy(wrong_C)
 
     # Construct matrices and compute their norm
@@ -1349,16 +1469,16 @@ def test_cmf_aoadmm_not_updating_C_works(rng, random_ragged_cmf):
 
     out_weights, (out_A, out_B_is, out_C) = out_cmf
     assert_array_almost_equal(wrong_C, out_C)
-    assert not tl.all(out_A == A)
+    assert not np.all(tl.to_numpy(out_A) == tl.to_numpy(A))
     for B_i, out_B_i in zip(B_is, out_B_is):
-        assert not tl.all(B_i == out_B_i)
+        assert not np.all(tl.to_numpy(B_i) == tl.to_numpy(out_B_i))
 
 
 def test_cmf_aoadmm_not_updating_B_is_works(rng, random_ragged_cmf):
     cmf, shapes, rank = random_ragged_cmf
     weights, (A, B_is, C) = cmf
     A_copy = tl.copy(A)
-    wrong_B_is = [rng.standard_normal(size=tl.shape(B_i)) for B_i in B_is]
+    wrong_B_is = [tl.tensor(rng.standard_normal(size=tl.shape(B_i))) for B_i in B_is]
     wrong_B_is_copy = [tl.copy(B_i) for B_i in wrong_B_is]
     C_copy = tl.copy(C)
     # Construct matrices and compute their norm
@@ -1376,8 +1496,8 @@ def test_cmf_aoadmm_not_updating_B_is_works(rng, random_ragged_cmf):
     )
 
     out_weights, (out_A, out_B_is, out_C) = out_cmf
-    assert not tl.all(out_A == A)
-    assert not tl.all(out_C == C)
+    assert not np.all(tl.to_numpy(out_C) == tl.to_numpy(C))
+    assert not np.all(tl.to_numpy(out_A) == tl.to_numpy(A))
     for B_i, out_B_i in zip(wrong_B_is, out_B_is):
         assert_array_almost_equal(B_i, out_B_i)
 

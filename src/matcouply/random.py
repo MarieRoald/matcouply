@@ -35,10 +35,10 @@ def random_coupled_matrices(
     if not all(shape[1] == shapes[0][1] for shape in shapes):
         raise ValueError("All matrices must have equal number of columns.")
 
-    A = rns.random_sample((len(shapes), rank), **context)
-    B_is = [rns.random_sample((j_i, rank), **context) for j_i, k in shapes]
+    A = tl.tensor(rns.random_sample((len(shapes), rank), **context))
+    B_is = [tl.tensor(rns.random_sample((j_i, rank), **context)) for j_i, k in shapes]
     K = shapes[0][1]
-    C = rns.random_sample((K, rank), **context)
+    C = tl.tensor(rns.random_sample((K, rank), **context))
 
     weights = tl.ones(rank, **context)
 
