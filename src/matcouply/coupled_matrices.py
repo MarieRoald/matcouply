@@ -185,23 +185,23 @@ class CoupledMatrixFactorization(FactorizedTensor):
         """
         return cmf_to_tensor(self)
 
-    def to_vec(self):  # TODO: Add flag to not pad by zeros
+    def to_vec(self, pad=True):
         """Convert to a vector by first converting to a dense tensor and unraveling.
         
         See also
         --------
         cmf_to_vec
         """
-        return cmf_to_vec(self)
+        return cmf_to_vec(self, pad=pad)
 
-    def to_unfolded(self, mode):
+    def to_unfolded(self, mode, pad=True):
         """Convert to a matrix by first converting to a dense tensor and unfolding.
         
         See also
         --------
         cmf_to_unfolded
         """
-        return cmf_to_unfolded(self, mode)
+        return cmf_to_unfolded(self, mode, pad=pad)
 
     def to_matrices(self):
         """Convert to a list of matrices.
@@ -564,13 +564,17 @@ def cmf_to_tensor(cmf, validate=True):
     return tensor
 
 
-def cmf_to_unfolded(cmf, mode, validate=True):
+def cmf_to_unfolded(cmf, mode, pad=True, validate=True):
     r"""Generate the unfolded tensor represented by the coupled matrix factorization.
 
-    This function is an alias for first constructing a tensor (``cmf_to_tensor``) and
-    then unfolding that tensor in a given mode. Note that if the matrices have a different
-    number of rows, then they will be padded when the tensor is constructed, and thus,
-    there will be zeros in the unfolded tensor too.
+    
+    By default the function is an alias for first constructing a tensor (``cmf_to_tensor``) and
+    then vectorizing that tensor. Note that if the matrices have a different number of
+    rows, then they will be padded when the tensor is constructed, and thus, there will
+    be zeros in the unfolded tensor too.
+
+    If the zero-padding is unwanted, then setting the ``pad`` parameter to ``False`` (only available for
+    ``mode=2``) will instead construct each matrix and concatenate them.
 
     Parameters
     ----------
@@ -583,7 +587,11 @@ def cmf_to_unfolded(cmf, mode, validate=True):
             Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}_i` and
             :math:`\mathbf{C}` described above
 
-    validate : bool
+    pad : bool (default=True)
+        If true, then the coupled matrix factorization will be converted into a dense tensor,
+        padding the matrices with zeros so all have the same size, and then unfolded.
+
+    validate : bool (default=True)
         If true, then the decomposition is validated before the matrix is constructed
         (see ``CoupledMatrixFactorization``).
 
@@ -647,18 +655,36 @@ def cmf_to_unfolded(cmf, mode, validate=True):
     >>> nonzeros_2 = tl.sum(matrix_2 == 0)
     >>> nonzeros_0, nonzeros_1, nonzeros_2
     (60, 60, 60)
+
+    If we want to unfold with ``mode=2`` without padding with zeros, then we can use the ``pad`` argument
+
+    >>> shapes = ((5, 10), (3, 10), (2, 10), (4, 10))
+    >>> cmf = random_coupled_matrices(shapes, rank=3)
+    >>> matrix_3 = cmf_to_unfolded(cmf, pad=False, mode=2)
+    >>> tl.shape(matrix_3)
+    (10, 14)
+
     """
-    # TODO: Option to use stack of matrices instead of tensor padded with zeros
-    return tl.unfold(cmf_to_tensor(cmf, validate=validate), mode)
+    if pad:
+        return tl.unfold(cmf_to_tensor(cmf, validate=validate), mode)
+    else:
+        if mode == 2:
+            return tl.transpose(tl.concatenate(cmf_to_matrices(cmf, validate=validate), axis=0))
+        else:
+            raise ValueError(f"Cannot unfold along mode {mode} without padding. ")
 
 
-def cmf_to_vec(cmf, validate=True):
+def cmf_to_vec(cmf, pad=True, validate=True):
     r"""Generate the vectorized tensor represented by the coupled matrix factorization.
 
-    This function is an alias for first constructing a tensor (``cmf_to_tensor``) and
+    By default the function is an alias for first constructing a tensor (``cmf_to_tensor``) and
     then vectorizing that tensor. Note that if the matrices have a different number of
     rows, then they will be padded when the tensor is constructed, and thus, there will
     be zeros in the vectorized tensor too.
+
+    If the zero-padding is unwanted, then setting the ``pad`` parameter to ``False`` will instead construct and 
+    vectorize each matrix described by the decomposition and then concatenate these vectors forming
+    one vector with no padded zero values.
 
     Parameters
     ----------
@@ -670,8 +696,11 @@ def cmf_to_vec(cmf, validate=True):
         * factors : List of factors of the coupled matrix decomposition
             Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}_i` and
             :math:`\mathbf{C}` described above
-
-    validate : bool
+    pad: bool (default=True)
+        If true then if the matrices described by the decomposition have a different number of rows, 
+        then they will be padded by zeros to construct a tensor which are vectorized, and there will
+        be zeros in the vectorized tensor too. If false, the matrices will not be padded. 
+    validate : bool (default=True)
         If true, then the decomposition is validated before the matrix is constructed
         (see ``CoupledMatrixFactorization``).
 
@@ -702,7 +731,7 @@ def cmf_to_vec(cmf, validate=True):
     >>> tl.shape(vector)
     (200,)
 
-    However, as we see, the length of the vectorized coupled matrix factorization 
+    However, as we see, the length of the vectorized coupled matrix factorization
     is still 200, despite some matrices being shorter. This is because the matrices
     are padded by zeros to construct a tensor, which is subsequently unfolded.
 
@@ -711,6 +740,17 @@ def cmf_to_vec(cmf, validate=True):
     
     >>> tl.sum(vector == 0)
     60
+
+    If we want to vectorize without padding with zeros, we can use the ``pad`` argument
+
+    >>> shapes = ((5, 10), (3, 10), (2, 10), (4, 10))
+    >>> cmf = random_coupled_matrices(shapes, rank=3)
+    >>> vector = cmf_to_vec(cmf, pad=False)
+    >>> tl.shape(vector)
+    (140,)
     """
-    # TODO: Option to use stack of matrices instead of tensor padded with zeros
-    return tl.tensor_to_vec(cmf_to_tensor(cmf, validate=validate))
+    if pad:
+        return tl.tensor_to_vec(cmf_to_tensor(cmf, validate=validate))
+    else:
+        matrices = cmf_to_matrices(cmf, validate=validate)
+        return tl.concatenate([tl.reshape(matrix, (-1,)) for matrix in matrices])

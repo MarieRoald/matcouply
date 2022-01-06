@@ -1,7 +1,6 @@
 from copy import copy
 from unittest.mock import patch
 
-import numpy as np
 import pytest
 import tensorly as tl
 import tensorly.random
@@ -119,38 +118,38 @@ def test_validate_cmf(rng, random_ragged_cmf):
     # ## Weights
     # The weights is a matrix
     with pytest.raises(ValueError):
-        coupled_matrices._validate_cmf((np.ones(shape=(rank, rank)), (A, B_is, C)))
+        coupled_matrices._validate_cmf((tl.ones((rank, rank)), (A, B_is, C)))
     # Wrong number of weights
     with pytest.raises(ValueError):
-        coupled_matrices._validate_cmf((np.ones(shape=(rank + 1,)), (A, B_is, C)))
+        coupled_matrices._validate_cmf((tl.ones((rank + 1,)), (A, B_is, C)))
 
     # ## Factor matrices
     # One of the matrices is a third order tensor
     with pytest.raises(ValueError):
-        coupled_matrices._validate_cmf((weights, (rng.random(size=(4, rank, rank)), B_is, C)))
+        coupled_matrices._validate_cmf((weights, (tl.tensor(rng.random(size=(4, rank, rank))), B_is, C)))
     with pytest.raises(ValueError):
-        coupled_matrices._validate_cmf((weights, (A, B_is, rng.random(size=(4, rank, rank)))))
+        coupled_matrices._validate_cmf((weights, (A, B_is, tl.tensor(rng.random(size=(4, rank, rank))))))
     with pytest.raises(ValueError):
         B_is_copy = copy(B_is)
-        B_is_copy[0] = rng.random(size=(4, rank, rank))
+        B_is_copy[0] = tl.tensor(rng.random(size=(4, rank, rank)))
         coupled_matrices._validate_cmf((weights, (A, B_is_copy, C)))
 
     # One of the matrices is a vector
     with pytest.raises(ValueError):
-        coupled_matrices._validate_cmf((weights, (rng.random(size=(rank,)), B_is, C)))
+        coupled_matrices._validate_cmf((weights, (tl.tensor(rng.random(size=(rank,))), B_is, C)))
     with pytest.raises(ValueError):
-        coupled_matrices._validate_cmf((weights, (A, B_is, rng.random(size=(rank,)))))
+        coupled_matrices._validate_cmf((weights, (A, B_is, tl.tensor(rng.random(size=(rank,))))))
     with pytest.raises(ValueError):
         B_is_copy = copy(B_is)
-        B_is_copy[0] = rng.random(size=(rank,))
+        B_is_copy[0] = tl.tensor(rng.random(size=(rank,)))
         coupled_matrices._validate_cmf((weights, (A, B_is_copy, C)))
 
     # ## Check wrong rank
     # Check with incorrect rank for one of the factors
-    invalid_A = rng.random((len(shapes), rank + 1))
-    invalid_C = rng.random((shapes[0][1], rank + 1))
-    invalid_B_is_2 = [rng.random((j_i, rank)) for j_i, k in shapes]
-    invalid_B_is_2[0] = rng.random((shapes[0][0], rank + 1))
+    invalid_A = tl.tensor(rng.random((len(shapes), rank + 1)))
+    invalid_C = tl.tensor(rng.random((shapes[0][1], rank + 1)))
+    invalid_B_is_2 = [tl.tensor(rng.random((j_i, rank))) for j_i, k in shapes]
+    invalid_B_is_2[0] = tl.tensor(rng.random((shapes[0][0], rank + 1)))
 
     # Both A and C have the wrong rank:
     with pytest.raises(ValueError):
@@ -177,7 +176,7 @@ def test_cmf_to_matrix(rng, random_ragged_cmf):
 
     # Test that it always fails when a single B_i is invalid and validate=True
     invalid_B_is = copy(B_is)
-    invalid_B_is[0] = rng.random((tl.shape(B_is[0])[0], tl.shape(B_is[0])[1] + 1))
+    invalid_B_is[0] = tl.tensor(rng.random((tl.shape(B_is[0])[0], tl.shape(B_is[0])[1] + 1)))
     invalid_cmf = (weights, (A, invalid_B_is, C))
 
     for i, _ in enumerate(invalid_B_is):
@@ -209,7 +208,7 @@ def test_cmf_to_matrices(rng, random_ragged_cmf):
         assert_array_almost_equal(matrix, manually_assembled_matrix)
 
     invalid_B_is = copy(B_is)
-    invalid_B_is[0] = rng.random((tl.shape(B_is[0])[0], tl.shape(B_is[0])[1] + 1))
+    invalid_B_is[0] = tl.tensor(rng.random((tl.shape(B_is[0])[0], tl.shape(B_is[0])[1] + 1)))
     invalid_cmf = (weights, (A, invalid_B_is, C))
 
     # Test that it always fails when a single B_i is invalid and validate=True
@@ -291,6 +290,7 @@ def test_cmf_to_tensor(rng, random_regular_cmf):
 def test_cmf_to_unfolded(rng, random_ragged_cmf):
     cmf, shapes, rank = random_ragged_cmf
 
+    # with padding
     tensor = cmf.to_tensor()
     for mode in range(3):
         unfolded_tensor = cmf.to_unfolded(mode)
@@ -302,14 +302,36 @@ def test_cmf_to_unfolded(rng, random_ragged_cmf):
             coupled_matrices.cmf_to_unfolded(cmf, mode, validate=True)
             mock.assert_called()
 
+    # without padding
+    with pytest.raises(ValueError):
+        cmf.to_unfolded(pad=False, mode=0)
+    with pytest.raises(ValueError):
+        cmf.to_unfolded(pad=False, mode=1)
+
+    matrices = cmf.to_matrices()
+
+    unfolded_matrices = tl.transpose(tl.concatenate(matrices, axis=0))
+    assert_array_almost_equal(cmf.to_unfolded(pad=False, mode=2), unfolded_matrices)
+    with patch("matcouply.coupled_matrices._validate_cmf", return_value=(shapes, rank)) as mock:
+        coupled_matrices.cmf_to_unfolded(cmf, 2, pad=False, validate=False)
+        mock.assert_not_called()
+        coupled_matrices.cmf_to_unfolded(cmf, 2, pad=False, validate=True)
+        mock.assert_called()
+
 
 def test_cmf_to_vec(rng, random_ragged_cmf):
     cmf, shapes, rank = random_ragged_cmf
 
+    # With zero padding
     tensor = cmf.to_tensor()
-    vector = tl.reshape(tensor, -1)
+    vector = tl.reshape(tensor, (-1,))
     assert_array_almost_equal(cmf.to_vec(), vector)
 
+    # Without zero padding TODO:CHECK
+    matrices = cmf.to_matrices()
+    assert_array_almost_equal(cmf.to_vec(pad=False), tl.concatenate([tl.reshape(matrix, (-1,)) for matrix in matrices]))
+
+    # Test that validate is called when it should be
     with patch("matcouply.coupled_matrices._validate_cmf", return_value=(shapes, rank)) as mock:
         coupled_matrices.cmf_to_vec(cmf, validate=False)
         mock.assert_not_called()
@@ -318,9 +340,9 @@ def test_cmf_to_vec(rng, random_ragged_cmf):
 
 
 def test_from_CPTensor_with_shapes(rng):
-    A = rng.standard_normal(size=(5, 4))
-    B = rng.standard_normal(size=(10, 4))
-    C = rng.standard_normal(size=(15, 4))
+    A = tl.tensor(rng.standard_normal(size=(5, 4)))
+    B = tl.tensor(rng.standard_normal(size=(10, 4)))
+    C = tl.tensor(rng.standard_normal(size=(15, 4)))
 
     # Check that we get decomposition with the correct shape
     cp_tensor = tl.cp_tensor.CPTensor((None, (A, B, C)))
