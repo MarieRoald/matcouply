@@ -301,4 +301,3 @@ plt.show()
 # We see that the model finds much more sensible component vectors. The :math:`\mathbf{A}`- and
 # :math:`\mathbf{C}`-component vectors no longer seem correlated, and the peaks of the :math:`\mathbf{B}_i`-component
 # vectors no longer jump around.
-
