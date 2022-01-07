@@ -31,8 +31,9 @@ def all_combinations(*args):
 
 
 def normalize(X):
-    # return X / tl.sqrt(tl.sum(X ** 2, axis=0, keepdims=True))  # TODO: which backends support keepdims?
-    return X / tl.sqrt(tl.sum(X ** 2, 0, True))  # TODO: CHECK which backends support keepdims?
+    ssX = tl.sum(X ** 2, 0)
+    ssX = tl.reshape(ssX, (1, *tl.shape(ssX)))
+    return X / tl.sqrt(ssX)
 
 
 @pytest.mark.parametrize(
@@ -177,9 +178,9 @@ def test_compute_feasibility_gaps(rng, random_ragged_cmf):
     weights, (A, B_is, C) = cmf
 
     # Create list with random noise
-    A_noise_list = [rng.standard_normal(A.shape) for _ in range(4)]
-    C_noise_list = [rng.standard_normal(C.shape) for _ in range(3)]
-    B_is_noise_list = [[rng.standard_normal(B_i.shape) for B_i in B_is] for _ in range(2)]
+    A_noise_list = [tl.tensor(rng.standard_normal(A.shape)) for _ in range(4)]
+    C_noise_list = [tl.tensor(rng.standard_normal(C.shape)) for _ in range(3)]
+    B_is_noise_list = [[tl.tensor(rng.standard_normal(B_i.shape)) for B_i in B_is] for _ in range(2)]
 
     A_norm = tl.norm(A)
     B_norm = tl.norm(tl.concatenate(B_is))
@@ -1212,7 +1213,7 @@ def test_admm_update_C(rng, random_ragged_cmf, feasibility_penalty_scale):
     nn_C = tl.clip(C, 0, float("inf"))
     nn_cmf = coupled_matrices.CoupledMatrixFactorization((weights, (nn_A, nn_B_is, nn_C)))
 
-    nn_C2 = rng.uniform(size=tl.shape(nn_C))
+    nn_C2 = tl.tensor(rng.uniform(size=tl.shape(nn_C)))
     nn_modified_cmf = coupled_matrices.CoupledMatrixFactorization((weights, (nn_A, nn_B_is, nn_C2)))
 
     nn = NonNegativity()
@@ -1231,8 +1232,8 @@ def test_admm_update_C(rng, random_ragged_cmf, feasibility_penalty_scale):
         svd_fun=get_svd("truncated_svd"),
     )
     nn_out_cmf, nn_out_C_auxes, nn_out_C_duals = out
-    out_nn_C_normalized = nn_out_cmf[1][2] / tl.sqrt(tl.sum(nn_out_cmf[1][2] ** 2, axis=0, keepdims=True))
-    nn_C_normalized = nn_C / tl.sqrt(tl.sum(nn_C ** 2, axis=0, keepdims=True))
+    out_nn_C_normalized = normalize(nn_out_cmf[1][2])
+    nn_C_normalized = normalize(nn_C)
     assert_array_almost_equal(out_nn_C_normalized, nn_C_normalized, decimal=3)
 
     # Check that the feasibility gap is low
