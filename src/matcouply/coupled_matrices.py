@@ -636,7 +636,7 @@ def cmf_to_unfolded(cmf, mode, pad=True, validate=True):
     However, as we see, the shape of the unfolded tensor is still (4, 50)
     despite some matrices being shorter. This is because the matrices are
     padded by zeros to construct the tensor, which is subsequently unfolded.
-    
+
     This padding happens independently of the unfolding mode.
 
     >>> matrix_1 = cmf_to_unfolded(cmf, mode=1)
