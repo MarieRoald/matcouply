@@ -101,7 +101,7 @@ noisy_matrices = [M + N * noise_level * tl.norm(M) / tl.norm(N) for M, N in zip(
 
 
 ###############################################################################
-# Use the ``regs`` parameter to input regularisation classes
+# Use the ``regs`` parameter to input regularization classes
 # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 # Matcouply automatically parses the constraints from the ``parafac2_aoadmm`` and ``cmf_aoadmm`` funciton
 # arguments. However, sometimes, you may want full control over how a penalty is implemented. In that case,
@@ -126,7 +126,7 @@ for init in range(4):
         random_state=init,
         verbose=True,
     )
-    if out[1].regularised_loss[-1] < lowest_error and out[1].satisfied_stopping_condition:
+    if out[1].regularized_loss[-1] < lowest_error and out[1].satisfied_stopping_condition:
         out_cmf, diagnostics = out
         lowest_error = diagnostics.rec_errors[-1]
 
@@ -209,9 +209,7 @@ plt.show()
 from matcouply._doc_utils import (
     copy_ancestor_docstring,  # Helper decorator that makes it possible for ADMMPenalties to inherit a docstring
 )
-from matcouply._unimodal_regression import (
-    unimodal_regression,  # The unimodal regression implementation
-)
+from matcouply._unimodal_regression import unimodal_regression  # The unimodal regression implementation
 from matcouply.penalties import HardConstraintMixin, MatrixPenalty
 
 
@@ -246,7 +244,7 @@ for init in range(4):
         random_state=init,
         verbose=True,
     )
-    if out[1].regularised_loss[-1] < lowest_error and out[1].satisfied_stopping_condition:
+    if out[1].regularized_loss[-1] < lowest_error and out[1].satisfied_stopping_condition:
         out_cmf, diagnostics = out
         lowest_error = diagnostics.rec_errors[-1]
 

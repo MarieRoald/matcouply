@@ -517,7 +517,7 @@ class BoxConstraint(HardConstraintMixin, RowVectorPenalty):
 
 
 class L1Penalty(RowVectorPenalty):
-    r"""Add L1 (LASSO) regularisation on the factor elements.
+    r"""Add L1 (LASSO) regularization on the factor elements.
 
     The L1 penalty is frequently used to obtain sparse components. That is,
     components with many zero-valued elements. To accomplish this, the L1 penalty
@@ -527,7 +527,7 @@ class L1Penalty(RowVectorPenalty):
     Parameters
     ----------
     reg_strength : float
-        The regularisation strength, :math:`\gamma` in the equation above
+        The regularization strength, :math:`\gamma` in the equation above
     non_negativity : bool
         If ``True``, then non-negativity is also imposed on the factor elements.
     aux_init : {"random_uniform", "random_standard_normal", "zeros", tl.tensor(ndim=2), list of tl.tensor(ndim=2)}
@@ -745,7 +745,7 @@ class TotalVariationPenalty(MatrixPenalty):
 
         g(\mathbf{x}) = \alpha \|\nabla \mathbf{x}\|_1 = \alpha \sum_{n=1}^{N} |x_n - x_{n-1}|,
 
-    where :math:`\alpha` is a regularisation coefficient that controls the sparsity
+    where :math:`\alpha` is a regularization coefficient that controls the sparsity
     level of the gradient and :math:`\nabla` is the finite difference operator.
     :math:`\mathbf{x}` is a column vector of a factor matrix, and all column vectors
     are penalised equally.
@@ -768,7 +768,7 @@ class TotalVariationPenalty(MatrixPenalty):
     Parameters
     ----------
     reg_strength : float (> 0)
-        The strength of the total variation regularisation (:math:`\alpha` above)
+        The strength of the total variation regularization (:math:`\alpha` above)
     l1_strength : float (>= 0)
         The strength of the L1 penalty (:math:`\beta` above)
     aux_init : {"random_uniform", "random_standard_normal", "zeros", tl.tensor(ndim=2), list of tl.tensor(ndim=2)}
@@ -797,9 +797,9 @@ class TotalVariationPenalty(MatrixPenalty):
                 "Install with ``pip install condat_tv``."
             )
         if reg_strength <= 0:
-            raise ValueError("The TV regularisation strength must be positive.")
+            raise ValueError("The TV regularization strength must be positive.")
         if l1_strength < 0:
-            raise ValueError("The L1 regularisation strength must be non-negative.")
+            raise ValueError("The L1 regularization strength must be non-negative.")
         super().__init__(aux_init, dual_init)
         self.reg_strength = reg_strength
         self.l1_strength = l1_strength

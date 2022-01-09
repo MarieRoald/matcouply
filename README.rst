@@ -43,7 +43,7 @@ About
 .. image:: docs/figures/CMF_multiblock.svg
     :alt: Illustration of a coupled matrix factorization
 
-MatCoupLy uses AO-ADMM to fit constrained and regularised coupled matrix factorization (and PARAFAC2) models.
+MatCoupLy uses AO-ADMM to fit constrained and regularized coupled matrix factorization (and PARAFAC2) models.
 It uses the alternating updates with the alternating direction method of multipliers (AO-ADMM) algorithm,
 which is very flexible in terms of constraints [1, 2]
 

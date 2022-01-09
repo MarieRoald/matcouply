@@ -9,7 +9,7 @@ different samples may vary, which leads to a stack of matrices, one for each sam
 natural choice :cite:p:`wise2001application`, as it naturally handles time profiles of different lengths.
 
 In this example, we repeat some of the analysis from :cite:p:`wise2001application` and show how total variation (TV) regularization
-can reduce noise in the components. TV regularisation is well suited for reducing noise without overly smoothing
+can reduce noise in the components. TV regularization is well suited for reducing noise without overly smoothing
 sharp transitions :cite:p:`rudin1992nonlinear`.
 """
 
@@ -56,7 +56,7 @@ standardised = [(m - mean) / std for m in matrices]
 # Fit a PARAFAC2 model
 # ^^^^^^^^^^^^^^^^^^^^
 #
-# Let's begin by fitting an unregularised PARAFAC2 model using the alternating least squares algorithm
+# Let's begin by fitting an unregularized PARAFAC2 model using the alternating least squares algorithm
 # :cite:p:`kiers1999parafac2` with the implementation in `TensorLy <http://tensorly.org/>`_ :cite:p:`kossaifi2019tensorly`.
 # This algorithm is comparable with the one used in :cite:p:`wise2001application`.
 #
@@ -161,13 +161,13 @@ cmf, diagnostics = parafac2_aoadmm(
 ###############################################################################
 # We examine the diagnostic plots
 #
-# For ALS, the relative SSE and its change was the only interesting metrics. However, with regularised PARAFAC2 and AO-ADMM
-# we should also to look at the feasibility gaps and the regularisation penalty.
+# For ALS, the relative SSE and its change was the only interesting metrics. However, with regularized PARAFAC2 and AO-ADMM
+# we should also to look at the feasibility gaps and the regularization penalty.
 #
 # All feasibility gaps and the change in relative SSE should be low.
 
 rel_sse = np.array(diagnostics.rec_errors) ** 2
-loss = np.array(diagnostics.regularised_loss)
+loss = np.array(diagnostics.regularized_loss)
 feasibility_penalty_A = np.array([gapA for gapA, gapB, gapC in diagnostics.feasibility_gaps])
 feasibility_penalty_B = np.array([gapB for gapA, gapB, gapC in diagnostics.feasibility_gaps])
 feasibility_penalty_C = np.array([gapC for gapA, gapB, gapC in diagnostics.feasibility_gaps])
@@ -182,11 +182,11 @@ axes[0, 0].set_ylabel("Relative SSE")
 
 axes[0, 1].plot(it_num, loss)
 axes[0, 1].set_xlabel("Iteration number")
-axes[0, 1].set_ylabel("Regularised loss")
+axes[0, 1].set_ylabel("Regularized loss")
 
 axes[0, 2].semilogy(it_num[1:], np.abs(loss[:-1] - loss[1:]) / loss[:-1])
 axes[0, 2].set_xlabel("Iteration number")
-axes[0, 2].set_ylabel("Relative change in regularised loss")
+axes[0, 2].set_ylabel("Relative change in regularized loss")
 
 axes[1, 0].semilogy(it_num, feasibility_penalty_A)
 axes[1, 0].set_xlabel("Iteration number")
@@ -202,7 +202,7 @@ axes[1, 2].set_xlabel("Iteration number")
 axes[1, 2].set_ylabel("Feasibility gap C")
 
 ###############################################################################
-# Next, we look at the regularised components
+# Next, we look at the regularized components
 
 weights, (A, B_is, C) = cmf
 # We find the permutation so the first component explains most of the variation in the data
@@ -216,13 +216,13 @@ for i, B_i in enumerate(B_is):
     axes[1].plot(B_i[:, permutation[1]], color="k", alpha=0.3)
 
 ###############################################################################
-# We see that the TV regularisation removed much of the noise. We now have piecewise constant components
+# We see that the TV regularization removed much of the noise. We now have piecewise constant components
 # with transitions that are easy to identify.
 
 ###############################################################################
-# Comparing with unregularised PARAFAC2
-print("Relative SSE with unregularised PARAFAC2: ", rec_err[-1] ** 2)
-print("Relative SSE with TV regularised PARAFAC2:", diagnostics.rec_errors[-1] ** 2)
+# Comparing with unregularized PARAFAC2
+print("Relative SSE with unregularized PARAFAC2: ", rec_err[-1] ** 2)
+print("Relative SSE with TV regularized PARAFAC2:", diagnostics.rec_errors[-1] ** 2)
 
 ###############################################################################
 # We see that there is only a small change in the relative SSE, but the components are much smoother and
@@ -238,7 +238,7 @@ print("Relative SSE with TV regularised PARAFAC2:", diagnostics.rec_errors[-1] *
 #
 #                       Version 3, 29 June 2007
 #
-#     Example demonstrating TV regularised PARAFAC2
+#     Example demonstrating TV regularized PARAFAC2
 #     Copyright (C) 2021 Marie Roald
 #
 #     This program is free software: you can redistribute it and/or modify

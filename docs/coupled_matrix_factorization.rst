@@ -74,7 +74,7 @@ of the implemented constraints and penalties, see :doc:`autodoc/penalties`.
 
 .. note::
 
-    If you use penalty based regularisation that scales with the norm of one of the parameters, then
-    norm-based regularisation should be imposed on all modes. This can, for example, be L2 regularisation,
+    If you use penalty based regularization that scales with the norm of one of the parameters, then
+    norm-based regularization should be imposed on all modes. This can, for example, be L2 regularization,
     max- and min-bound constraints, L1 penalties or hard L2 norm constraints. See :cite:p:`roald2021admm`
     for more details.

@@ -565,7 +565,7 @@ def _parse_mode_penalties(
         description_str += "\n * Non negativity constraints"
 
     if len(description_str) == 0:
-        description_str += "\n (no additional regularisation added)"
+        description_str += "\n (no additional regularization added)"
     return regs, description_str
 
 
@@ -590,7 +590,7 @@ class AdmmVars(NamedTuple):
 class DiagnosticMetrics(NamedTuple):
     rec_errors: list  #: List of length equal to the number of iterations plus one containing the reconstruction errors
     feasibility_gaps: list  #: List of length equal to the number of iterations plus one containing the feasibility gaps
-    regularised_loss: list  #: List of length equal to the number of iterations plus one containing the regularised loss
+    regularized_loss: list  #: List of length equal to the number of iterations plus one containing the regularized loss
     satisfied_stopping_condition: Optional[
         bool
     ]  #: Boolean specifying whether the stopping conditions were satisfied, None if no tolerance is set
@@ -753,7 +753,7 @@ def cmf_aoadmm(
         differences between the auxiliary variables and the factor matrices of the model.
     DiagnosticMetrics
         (only returned if ``return_errors=True``) NamedTuple containing lists of the relative
-        norm-error, the feasibility gaps and the regularised loss for each iteration, each with
+        norm-error, the feasibility gaps and the regularized loss for each iteration, each with
         length equal to the number of iterations plus one (the initial values), a stopping
         message and two boolean values, one signifying whether the stopping conditions (including
         feasibility gap) were satisfied and one signifying whether the feasibility gaps were
@@ -766,8 +766,8 @@ def cmf_aoadmm(
 
     Note
     ----
-    If you use norm-dependent regularisation (e.g. ``generalized_l2_penalty``) in one mode,
-    then you must use norm-dependent regularisation in all modes. You may, for example, use
+    If you use norm-dependent regularization (e.g. ``generalized_l2_penalty``) in one mode,
+    then you must use norm-dependent regularization in all modes. You may, for example, use
     ``l2_penalty``, ``norm_bound``, ``l1_penalty`` or ``lower_bound`` and ``upper_bound``.
     See :cite:p:`roald2021admm` for more details.
 
@@ -787,10 +787,10 @@ def cmf_aoadmm(
     >>> diagnostics.satisfied_feasibility_condition
     True
 
-    >>> len(diagnostics.regularised_loss)
+    >>> len(diagnostics.regularized_loss)
     5
 
-    We see that the length of the regularised loss list is the number of iterations plus one. This is because the initial
+    We see that the length of the regularized loss list is the number of iterations plus one. This is because the initial
     decomposition is included in this.
 
     >>> len(diagnostics.feasibility_gaps[0])
@@ -930,8 +930,8 @@ def cmf_aoadmm(
                         print(
                             "Coupled matrix factorization iteration={}, ".format(it)
                             + "reconstruction error=NOT COMPUTED, "
-                            + "regularised loss=NOT COMPUTED, "
-                            + "regularised loss variation=NOT COMPUTED."
+                            + "regularized loss=NOT COMPUTED, "
+                            + "regularized loss variation=NOT COMPUTED."
                         )
                         print("Duality gaps for A: {}".format(A_gaps))
                         print("Duality gaps for the Bi-matrices: {}".format(B_gaps))
@@ -955,8 +955,8 @@ def cmf_aoadmm(
                 print(
                     "Coupled matrix factorization iteration={}, ".format(it)
                     + "reconstruction error={}, ".format(rec_errors[-1])
-                    + "regularised loss={} ".format(losses[-1])
-                    + "regularised loss variation={}.".format(abs(losses[-2] - losses[-1]) / losses[-2])
+                    + "regularized loss={} ".format(losses[-1])
+                    + "regularized loss variation={}.".format(abs(losses[-2] - losses[-1]) / losses[-2])
                 )
                 print("Duality gaps for A: {}".format(A_gaps))
                 print("Duality gaps for the Bi-matrices: {}".format(B_gaps))
@@ -1016,7 +1016,7 @@ def cmf_aoadmm(
         diagnostic_metrics = DiagnosticMetrics(
             rec_errors=rec_errors,
             feasibility_gaps=feasibility_gaps,
-            regularised_loss=losses,
+            regularized_loss=losses,
             satisfied_stopping_condition=satisfied_stopping_condition,
             satisfied_feasibility_condition=feasibility_criterion,
             message=message,

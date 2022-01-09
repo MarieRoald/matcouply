@@ -14,7 +14,7 @@ To fit a coupled matrix factorization, we solve the following optimization probl
 
 However, this problem does not have a unique solution, and each time we fit a coupled matrx
 factorization, we may obtain different factor matrices. As a consequence, we cannot interpret
-the factor matrices. To circumvent this problem, it is common to add regularisation, forming
+the factor matrices. To circumvent this problem, it is common to add regularization, forming
 the following optimisation problem
 
 .. math::
@@ -24,8 +24,8 @@ the following optimisation problem
     + \sum_{n=1}^{N_\mathbf{B}} g^{(B)}_n(\{ \mathbf{B}_i \}_{i=1}^I)
     + \sum_{n=1}^{N_\mathbf{C}} g^{(C)}_n(\mathbf{C}),
 
-where the :math:`g`-functions are regularisation penalties, and :math:`N_\mathbf{A}, N_\mathbf{B}`
-and :math:`N_\mathbf{C}` are the number of regularisation penalties for 
+where the :math:`g`-functions are regularization penalties, and :math:`N_\mathbf{A}, N_\mathbf{B}`
+and :math:`N_\mathbf{C}` are the number of regularization penalties for 
 :math:`\mathbf{A}, \{\mathbf{B}\}_{i=1}^I` and :math:`\mathbf{C}`, respectively.
 
 The formulation above also encompasses hard constraints, such as :math:`a_{ir} \geq 0` for
@@ -43,7 +43,7 @@ Optimization
 To solve the regularized least squares problem, we use alternating optimisation (AO) with
 the alternating direction method of multipliers (ADMM). AO-ADMM is a block 
 coordinate descent scheme, where the factor matrices for each mode is updated in an
-alternating fashion. This means that the regularised loss function above is split into
+alternating fashion. This means that the regularized loss function above is split into
 the following three optimization subproblems:
 
 .. math::
@@ -68,13 +68,13 @@ some convergence criteria are satisfied.
 The benefit of AO-ADMM is its flexibility in terms of regularization and constraints. We
 can impose any regularization penalty or hard constraint so long as we have a way to
 evaluate the scaled proximal operator of the penalty function or projection onto the
-feasible set of the hard constraint :cite:p:`huang2016flexible`. That is, any regularisation
+feasible set of the hard constraint :cite:p:`huang2016flexible`. That is, any regularization
 function, :math:`g(\mathbf{v})`, where we can solve the problem
 
 .. math::
     \min_{\mathbf{w}} g(\mathbf{w}) + \frac{\rho}{2}\|\mathbf{w} - \mathbf{v}\|^2,
 
-where :math:`\mathbf{v}` and :math:`\mathbf{w}` are the vectorized input to the regularised
+where :math:`\mathbf{v}` and :math:`\mathbf{w}` are the vectorized input to the regularized
 least squares subproblem we solve with ADMM. :math:`\rho` is a parameter that penalises infeasible
 solutions (more about that later), we use the name *feasibility penalty parameter* for :math:`\rho`.
 
@@ -91,7 +91,7 @@ ADMM and the feasibility gap
 There is one property of ADMM that is important to be aware of when fitting models with AO-ADMM:
 The *feasibility gap*. If the feasibility gap is high (what a high value depends on the application,
 but any value above 0.0001 is suspicious and any value above 0.01 is likely high), then the
-constraints and regularisation we impose may not be satisfied. To explain why, we briefly describe
+constraints and regularization we impose may not be satisfied. To explain why, we briefly describe
 ADMM (for a thorough introduction, see :cite:p:`boyd2011distributed`, and for an introduction
 specifically for coupled matrix factorization, see :cite:p:`roald2021admm`).
 
@@ -102,7 +102,7 @@ ADMM can solve problems on the form
     \text{s.t. } \mathbf{Mx} - \mathbf{Ny} = \mathbf{c},
 
 which is useful for solving regularized least squares problems. If we have only one regularization
-penalty, then we can rewrite a regularised least squares problem to the standard form of ADMM:
+penalty, then we can rewrite a regularized least squares problem to the standard form of ADMM:
 
 .. math::
     \min_{\mathbf{x}, \mathbf{z}} \frac{1}{2}\|\mathbf{Tx} - \mathbf{b}\|^2 + g(\mathbf{z}) \\
@@ -142,7 +142,7 @@ and multi-matrix penalties:
 * *Multi-matrix* penalties are penalties that penalise behaviour across 
   multiple :math:`\mathbf{B}_i`-matrices at once (e.g. the PARAFAC2 constraint: :meth:`matcouply.penalties.Parafac2`).
 * *Matrix-wise* penalties are penalties full matrices (or columns of full matrices) at once
-  (e.g. total variation regularisation: :meth:`matcouply.penalties.TotalVariationPenalty`) and can be
+  (e.g. total variation regularization: :meth:`matcouply.penalties.TotalVariationPenalty`) and can be
   applied either to the :math:`\mathbf{B}_i`-matrices, or the :math:`\mathbf{C}`-matrix with no.
 * Finally, *row-wise* penalties are penalties that single rows (or elements) of a matrix at a time
   (e.g. non-negativity: :meth:`matcouply.penalties.NonNegativity`. These penalties can be applied to

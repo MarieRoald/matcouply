@@ -55,9 +55,9 @@ for init in range(5):
     all_models.append(cmf)
     all_errors.append(diagnostics)
 
-    if diagnostics.regularised_loss[-1] < lowest_error:
+    if diagnostics.regularized_loss[-1] < lowest_error:
         selected_init = init
-        lowest_error = diagnostics.regularised_loss[-1]
+        lowest_error = diagnostics.regularized_loss[-1]
 
 ###############################################################################
 # Check uniqueness of the NN-PARAFAC2 models

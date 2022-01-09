@@ -89,7 +89,7 @@ for init in range(5):
     out = decomposition.parafac2_aoadmm(
         noisy_matrices, rank, n_iter_max=1000, non_negative=True, return_errors=True, random_state=init
     )
-    if out[1].regularised_loss[-1] < lowest_error and out[1].satisfied_stopping_condition:
+    if out[1].regularized_loss[-1] < lowest_error and out[1].satisfied_stopping_condition:
         out_cmf, diagnostics = out
         lowest_error = diagnostics.rec_errors[-1]
 

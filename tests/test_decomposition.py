@@ -211,7 +211,7 @@ def test_compute_feasibility_gaps(rng, random_ragged_cmf):
 
 
 def test_parse_all_penalties():
-    # Check that regularisation is added
+    # Check that regularization is added
     regs = decomposition._parse_all_penalties(
         non_negative=1,
         lower_bound=2,
@@ -457,10 +457,10 @@ def test_parse_all_penalties_verbose(capfd):
     message = (
         "Added mode 0 penalties and constraints:"
         + "\n"
-        + " (no additional regularisation added)\n"
+        + " (no additional regularization added)\n"
         + "Added mode 1 penalties and constraints:"
         + "\n"
-        + " (no additional regularisation added)\n"
+        + " (no additional regularization added)\n"
         + "Added mode 2 penalties and constraints:"
         + "\n"
         + " * Non negativity constraints\n"
@@ -526,7 +526,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
         aux_init=aux_init,
     )
     assert len(out) == 0
-    assert verbosity_str == "\n (no additional regularisation added)"
+    assert verbosity_str == "\n (no additional regularization added)"
 
     # Check that non-negativity gives length one
     out, verbosity_str = decomposition._parse_mode_penalties(
@@ -1054,7 +1054,7 @@ def test_admm_update_A(rng, random_ragged_cmf, feasibility_penalty_scale, consta
     # Check that the feasibility gap is low
     assert_array_almost_equal(out_nn_cmf[1][0], out_nn_A_auxes[0])
 
-    # Test for l2_penalty > 0 by constructing and solving the regularised normal equations
+    # Test for l2_penalty > 0 by constructing and solving the regularized normal equations
     X = cmf.to_matrices()
     out = decomposition.admm_update_A(
         matrices=X,
@@ -1154,7 +1154,7 @@ def test_admm_update_B(rng, random_ragged_cmf, feasibility_penalty_scale, consta
     for aux_B_i, out_B_i in zip(out_nn_B_auxes[0], out_nn_B_is):
         assert_array_almost_equal(aux_B_i, out_B_i, decimal=3)
 
-    # Test for l2_penalty > 0 by constructing and solving the regularised normal equations
+    # Test for l2_penalty > 0 by constructing and solving the regularized normal equations
     X = cmf.to_matrices()
     out = decomposition.admm_update_B(
         matrices=X,
@@ -1238,7 +1238,7 @@ def test_admm_update_C(rng, random_ragged_cmf, feasibility_penalty_scale):
     # Check that the feasibility gap is low
     assert_array_almost_equal(nn_out_cmf[1][2], nn_out_C_auxes[0])
 
-    # Test for l2_penalty > 0 by constructing and solving the regularised normal equations
+    # Test for l2_penalty > 0 by constructing and solving the regularized normal equations
     X = cmf.to_matrices()
     out = decomposition.admm_update_C(
         matrices=X,
@@ -1522,7 +1522,7 @@ def test_l2_penalty_is_included(rng, random_ragged_cmf):
     )
 
     rel_sse = diagnostics.rec_errors[-1] ** 2
-    assert diagnostics.regularised_loss[-1] == pytest.approx(0.5 * rel_sse)
+    assert diagnostics.regularized_loss[-1] == pytest.approx(0.5 * rel_sse)
 
     out_cmf, diagnostics = decomposition.cmf_aoadmm(
         matrices, rank, n_iter_max=5, l2_penalty=1, return_errors=True, update_B_is=False,
@@ -1533,7 +1533,7 @@ def test_l2_penalty_is_included(rng, random_ragged_cmf):
     SS_A = tl.sum(out_A ** 2)
     SS_B = sum(tl.sum(out_B_i ** 2) for out_B_i in out_B_is)
     SS_C = tl.sum(out_C ** 2)
-    assert diagnostics.regularised_loss[-1] == pytest.approx(0.5 * rel_sse + 0.5 * (SS_A + SS_B + SS_C))
+    assert diagnostics.regularized_loss[-1] == pytest.approx(0.5 * rel_sse + 0.5 * (SS_A + SS_B + SS_C))
 
     out_cmf, diagnostics = decomposition.cmf_aoadmm(
         matrices, rank, n_iter_max=5, l2_penalty=[1, 2, 3], return_errors=True, update_B_is=False,
@@ -1544,7 +1544,7 @@ def test_l2_penalty_is_included(rng, random_ragged_cmf):
     SS_A = tl.sum(out_A ** 2)
     SS_B = sum(tl.sum(out_B_i ** 2) for out_B_i in out_B_is)
     SS_C = tl.sum(out_C ** 2)
-    assert diagnostics.regularised_loss[-1] == pytest.approx(0.5 * rel_sse + 0.5 * (1 * SS_A + 2 * SS_B + 3 * SS_C))
+    assert diagnostics.regularized_loss[-1] == pytest.approx(0.5 * rel_sse + 0.5 * (1 * SS_A + 2 * SS_B + 3 * SS_C))
 
 
 def test_cmf_aoadmm_stopping_information(random_ragged_cmf):
@@ -1568,7 +1568,7 @@ def test_cmf_aoadmm_stopping_information(random_ragged_cmf):
     assert not diagnostics.satisfied_stopping_condition
     assert not diagnostics.satisfied_feasibility_condition
     assert diagnostics.message == "MAXIMUM NUMBER OF ITERATIONS REACHED"
-    assert len(diagnostics.regularised_loss) == n_iter_max + 1
+    assert len(diagnostics.regularized_loss) == n_iter_max + 1
     assert len(diagnostics.rec_errors) == n_iter_max + 1
     assert len(diagnostics.feasibility_gaps) == n_iter_max + 1
 
@@ -1588,7 +1588,7 @@ def test_cmf_aoadmm_stopping_information(random_ragged_cmf):
     assert not diagnostics.satisfied_stopping_condition
     assert diagnostics.satisfied_feasibility_condition
     assert diagnostics.message == "MAXIMUM NUMBER OF ITERATIONS REACHED"
-    assert len(diagnostics.regularised_loss) == n_iter_max + 1
+    assert len(diagnostics.regularized_loss) == n_iter_max + 1
     assert len(diagnostics.rec_errors) == n_iter_max + 1
     assert len(diagnostics.feasibility_gaps) == n_iter_max + 1
 
@@ -1608,7 +1608,7 @@ def test_cmf_aoadmm_stopping_information(random_ragged_cmf):
     assert diagnostics.satisfied_stopping_condition
     assert diagnostics.satisfied_feasibility_condition
     assert diagnostics.message == "FEASIBILITY GAP CRITERION AND RELATIVE LOSS CRITERION SATISFIED"
-    assert len(diagnostics.regularised_loss) == 2
+    assert len(diagnostics.regularized_loss) == 2
     assert len(diagnostics.rec_errors) == 2
     assert len(diagnostics.feasibility_gaps) == 2
 
@@ -1628,6 +1628,6 @@ def test_cmf_aoadmm_stopping_information(random_ragged_cmf):
     assert diagnostics.satisfied_stopping_condition
     assert diagnostics.satisfied_feasibility_condition
     assert diagnostics.message == "FEASIBILITY GAP CRITERION AND ABSOLUTE LOSS CRITERION SATISFIED"
-    assert len(diagnostics.regularised_loss) == 2
+    assert len(diagnostics.regularized_loss) == 2
     assert len(diagnostics.rec_errors) == 2
     assert len(diagnostics.feasibility_gaps) == 2
