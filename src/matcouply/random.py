@@ -17,8 +17,8 @@ def random_coupled_matrices(
     rank : int or int list
         rank of the coupled matrix decomposition
     full : bool, optional, default is False
-        if True, a full tensor is returned otherwise,
-        the decomposed tensor is returned
+        if True, a list of dense matrices is returned otherwise,
+        the decomposition is returned
     random_state : `np.random.RandomState`
 
     Examples
