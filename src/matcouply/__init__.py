@@ -5,4 +5,4 @@ __email__ = "roald.marie@gmail.com"
 __version__ = "0.0.1"
 
 
-from . import coupled_matrices, decomposition, penalties, random
+from . import coupled_matrices, data, decomposition, penalties, random
