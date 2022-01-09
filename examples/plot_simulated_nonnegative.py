@@ -86,19 +86,18 @@ noisy_matrices = [M + N * noise_level * tl.norm(M) / tl.norm(N) for M, N in zip(
 lowest_error = float("inf")
 for init in range(5):
     print("Init:", init)
-    out, diagnostics = decomposition.parafac2_aoadmm(
+    out = decomposition.parafac2_aoadmm(
         noisy_matrices, rank, n_iter_max=1000, non_negative=True, return_errors=True, random_state=init
     )
-    if diagnostics.regularised_loss[-1] < lowest_error:
-        out_cmf = out
-        rec_errors, feasibility_gaps, regularised_loss = diagnostics
-        lowest_error = rec_errors[-1]
+    if out[1].regularised_loss[-1] < lowest_error and out[1].satisfied_stopping_condition:
+        out_cmf, diagnostics = out
+        lowest_error = diagnostics.rec_errors[-1]
 
 print("=" * 50)
 print(f"Final reconstruction error: {lowest_error:.3f}")
-print(f"Feasibility gap for A: {feasibility_gaps[-1][0]}")
-print(f"Feasibility gap for B_is: {feasibility_gaps[-1][1]}")
-print(f"Feasibility gap for C: {feasibility_gaps[-1][2]}")
+print(f"Feasibility gap for A: {diagnostics.feasibility_gaps[-1][0]}")
+print(f"Feasibility gap for B_is: {diagnostics.feasibility_gaps[-1][1]}")
+print(f"Feasibility gap for C: {diagnostics.feasibility_gaps[-1][2]}")
 
 ###############################################################################
 # Compute factor match score to measure the accuracy of the recovered components
@@ -123,7 +122,7 @@ print(f"Factor match score: {fms}")
 # ^^^^^^^^^^^^^^^^^^
 
 fig, ax = plt.subplots(tight_layout=True)
-ax.semilogy(rec_errors)
+ax.semilogy(diagnostics.rec_errors)
 plt.xlabel("Iteration")
 plt.ylabel("Relative normed error (2-norm)")
 plt.show()

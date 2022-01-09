@@ -30,8 +30,8 @@ def normalize(x):
 
 
 ###############################################################################
-# Generate simulated PARFAC2 factor matrices where the true number of components (`rank`) is known
-# ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+# Generate simulated PARFAC2 factor matrices where the true number of components (``rank``) is known
+# ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 A = rng.uniform(size=(I, rank)) + 0.1  # Add 0.1 to ensure that there is signal for all components for all slices
 A = tl.tensor(A)
 

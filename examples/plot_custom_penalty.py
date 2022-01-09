@@ -117,24 +117,24 @@ from matcouply.penalties import NonNegativity, Unimodality
 lowest_error = float("inf")
 for init in range(4):
     print("Init:", init)
-    out, diagnostics = decomposition.parafac2_aoadmm(
+    out = decomposition.parafac2_aoadmm(
         noisy_matrices,
         rank,
         n_iter_max=1000,
         regs=[[NonNegativity()], [Unimodality(non_negativity=True)], [NonNegativity()]],
         return_errors=True,
         random_state=init,
+        verbose=True,
     )
-    if diagnostics.regularised_loss[-1] < lowest_error and len(diagnostics.rec_errors) < 1000:
-        out_cmf = out
-        rec_errors, feasibility_gaps, regularised_loss = diagnostics
-        lowest_error = rec_errors[-1]
+    if out[1].regularised_loss[-1] < lowest_error and out[1].satisfied_stopping_condition:
+        out_cmf, diagnostics = out
+        lowest_error = diagnostics.rec_errors[-1]
 
 print("=" * 50)
 print(f"Final reconstruction error: {lowest_error:.3f}")
-print(f"Feasibility gap for A: {feasibility_gaps[-1][0]}")
-print(f"Feasibility gap for B_is: {feasibility_gaps[-1][1]}")
-print(f"Feasibility gap for C: {feasibility_gaps[-1][2]}")
+print(f"Feasibility gap for A: {diagnostics.feasibility_gaps[-1][0]}")
+print(f"Feasibility gap for B_is: {diagnostics.feasibility_gaps[-1][1]}")
+print(f"Feasibility gap for C: {diagnostics.feasibility_gaps[-1][2]}")
 
 ###############################################################################
 # Compute factor match score to measure the accuracy of the recovered components
@@ -209,7 +209,9 @@ plt.show()
 from matcouply._doc_utils import (
     copy_ancestor_docstring,  # Helper decorator that makes it possible for ADMMPenalties to inherit a docstring
 )
-from matcouply._unimodal_regression import unimodal_regression  # The unimodal regression implementation
+from matcouply._unimodal_regression import (
+    unimodal_regression,  # The unimodal regression implementation
+)
 from matcouply.penalties import HardConstraintMixin, MatrixPenalty
 
 
@@ -235,24 +237,24 @@ class CustomUnimodality(HardConstraintMixin, MatrixPenalty):
 lowest_error = float("inf")
 for init in range(4):
     print("Init:", init)
-    out, diagnostics = decomposition.parafac2_aoadmm(
+    out = decomposition.parafac2_aoadmm(
         noisy_matrices,
         rank,
         n_iter_max=1000,
         regs=[[NonNegativity()], [CustomUnimodality(non_negativity=True)], [NonNegativity()]],
         return_errors=True,
         random_state=init,
+        verbose=True,
     )
-    if diagnostics.regularised_loss[-1] < lowest_error and len(diagnostics.rec_errors) < 1000:
-        out_cmf = out
-        rec_errors, feasibility_gaps, regularised_loss = diagnostics
-        lowest_error = rec_errors[-1]
+    if out[1].regularised_loss[-1] < lowest_error and out[1].satisfied_stopping_condition:
+        out_cmf, diagnostics = out
+        lowest_error = diagnostics.rec_errors[-1]
 
 print("=" * 50)
 print(f"Final reconstruction error: {lowest_error:.3f}")
-print(f"Feasibility gap for A: {feasibility_gaps[-1][0]}")
-print(f"Feasibility gap for B_is: {feasibility_gaps[-1][1]}")
-print(f"Feasibility gap for C: {feasibility_gaps[-1][2]}")
+print(f"Feasibility gap for A: {diagnostics.feasibility_gaps[-1][0]}")
+print(f"Feasibility gap for B_is: {diagnostics.feasibility_gaps[-1][1]}")
+print(f"Feasibility gap for C: {diagnostics.feasibility_gaps[-1][2]}")
 
 ###############################################################################
 # Compute factor match score to measure the accuracy of the recovered components

@@ -1,4 +1,4 @@
-from typing import List, NamedTuple, Tuple
+from typing import NamedTuple, Optional
 
 import numpy as np
 import tensorly as tl
@@ -583,14 +583,21 @@ def _compute_l2_penalty(cmf, l2_parameters):
 
 
 class AdmmVars(NamedTuple):
-    auxes: Tuple
-    duals: Tuple
+    auxes: tuple  #: Length three tuple containing a list of auxiliary factor matrices for each mode
+    duals: tuple  #: Length three tuple containing a list of dual variables for each mode
 
 
 class DiagnosticMetrics(NamedTuple):
-    rec_errors: List
-    feasibility_gaps: Tuple
-    regularised_loss: List
+    rec_errors: list  #: List of length equal to the number of iterations plus one containing the reconstruction errors
+    feasibility_gaps: list  #: List of length equal to the number of iterations plus one containing the feasibility gaps
+    regularised_loss: list  #: List of length equal to the number of iterations plus one containing the regularised loss
+    satisfied_stopping_condition: Optional[
+        bool
+    ]  #: Boolean specifying whether the stopping conditions were satisfied, None if no tolerance is set
+    satisfied_feasibility_condition: Optional[
+        bool
+    ]  #: Boolean specifying whether the feasibility conditions were satisfied, None if no tolerance is set
+    message: str  #: Convergence message
 
 
 # TODO: Write what loss we minimise
@@ -746,7 +753,11 @@ def cmf_aoadmm(
         differences between the auxiliary variables and the factor matrices of the model.
     DiagnosticMetrics
         (only returned if ``return_errors=True``) NamedTuple containing lists of the relative
-        norm-error, the feasibility gaps and the regularised loss for each iteartion.
+        norm-error, the feasibility gaps and the regularised loss for each iteration, each with
+        length equal to the number of iterations plus one (the initial values), a stopping
+        message and two boolean values, one signifying whether the stopping conditions (including
+        feasibility gap) were satisfied and one signifying whether the feasibility gaps were
+        sufficiently low (according to ``feasibility_tol``).  
 
     Note
     ----
@@ -759,6 +770,36 @@ def cmf_aoadmm(
     then you must use norm-dependent regularisation in all modes. You may, for example, use
     ``l2_penalty``, ``norm_bound``, ``l1_penalty`` or ``lower_bound`` and ``upper_bound``.
     See :cite:p:`roald2021admm` for more details.
+
+    Examples
+    --------
+    Here is a small example that shows what the diagnostic metrics contain. For more detailed examples, see :ref:`examples`
+
+    >>> import matcouply
+    >>> data = matcouply.random.random_coupled_matrices([(10, 5), (12, 5), (11, 5)], rank=2, full=True, random_state=1)
+    >>> cmf, diagnostics = matcouply.decomposition.cmf_aoadmm(data, 2, n_iter_max=4, non_negative=True, return_errors=True, random_state=10)
+    >>> diagnostics.message
+    'MAXIMUM NUMBER OF ITERATIONS REACHED'
+
+    >>> diagnostics.satisfied_stopping_condition
+    False
+
+    >>> diagnostics.satisfied_feasibility_condition
+    True
+
+    >>> len(diagnostics.regularised_loss)
+    5
+
+    We see that the length of the regularised loss list is the number of iterations plus one. This is because the initial
+    decomposition is included in this.
+
+    >>> len(diagnostics.feasibility_gaps[0])
+    3
+
+    The feasibility gaps list contain tuples (one for each mode) of tuples (one for each penalty for the given mode).
+    
+    >>> len(diagnostics.feasibility_gaps[0][0])
+    1
     """
     random_state = tl.check_random_state(random_state)
     svd_fun = get_svd(svd)
@@ -820,6 +861,9 @@ def cmf_aoadmm(
         print("Duality gaps for the Bi-matrices: {}".format(B_gaps))
         print("Duality gaps for C: {}".format(C_gaps))
 
+    # Default values for diagnostics
+    satisfied_stopping_condition = False
+    message = "MAXIMUM NUMBER OF ITERATIONS REACHED"
     for it in range(n_iter_max):
         if update_B_is:
             cmf, B_is_aux_list, B_is_dual_list = admm_update_B(
@@ -864,11 +908,11 @@ def cmf_aoadmm(
             )
 
         # TODO: Do we want normalisation?
-        if tol or return_errors:
+        if tol or absolute_tol or return_errors:
             A_gaps, B_gaps, C_gaps = compute_feasibility_gaps(cmf, regs, A_aux_list, B_is_aux_list, C_aux_list)
             feasibility_gaps.append((A_gaps, B_gaps, C_gaps))
 
-            if tol:
+            if tol or absolute_tol:
                 max_feasibility_gap = -float("inf")
                 if len(A_gaps):
                     max_feasibility_gap = max((max(A_gaps), max_feasibility_gap))
@@ -922,13 +966,38 @@ def cmf_aoadmm(
                 # Compute rest of stopping criterions
                 rel_loss_criterion = abs(losses[-2] - losses[-1]) < (tol * losses[-2])
                 abs_loss_criterion = losses[-1] < absolute_tol
-                if feasibility_criterion and (rel_loss_criterion or abs_loss_criterion):
+
+                if feasibility_criterion and rel_loss_criterion:
+                    satisfied_stopping_condition = True
+                    message = "FEASIBILITY GAP CRITERION AND RELATIVE LOSS CRITERION SATISFIED"
                     if verbose:
-                        print("converged in {} iterations.".format(it))
-                        # TODO: print information about what stopped it?
+                        print("converged in {} iterations: {}".format(it, message))
                     break
+                elif feasibility_criterion and abs_loss_criterion:
+                    satisfied_stopping_condition = True
+                    message = "FEASIBILITY GAP CRITERION AND ABSOLUTE LOSS CRITERION SATISFIED"
+                    if verbose:
+                        print("converged in {} iterations: {}".format(it, message))
+                    break
+
         elif verbose and it % verbose == 0:
             print("Coupled matrix factorization iteration={}".format(it))
+
+    if feasibility_tol and not (tol or absolute_tol):
+        A_gaps, B_gaps, C_gaps = compute_feasibility_gaps(cmf, regs, A_aux_list, B_is_aux_list, C_aux_list)
+        feasibility_gaps.append((A_gaps, B_gaps, C_gaps))
+
+        max_feasibility_gap = -float("inf")
+        if len(A_gaps):
+            max_feasibility_gap = max((max(A_gaps), max_feasibility_gap))
+        if len(B_gaps):
+            max_feasibility_gap = max((max(B_gaps), max_feasibility_gap))
+        if len(C_gaps):
+            max_feasibility_gap = max((max(C_gaps), max_feasibility_gap))
+
+        feasibility_criterion = max_feasibility_gap < feasibility_tol
+    elif not feasibility_tol:
+        feasibility_criterion = None
 
     # Save as validated factorization instead of tuple
     cmf = CoupledMatrixFactorization(cmf)
@@ -941,8 +1010,16 @@ def cmf_aoadmm(
         )
         out.append(admm_vars)
     if return_errors:
+        if not satisfied_stopping_condition and not (tol or absolute_tol):
+            satisfied_stopping_condition = None
+
         diagnostic_metrics = DiagnosticMetrics(
-            rec_errors=rec_errors, feasibility_gaps=feasibility_gaps, regularised_loss=losses
+            rec_errors=rec_errors,
+            feasibility_gaps=feasibility_gaps,
+            regularised_loss=losses,
+            satisfied_stopping_condition=satisfied_stopping_condition,
+            satisfied_feasibility_condition=feasibility_criterion,
+            message=message,
         )
         out.append(diagnostic_metrics)
 
@@ -950,21 +1027,6 @@ def cmf_aoadmm(
         return out[0]
     else:
         return tuple(out)
-
-    if return_errors:
-        return (
-            cmf,
-            (A_aux_list, B_is_aux_list, C_aux_list),
-            (A_dual_list, B_is_dual_list, C_dual_list),
-            rec_errors,
-            feasibility_gaps,
-        )
-    else:
-        return (
-            cmf,
-            (A_aux_list, B_is_aux_list, C_aux_list),
-            (A_dual_list, B_is_dual_list, C_dual_list),
-        )
 
 
 def parafac2_aoadmm(

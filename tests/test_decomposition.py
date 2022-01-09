@@ -1,4 +1,3 @@
-import decimal
 import inspect
 import itertools
 from copy import copy
@@ -1277,20 +1276,20 @@ def test_cmf_aoadmm(rng, random_ragged_cmf):
     norm_matrices = tl.sqrt(sum(tl.sum(matrix ** 2) for matrix in matrices))
 
     # Decompose matrices with cmf_aoadmm with no constraints
-    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = decomposition.cmf_aoadmm(
+    out_cmf, (aux, dual), diagnostics = decomposition.cmf_aoadmm(
         matrices, rank, n_iter_max=5_000, return_errors=True, return_admm_vars=True,
     )
 
     # Check that reconstruction error is low
-    assert rec_errors[-1] < 1e-02
+    assert diagnostics.rec_errors[-1] < 1e-02
 
     # Add non-negativity constraints on all modes
-    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = decomposition.cmf_aoadmm(
+    out_cmf, (aux, dual), diagnostics = decomposition.cmf_aoadmm(
         matrices, rank, n_iter_max=5_000, return_errors=True, return_admm_vars=True, non_negative=[True, True, True]
     )
 
     # Check that reconstruction error is low
-    assert rec_errors[-1] < 1e-02
+    assert diagnostics.rec_errors[-1] < 1e-02
 
     # Check that we get errors out when we ask for errors. Even if convergence checking is disabled and verbose=False
     out = decomposition.cmf_aoadmm(
@@ -1326,32 +1325,34 @@ def test_cmf_aoadmm(rng, random_ragged_cmf):
 
     # Check that we can add non-negativity constraints with list of regs.
     regs = [[NonNegativity()], [NonNegativity()], [NonNegativity()]]
-    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = decomposition.cmf_aoadmm(
+    out_cmf, (aux, dual), diagnostics = decomposition.cmf_aoadmm(
         matrices, rank, n_iter_max=10, return_errors=True, return_admm_vars=True, regs=regs
     )
     # Check that final reconstruction error is the same as when we compute it with the returned decomposition and auxes
-    assert decomposition._cmf_reconstruction_error(matrices, out_cmf) / norm_matrices == pytest.approx(rec_errors[-1])
+    assert decomposition._cmf_reconstruction_error(matrices, out_cmf) / norm_matrices == pytest.approx(
+        diagnostics.rec_errors[-1]
+    )
 
     # Check that feasibility gaps are the same as when we compute it with the returned decomposition and auxes
     A_gap_list, B_gap_list, C_gap_list = decomposition.compute_feasibility_gaps(out_cmf, regs, *aux)
-    for A_gap, out_A_gap in zip(A_gap_list, feasibility_gaps[-1][0]):
+    for A_gap, out_A_gap in zip(A_gap_list, diagnostics.feasibility_gaps[-1][0]):
         assert A_gap == pytest.approx(out_A_gap)
-    for B_gap, out_B_gap in zip(B_gap_list, feasibility_gaps[-1][1]):
+    for B_gap, out_B_gap in zip(B_gap_list, diagnostics.feasibility_gaps[-1][1]):
         assert B_gap == pytest.approx(out_B_gap)
-    for C_gap, out_C_gap in zip(C_gap_list, feasibility_gaps[-1][2]):
+    for C_gap, out_C_gap in zip(C_gap_list, diagnostics.feasibility_gaps[-1][2]):
         assert C_gap == pytest.approx(out_C_gap)
 
     # Test that the code fails gracefully with list of regs not list of list of regs
     list_of_regs = [0.1, 0.1, 0.1]
     with pytest.raises(TypeError):
-        out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = decomposition.cmf_aoadmm(
+        out_cmf, (aux, dual), diagnostics = decomposition.cmf_aoadmm(
             matrices, rank, n_iter_max=1, return_errors=True, return_admm_vars=True, regs=list_of_regs
         )
 
     # Test that the code fails gracefully with list of lists containting something other than ADMMPenalty
     list_of_regs = [[1], [], []]
     with pytest.raises(TypeError):
-        out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = decomposition.cmf_aoadmm(
+        out_cmf, (aux, dual), diagnostics = decomposition.cmf_aoadmm(
             matrices, rank, n_iter_max=1, return_errors=True, return_admm_vars=True, regs=list_of_regs
         )
 
@@ -1361,21 +1362,17 @@ def test_cmf_aoadmm_verbose(rng, random_ragged_cmf, capfd):
     matrices = cmf.to_matrices()
 
     # Check that verbose = False results in no print
-    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = decomposition.cmf_aoadmm(
-        matrices, rank, n_iter_max=10, return_errors=True, return_admm_vars=True, verbose=False
-    )
+    decomposition.cmf_aoadmm(matrices, rank, n_iter_max=10, return_errors=True, return_admm_vars=True, verbose=False)
     out, err = capfd.readouterr()
     assert len(out) == 0
 
     # Check that verbose = True results in print when return_errors = True
-    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = decomposition.cmf_aoadmm(
-        matrices, rank, n_iter_max=10, return_errors=True, return_admm_vars=True, verbose=True
-    )
+    decomposition.cmf_aoadmm(matrices, rank, n_iter_max=10, return_errors=True, return_admm_vars=True, verbose=True)
     out, err = capfd.readouterr()
     assert len(out) > 0
 
     # Check that verbose = True results in print when return_errors = False and
-    out_cmf, (aux, dual) = decomposition.cmf_aoadmm(
+    decomposition.cmf_aoadmm(
         matrices,
         rank,
         n_iter_max=10,
@@ -1402,19 +1399,22 @@ def test_parafac2_makes_nn_cmf_unique(rng):
 
     rec_errors = [float("inf")]
     for init in range(3):
-        out = decomposition.cmf_aoadmm(
+        out, diagnostics = decomposition.cmf_aoadmm(
             matrices, rank, n_iter_max=3_000, return_errors=True, non_negative=[True, True, True], parafac2=True,
         )
 
-        if out[1][0][-1] < rec_errors[-1]:
-            out_cmf, (rec_errors, feasibility_gaps, loss) = out
+        if diagnostics.rec_errors[-1] < rec_errors[-1] and diagnostics.satisfied_feasibility_condition:
+            out_cmf = out
+            rec_errors = diagnostics.rec_errors
 
     # Check that reconstruction error is low and that the correct factors are recovered
     assert rec_errors[-1] < 1e-04
-    assert congruence_coefficient(A, out_cmf[1][0], absolute_value=True)[0] > 0.99
+
+    # Low congruence coefficient tolerance to account for single precision (pytorch) being less accurate
+    assert congruence_coefficient(A, out_cmf[1][0], absolute_value=True)[0] > 0.95
     for B_i, out_B_i in zip(B_is, out_cmf[1][1]):
-        assert congruence_coefficient(B_i, out_B_i, absolute_value=True)[0] > 0.99
-    assert congruence_coefficient(C, out_cmf[1][2], absolute_value=True)[0] > 0.99
+        assert congruence_coefficient(B_i, out_B_i, absolute_value=True)[0] > 0.95
+    assert congruence_coefficient(C, out_cmf[1][2], absolute_value=True)[0] > 0.95
 
 
 def test_cmf_aoadmm_not_updating_A_works(rng, random_ragged_cmf):
@@ -1429,14 +1429,8 @@ def test_cmf_aoadmm_not_updating_A_works(rng, random_ragged_cmf):
     matrices = cmf.to_matrices()
 
     # Decompose matrices with cmf_aoadmm with no constraints
-    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = decomposition.cmf_aoadmm(
-        matrices,
-        rank,
-        n_iter_max=5,
-        return_errors=True,
-        return_admm_vars=True,
-        update_A=False,
-        init=(None, (wrong_A_copy, B_is_copy, C_copy)),
+    out_cmf = decomposition.cmf_aoadmm(
+        matrices, rank, n_iter_max=5, update_A=False, init=(None, (wrong_A_copy, B_is_copy, C_copy)),
     )
 
     out_weights, (out_A, out_B_is, out_C) = out_cmf
@@ -1458,14 +1452,8 @@ def test_cmf_aoadmm_not_updating_C_works(rng, random_ragged_cmf):
     matrices = cmf.to_matrices()
 
     # Decompose matrices with cmf_aoadmm with no constraints
-    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = decomposition.cmf_aoadmm(
-        matrices,
-        rank,
-        n_iter_max=5,
-        return_errors=True,
-        return_admm_vars=True,
-        update_C=False,
-        init=(None, (A_copy, B_is_copy, wrong_C_copy)),
+    out_cmf = decomposition.cmf_aoadmm(
+        matrices, rank, n_iter_max=5, update_C=False, init=(None, (A_copy, B_is_copy, wrong_C_copy)),
     )
 
     out_weights, (out_A, out_B_is, out_C) = out_cmf
@@ -1486,14 +1474,8 @@ def test_cmf_aoadmm_not_updating_B_is_works(rng, random_ragged_cmf):
     matrices = cmf.to_matrices()
 
     # Decompose matrices with cmf_aoadmm with no constraints
-    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = decomposition.cmf_aoadmm(
-        matrices,
-        rank,
-        n_iter_max=5,
-        return_errors=True,
-        return_admm_vars=True,
-        update_B_is=False,
-        init=(None, (A_copy, wrong_B_is_copy, C_copy)),
+    out_cmf = decomposition.cmf_aoadmm(
+        matrices, rank, n_iter_max=5, update_B_is=False, init=(None, (A_copy, wrong_B_is_copy, C_copy)),
     )
 
     out_weights, (out_A, out_B_is, out_C) = out_cmf
@@ -1535,37 +1517,117 @@ def test_l2_penalty_is_included(rng, random_ragged_cmf):
     matrices = cmf.to_matrices()
 
     # Decompose matrices with cmf_aoadmm with no constraints
-    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = decomposition.cmf_aoadmm(
-        matrices, rank, n_iter_max=5, return_errors=True, return_admm_vars=True, update_B_is=False,
+    out_cmf, diagnostics = decomposition.cmf_aoadmm(
+        matrices, rank, n_iter_max=5, return_errors=True, update_B_is=False,
     )
 
-    rel_sse = rec_errors[-1] ** 2
-    assert losses[-1] == pytest.approx(0.5 * rel_sse)
+    rel_sse = diagnostics.rec_errors[-1] ** 2
+    assert diagnostics.regularised_loss[-1] == pytest.approx(0.5 * rel_sse)
 
-    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = decomposition.cmf_aoadmm(
-        matrices, rank, n_iter_max=5, l2_penalty=1, return_errors=True, return_admm_vars=True, update_B_is=False,
+    out_cmf, diagnostics = decomposition.cmf_aoadmm(
+        matrices, rank, n_iter_max=5, l2_penalty=1, return_errors=True, update_B_is=False,
     )
 
     out_weights, (out_A, out_B_is, out_C) = out_cmf
-    rel_sse = rec_errors[-1] ** 2
+    rel_sse = diagnostics.rec_errors[-1] ** 2
     SS_A = tl.sum(out_A ** 2)
     SS_B = sum(tl.sum(out_B_i ** 2) for out_B_i in out_B_is)
     SS_C = tl.sum(out_C ** 2)
-    assert losses[-1] == pytest.approx(0.5 * rel_sse + 0.5 * (SS_A + SS_B + SS_C))
+    assert diagnostics.regularised_loss[-1] == pytest.approx(0.5 * rel_sse + 0.5 * (SS_A + SS_B + SS_C))
 
-    out_cmf, (aux, dual), (rec_errors, feasibility_gaps, losses) = decomposition.cmf_aoadmm(
+    out_cmf, diagnostics = decomposition.cmf_aoadmm(
+        matrices, rank, n_iter_max=5, l2_penalty=[1, 2, 3], return_errors=True, update_B_is=False,
+    )
+
+    out_weights, (out_A, out_B_is, out_C) = out_cmf
+    rel_sse = diagnostics.rec_errors[-1] ** 2
+    SS_A = tl.sum(out_A ** 2)
+    SS_B = sum(tl.sum(out_B_i ** 2) for out_B_i in out_B_is)
+    SS_C = tl.sum(out_C ** 2)
+    assert diagnostics.regularised_loss[-1] == pytest.approx(0.5 * rel_sse + 0.5 * (1 * SS_A + 2 * SS_B + 3 * SS_C))
+
+
+def test_cmf_aoadmm_stopping_information(random_ragged_cmf):
+    cmf, shapes, rank = random_ragged_cmf
+    matrices = cmf.to_matrices()
+    n_iter_max = 10
+
+    # Check that we get correct output when none of the conditions are met
+    out_cmf, diagnostics = decomposition.cmf_aoadmm(
         matrices,
         rank,
-        n_iter_max=5,
-        l2_penalty=[1, 2, 3],
+        n_iter_max=n_iter_max,
         return_errors=True,
-        return_admm_vars=True,
-        update_B_is=False,
+        verbose=False,
+        tol=-float("inf"),
+        absolute_tol=-float("inf"),
+        feasibility_tol=-float("inf"),
+        non_negative=True,
     )
 
-    out_weights, (out_A, out_B_is, out_C) = out_cmf
-    rel_sse = rec_errors[-1] ** 2
-    SS_A = tl.sum(out_A ** 2)
-    SS_B = sum(tl.sum(out_B_i ** 2) for out_B_i in out_B_is)
-    SS_C = tl.sum(out_C ** 2)
-    assert losses[-1] == pytest.approx(0.5 * rel_sse + 0.5 * (1 * SS_A + 2 * SS_B + 3 * SS_C))
+    assert not diagnostics.satisfied_stopping_condition
+    assert not diagnostics.satisfied_feasibility_condition
+    assert diagnostics.message == "MAXIMUM NUMBER OF ITERATIONS REACHED"
+    assert len(diagnostics.regularised_loss) == n_iter_max + 1
+    assert len(diagnostics.rec_errors) == n_iter_max + 1
+    assert len(diagnostics.feasibility_gaps) == n_iter_max + 1
+
+    # Check that we get correct output when only the feasibility conditions are met
+    out_cmf, diagnostics = decomposition.cmf_aoadmm(
+        matrices,
+        rank,
+        n_iter_max=n_iter_max,
+        return_errors=True,
+        verbose=False,
+        tol=-float("inf"),
+        absolute_tol=-float("inf"),
+        feasibility_tol=float("inf"),
+        non_negative=True,
+    )
+
+    assert not diagnostics.satisfied_stopping_condition
+    assert diagnostics.satisfied_feasibility_condition
+    assert diagnostics.message == "MAXIMUM NUMBER OF ITERATIONS REACHED"
+    assert len(diagnostics.regularised_loss) == n_iter_max + 1
+    assert len(diagnostics.rec_errors) == n_iter_max + 1
+    assert len(diagnostics.feasibility_gaps) == n_iter_max + 1
+
+    # Check that we get correct output when only the feasibility conditions and the relative loss tolerance are met
+    out_cmf, diagnostics = decomposition.cmf_aoadmm(
+        matrices,
+        rank,
+        n_iter_max=n_iter_max,
+        return_errors=True,
+        verbose=False,
+        tol=float("inf"),
+        absolute_tol=-float("inf"),
+        feasibility_tol=float("inf"),
+        non_negative=True,
+    )
+
+    assert diagnostics.satisfied_stopping_condition
+    assert diagnostics.satisfied_feasibility_condition
+    assert diagnostics.message == "FEASIBILITY GAP CRITERION AND RELATIVE LOSS CRITERION SATISFIED"
+    assert len(diagnostics.regularised_loss) == 2
+    assert len(diagnostics.rec_errors) == 2
+    assert len(diagnostics.feasibility_gaps) == 2
+
+    # Check that we get correct output when only the feasibility conditions and the absolute loss tolerance are met
+    out_cmf, diagnostics = decomposition.cmf_aoadmm(
+        matrices,
+        rank,
+        n_iter_max=n_iter_max,
+        return_errors=True,
+        verbose=False,
+        tol=-float("inf"),
+        absolute_tol=float("inf"),
+        feasibility_tol=float("inf"),
+        non_negative=True,
+    )
+
+    assert diagnostics.satisfied_stopping_condition
+    assert diagnostics.satisfied_feasibility_condition
+    assert diagnostics.message == "FEASIBILITY GAP CRITERION AND ABSOLUTE LOSS CRITERION SATISFIED"
+    assert len(diagnostics.regularised_loss) == 2
+    assert len(diagnostics.rec_errors) == 2
+    assert len(diagnostics.feasibility_gaps) == 2
