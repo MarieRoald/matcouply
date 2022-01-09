@@ -13,7 +13,6 @@ DATASET_PARENT = Path(__file__).parent / "datasets"
 DOWNLOADED_PARENT = DATASET_PARENT / "downloads"
 
 
-# TODO: Convert to xarray datasets
 def get_bike_data():
     r"""Get bike sharing data from three major Norwegian cities
 
