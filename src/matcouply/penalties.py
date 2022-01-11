@@ -815,7 +815,7 @@ class TotalVariationPenalty(MatrixPenalty):
             return X
 
     def _penalty(self, x):
-        penalty = self.reg_strength * tl.sum(tl.abs(np.diff(x, axis=0)))  # TODO: add diff to tl backend
+        penalty = self.reg_strength * tl.sum(tl.abs(np.diff(x, axis=0)))
         if self.l1_strength:
             penalty = penalty + self.l1_strength * tl.sum(tl.abs(x))  # TODO: test this
         return penalty
