@@ -10,7 +10,7 @@ To fit a coupled matrix factorization, we solve the following optimization probl
 
 .. math::
     \min_{\mathbf{A}, \{\mathbf{B}_i\}_{i=1}^I, \mathbf{C}}
-    \sum_{i=1}^I \frac{\| \mathbf{B}_i \mathbf{D}_i \mathbf{C}^\mathsf{T} - \mathbf{X}_i\|^2}{\|\mathbf{X}_i\|^2}.
+    \frac{1}{2} \sum_{i=1}^I \frac{\| \mathbf{B}_i \mathbf{D}_i \mathbf{C}^\mathsf{T} - \mathbf{X}_i\|^2}{\|\mathbf{X}_i\|^2}.
 
 However, this problem does not have a unique solution, and each time we fit a coupled matrx
 factorization, we may obtain different factor matrices. As a consequence, we cannot interpret
@@ -19,7 +19,7 @@ the following optimisation problem
 
 .. math::
     \min_{\mathbf{A}, \{\mathbf{B}_i\}_{i=1}^I, \mathbf{C}}
-    \sum_{i=1}^I \frac{\| \mathbf{B}_i \mathbf{D}_i \mathbf{C}^\mathsf{T} - \mathbf{X}_i\|^2}{\|\mathbf{X}_i\|^2}
+    \frac{1}{2} \sum_{i=1}^I \frac{\| \mathbf{B}_i \mathbf{D}_i \mathbf{C}^\mathsf{T} - \mathbf{X}_i\|^2}{\|\mathbf{X}_i\|^2}
     + \sum_{n=1}^{N_\mathbf{A}} g^{(A)}_n(\mathbf{A})
     + \sum_{n=1}^{N_\mathbf{B}} g^{(B)}_n(\{ \mathbf{B}_i \}_{i=1}^I)
     + \sum_{n=1}^{N_\mathbf{C}} g^{(C)}_n(\mathbf{C}),
@@ -37,6 +37,11 @@ any index :math:`(i, r)`. To obtain such a constraint, we set
         \infty & \text{otherwise}.
     \end{cases}
 
+.. note::
+
+    The data fidelity term (sum of squared error) differs by a factor :math:`1/2`
+    compared to that in :cite:p:`roald2021parafac2,roald2021admm`
+
 Optimization
 ^^^^^^^^^^^^
 
@@ -48,17 +53,17 @@ the following three optimization subproblems:
 
 .. math::
     \min_{\mathbf{A}}
-    \sum_{i=1}^I \| \mathbf{B}_i \mathbf{D}_i \mathbf{C}^\mathsf{T} - \mathbf{X}_i\|^2
+    \frac{1}{2} \sum_{i=1}^I \| \mathbf{B}_i \mathbf{D}_i \mathbf{C}^\mathsf{T} - \mathbf{X}_i\|^2
     + \sum_{n=1}^{N_\mathbf{A}} g^{(A)}_n(\mathbf{A}),
 
 .. math::
     \min_{\{\mathbf{B}_i\}_{i=1}^I}
-    \sum_{i=1}^I \| \mathbf{B}_i \mathbf{D}_i \mathbf{C}^\mathsf{T} - \mathbf{X}_i\|^2
+    \frac{1}{2} \sum_{i=1}^I \| \mathbf{B}_i \mathbf{D}_i \mathbf{C}^\mathsf{T} - \mathbf{X}_i\|^2
     + \sum_{n=1}^{N_\mathbf{B}} g^{(B)}_n(\{ \mathbf{B}_i \}_{i=1}^I),
 
 .. math::
     \min_{\mathbf{C}}
-    \sum_{i=1}^I \| \mathbf{B}_i \mathbf{D}_i \mathbf{C}^\mathsf{T} - \mathbf{X}_i\|^2
+    \frac{1}{2} \sum_{i=1}^I \| \mathbf{B}_i \mathbf{D}_i \mathbf{C}^\mathsf{T} - \mathbf{X}_i\|^2
     + \sum_{n=1}^{N_\mathbf{C}} g^{(C)}_n(\mathbf{C}),
 
 which we solve approximately, one at a time, using a few iterations of ADMM. We repeat this
