@@ -172,6 +172,15 @@ def test_listify(rng):
         out = decomposition._listify(four_elements_list, param_name)
 
 
+def test_listify_is_called_on_l2(rng, random_ragged_cmf):
+    cmf, shapes, rank = random_ragged_cmf
+    l2_penalty = None
+    with patch("matcouply.decomposition._listify", return_value=[l2_penalty] * 3) as mock:
+        decomposition.cmf_aoadmm(cmf.to_matrices(), rank, n_iter_max=2, l2_penalty=l2_penalty)
+        mock.assert_called()
+        mock.assert_any_call(l2_penalty, "l2_penalty")
+
+
 def test_compute_feasibility_gaps(rng, random_ragged_cmf):
     cmf, shapes, rank = random_ragged_cmf
     weights, (A, B_is, C) = cmf

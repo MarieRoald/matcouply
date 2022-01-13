@@ -10,9 +10,6 @@ from .coupled_matrices import CoupledMatrixFactorization, cmf_to_matrices
 
 __all__ = ["compute_feasibility_gaps", "AdmmVars", "DiagnosticMetrics", "cmf_aoadmm", "parafac2_aoadmm"]
 
-# TODO: Document all update steps, they might be slightly different from paper (e.g. new transposes)
-# TODO: Document l2_penalty as 0.5||A||^2, etc. Not ||A||^2
-
 # TODO: If using precomputed decomposition, check weights
 def initialize_cmf(matrices, rank, init, svd_fun, random_state=None, init_params=None):
     random_state = tl.check_random_state(random_state)
@@ -83,7 +80,6 @@ def initialize_dual(matrices, rank, reg, random_state):
     return A_dual_list, B_dual_list, C_dual_list
 
 
-# TODO: Document the loss function we are optinmising, l2_penalty half its value in the paper
 # TODO: Add option to scale the l2_penalty
 def admm_update_A(
     matrices,
@@ -664,7 +660,8 @@ def cmf_aoadmm(
         Maximum number of iterations.
     l2_penalty : Regularization parameter (default=None)
         Strength of the L2 penalty, imposed as ``0.5 * l2_penalty * tl.sum(M**2)``, where ``M``
-        represents a single factor matrix.
+        represents a single factor matrix (note that this differs by a factor :math:`0.5` compared
+        to the expression in :cite:p:`roald2021parafac2,roald2021admm`).
     tv_penalty : Regularization parameter (default=None)
         Strength of the TV penalty. To use this regularizer, you must have the GPL-lisenced library:
         ``condat_tv`` installed.
@@ -771,6 +768,12 @@ def cmf_aoadmm(
     ``l2_penalty``, ``norm_bound``, ``l1_penalty`` or ``lower_bound`` and ``upper_bound``.
     See :cite:p:`roald2021admm` for more details.
 
+    Note
+    ----
+    For simplicity, the model used here is a permuted version of that in
+    :cite:p:`roald2021parafac2,roald2021admm` (where :math:`\mathbf{B_k}`-matrices
+    vary over the rows in :math:`\mathbf{C}` instead of the rows in :math:`\mathbf{A}`).
+
     Examples
     --------
     Here is a small example that shows what the diagnostic metrics contain. For more detailed examples, see :ref:`examples`
@@ -806,7 +809,7 @@ def cmf_aoadmm(
     cmf = initialize_cmf(matrices, rank, init, svd_fun=svd_fun, random_state=random_state, init_params=init_params)
 
     # Parse constraints
-    l2_penalty = _listify(l2_penalty, "l2_penalty")  # TODO: Make test that checks that listify is called on l2_penalty
+    l2_penalty = _listify(l2_penalty, "l2_penalty")
     l2_penalty = [l2 if l2 is not None else 0 for l2 in l2_penalty]
 
     regs = _parse_all_penalties(

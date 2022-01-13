@@ -1069,7 +1069,6 @@ class Parafac2(MatricesPenalty):
     dual_init : {"random_uniform", "random_standard_normal", "zeros", tl.tensor(ndim=2), list of tl.tensor(ndim=2)}
         Initialisation method for the auxiliary variables
     """
-    # TODO: Update cite once proceedings is published
 
     def __init__(
         self,
