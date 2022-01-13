@@ -7,6 +7,18 @@ procedure. Then, we create a custom penalty that imposes non-negativity on all c
 but one of the component vectors.
 """
 
+###############################################################################
+# Disable JIT for documentation building
+# ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+import os
+
+os.environ["NUMBA_DISABLE_JIT"] = "1"
+
+###############################################################################
+# Imports
+# ^^^^^^^
+
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.stats as stats
