@@ -63,7 +63,7 @@ A_gaps = []
 for num_components in range(2, 7):
     print(num_components, "components")
     lowest_error = float("inf")
-    for init in range(5):
+    for init in range(3):  # Here we just do three initialisations, for complex data, you may want to do more
         cmf, diagnostics = decomposition.parafac2_aoadmm(
             noisy_matrices,
             num_components,
