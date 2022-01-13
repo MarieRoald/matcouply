@@ -111,6 +111,103 @@ matrices = cmf.to_matrices()
 noise = [tl.tensor(rng.uniform(size=M.shape)) for M in matrices]
 noisy_matrices = [M + N * noise_level * tl.norm(M) / tl.norm(N) for M, N in zip(matrices, noise)]
 
+
+###############################################################################
+# Use the ``regs`` parameter to input regularization classes
+# ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+# Matcouply automatically parses the constraints from the ``parafac2_aoadmm`` and ``cmf_aoadmm`` funciton
+# arguments. However, sometimes, you may want full control over how a penalty is implemented. In that case,
+# the ``regs``-argument is useful. This argument makes it possible to specify exactly which penalty instances
+# to use.
+#
+# Since the components are non-negative, it makes sense to fit a non-negative PARAFAC2 model, however,
+# we also know that two of the :math:`\mathbf{B}_i`-component vectors are unimodal, so we first try with
+# a fully unimodal decomposition.
+
+from matcouply.penalties import NonNegativity, Unimodality
+
+lowest_error = float("inf")
+for init in range(4):
+    print("Init:", init)
+    out = decomposition.parafac2_aoadmm(
+        noisy_matrices,
+        rank,
+        n_iter_max=1000,
+        regs=[[NonNegativity()], [Unimodality(non_negativity=True)], [NonNegativity()]],
+        return_errors=True,
+        random_state=init,
+        verbose=True,
+    )
+    if out[1].regularized_loss[-1] < lowest_error and out[1].satisfied_stopping_condition:
+        out_cmf, diagnostics = out
+        lowest_error = diagnostics.rec_errors[-1]
+
+print("=" * 50)
+print(f"Final reconstruction error: {lowest_error:.3f}")
+print(f"Feasibility gap for A: {diagnostics.feasibility_gaps[-1][0]}")
+print(f"Feasibility gap for B_is: {diagnostics.feasibility_gaps[-1][1]}")
+print(f"Feasibility gap for C: {diagnostics.feasibility_gaps[-1][2]}")
+
+###############################################################################
+# Compute factor match score to measure the accuracy of the recovered components
+# ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+def get_stacked_CP_tensor(cmf):
+    weights, factors = cmf
+    A, B_is, C = factors
+
+    stacked_cp_tensor = (weights, (A, np.concatenate(B_is, axis=0), C))
+    return stacked_cp_tensor
+
+
+fms, permutation = factor_match_score(
+    get_stacked_CP_tensor(cmf), get_stacked_CP_tensor(out_cmf), consider_weights=False, return_permutation=True
+)
+print(f"Factor match score: {fms}")
+
+###############################################################################
+# Plot the recovered components
+# ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+out_weights, (out_A, out_B_is, out_C) = out_cmf
+out_A = out_A[:, permutation]
+out_B_is = [out_B_i[:, permutation] for out_B_i in out_B_is]
+out_C = out_C[:, permutation]
+
+fig, axes = plt.subplots(2, 3, tight_layout=True)
+
+axes[0, 0].plot(normalize(out_A))
+axes[0, 0].set_title("$\\mathbf{A}$")
+
+axes[0, 1].plot(normalize(out_C))
+axes[0, 1].set_title("$\\mathbf{C}$")
+
+axes[0, 2].axis("off")
+
+axes[1, 0].plot(normalize(out_B_is[0]))
+axes[1, 0].set_title("$\\mathbf{B}_0$")
+
+axes[1, 1].plot(normalize(out_B_is[I // 2]))
+axes[1, 1].set_title(f"$\\mathbf{{B}}_{{{I//2}}}$")
+
+axes[1, 2].plot(normalize(out_B_is[-1]))
+axes[1, 2].set_title(f"$\\mathbf{{B}}_{{{I-1}}}$")
+fig.legend(["Component 0", "Component 1", "Component 2"], bbox_to_anchor=(0.95, 0.75), loc="center right")
+
+fig.suptitle(r"Unimodality on the $\mathbf{B}_i$-components")
+plt.show()
+
+###############################################################################
+# We see that the :math:`\mathbf{C}`-component vectors all follow the same pattern and that the the
+# :math:`\mathbf{A}`-component vectors all follow a similar pattern. This is not the case with the real,
+# uncorrelated random, components. The :math:`\mathbf{B}_i`-component vectors also follow a strange pattern
+# with peaks jumping forwards and backwards, which we know are not the case with the real components either.
+#
+# However, this strange behaviour is not too surprising, considering that there are only two uniomdal component
+# vectors in the data. So this model that assumes all unimodal components might be too restrictive.
+
+
 ###############################################################################
 # Create a custom penalty class for unimodality in all but one class
 # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -125,7 +222,7 @@ from matcouply._doc_utils import (
     copy_ancestor_docstring,  # Helper decorator that makes it possible for ADMMPenalties to inherit a docstring
 )
 from matcouply._unimodal_regression import unimodal_regression  # The unimodal regression implementation
-from matcouply.penalties import HardConstraintMixin, MatrixPenalty, NonNegativity
+from matcouply.penalties import HardConstraintMixin, MatrixPenalty
 
 
 class CustomUnimodality(HardConstraintMixin, MatrixPenalty):
