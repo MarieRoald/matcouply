@@ -15,7 +15,7 @@ from matcouply.coupled_matrices import CoupledMatrixFactorization
 # Setup
 # ^^^^^
 
-I, J, K = 10, 20, 30
+I, J, K = 10, 15, 20
 rank = 3
 noise_level = 0.2
 rng = np.random.default_rng(0)
