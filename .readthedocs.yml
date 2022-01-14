@@ -1,7 +1,6 @@
 version: 2
 
 python:
-  setup_py_install: true
   install:
     - path: .
       method: pip
