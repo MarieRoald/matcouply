@@ -53,6 +53,26 @@ def test_initialize_cmf(rng, rank, init):
         assert matrix.shape == init_matrix.shape
 
 
+def test_initialize_cmf_init_with_cmf(rng, random_ragged_cmf):
+    cmf, shapes, rank = random_ragged_cmf
+    weights, (A, B_is, C) = cmf
+
+    out_weights, (out_A, out_B_is, out_C) = decomposition.cmf_aoadmm(
+        cmf.to_matrices(), rank, init=cmf, n_iter_max=0, return_errors=False, return_admm_vars=False
+    )
+    assert out_weights is None
+    assert_array_almost_equal(out_A, weights * A)
+    for out_B_i, B_i in zip(out_B_is, B_is):
+        assert_array_almost_equal(out_B_i, B_i)
+    assert_array_almost_equal(out_C, C)
+
+    with pytest.raises(ValueError):
+        invalid_init = None, (A, B_is, tl.zeros((tl.shape(C)[0], rank + 1)))
+        decomposition.cmf_aoadmm(
+            cmf.to_matrices(), rank, init=invalid_init, n_iter_max=0, return_errors=False, return_admm_vars=False
+        )
+
+
 def test_initialize_cmf_invalid_init(rng):
     shapes = ((5, 10), (10, 10), (15, 10))
     rank = 3
@@ -1365,6 +1385,20 @@ def test_cmf_aoadmm(rng, random_ragged_cmf):
             matrices, rank, n_iter_max=1, return_errors=True, return_admm_vars=True, regs=list_of_regs
         )
 
+    # Test that we get correct amount of auxes and duals with only one constraint on B
+    regs = [[], [NonNegativity()], []]
+    out_cmf, (aux, dual), diagnostics = decomposition.cmf_aoadmm(
+        matrices, rank, n_iter_max=10, return_errors=True, return_admm_vars=True, regs=regs
+    )
+    assert len(aux) == 3
+    assert len(dual) == 3
+    assert len(aux[1]) == 1
+    assert len(dual[1]) == 1
+    assert len(aux[0]) == 0
+    assert len(dual[0]) == 0
+    assert len(aux[2]) == 0
+    assert len(dual[2]) == 0
+
 
 def test_cmf_aoadmm_verbose(rng, random_ragged_cmf, capfd):
     cmf, shapes, rank = random_ragged_cmf
@@ -1426,8 +1460,8 @@ def test_parafac2_makes_nn_cmf_unique(rng):
     assert congruence_coefficient(C, out_cmf[1][2], absolute_value=True)[0] > 0.95
 
 
-def test_cmf_aoadmm_not_updating_A_works(rng, random_ragged_cmf):
-    cmf, shapes, rank = random_ragged_cmf
+def test_cmf_aoadmm_not_updating_A_works(rng, random_rank5_ragged_cmf):
+    cmf, shapes, rank = random_rank5_ragged_cmf
     weights, (A, B_is, C) = cmf
     wrong_A = tl.tensor(rng.random_sample(tl.shape(A)))
     wrong_A_copy = tl.copy(wrong_A)
@@ -1449,8 +1483,8 @@ def test_cmf_aoadmm_not_updating_A_works(rng, random_ragged_cmf):
         assert not np.all(tl.to_numpy(B_i) == tl.to_numpy(out_B_i))
 
 
-def test_cmf_aoadmm_not_updating_C_works(rng, random_ragged_cmf):
-    cmf, shapes, rank = random_ragged_cmf
+def test_cmf_aoadmm_not_updating_C_works(rng, random_rank5_ragged_cmf):
+    cmf, shapes, rank = random_rank5_ragged_cmf
     weights, (A, B_is, C) = cmf
     A_copy = tl.copy(A)
     B_is_copy = [tl.copy(B_i) for B_i in B_is]
@@ -1472,8 +1506,8 @@ def test_cmf_aoadmm_not_updating_C_works(rng, random_ragged_cmf):
         assert not np.all(tl.to_numpy(B_i) == tl.to_numpy(out_B_i))
 
 
-def test_cmf_aoadmm_not_updating_B_is_works(rng, random_ragged_cmf):
-    cmf, shapes, rank = random_ragged_cmf
+def test_cmf_aoadmm_not_updating_B_is_works(rng, random_rank5_ragged_cmf):
+    cmf, shapes, rank = random_rank5_ragged_cmf
     weights, (A, B_is, C) = cmf
     A_copy = tl.copy(A)
     wrong_B_is = [tl.tensor(rng.standard_normal(size=tl.shape(B_i))) for B_i in B_is]
