@@ -33,14 +33,18 @@ def rng(seed):
 def random_ragged_shapes(rng):
     I = rng.randint(1, 20)
     K = rng.randint(2, 20)
-    shapes = tuple((rng.randint(1, 20), K) for i in range(I))
+
+    def random_J():
+        return max(2, round(rng.normal(loc=8, scale=2)))
+
+    shapes = tuple((random_J(), K) for i in range(I))
     return shapes
 
 
 @pytest.fixture
 def random_regular_shapes(rng):
     I = rng.randint(1, 20)
-    J = rng.randint(1, 20)
+    J = rng.randint(2, 20)
     K = rng.randint(2, 20)
     shapes = tuple((J, K) for i in range(I))
     return shapes
