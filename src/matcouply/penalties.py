@@ -704,9 +704,13 @@ class GeneralizedL2Penalty(MatrixPenalty):
         sign_matrix = sign_matrix + 2 * tl.eye(tl.shape(norm_matrix)[0])
         if validate and (
             not tl.all(tl.transpose(norm_matrix) == norm_matrix)
-            # TODO: Validate eigenvalues also
+            # TODO: Validate eigenvalues also when/if tensorly gets eigvals function
         ):
             raise ValueError("The norm matrix should be symmetric positive semidefinite")
+        if validate and tl.get_backend() == "numpy" and method == "svd":
+            eigvals = np.linalg.eigvals(norm_matrix)
+            if np.any(eigvals < 0):
+                raise ValueError("The norm matrix should be symmetric positive semidefinite")
 
         if not isinstance(self.method, str):
             raise TypeError("Solve method must be string")
@@ -718,8 +722,8 @@ class GeneralizedL2Penalty(MatrixPenalty):
     @copy_ancestor_docstring
     def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
         if self.method == "svd":
-            s_aug = self.s + feasibility_penalty
-            return (self.U * (1 / s_aug)) @ (self.U.T @ (feasibility_penalty * factor_matrix))
+            s_aug = self.s + 0.5 * feasibility_penalty
+            return (self.U * (1 / s_aug)) @ (self.U.T @ (0.5 * feasibility_penalty * factor_matrix))
         else:
             raise ValueError(f"Unknown solve method: {self.method}")
 
@@ -735,7 +739,7 @@ class GeneralizedL2Penalty(MatrixPenalty):
 
 
 class TotalVariationPenalty(MatrixPenalty):
-    r"""Impose piecewise constant components 
+    r"""Impose piecewise constant components
 
     Total variation regularization imposes piecewise constant components by
     obtaining components whose derivative is sparse. This sparsity is obtained
@@ -756,14 +760,14 @@ class TotalVariationPenalty(MatrixPenalty):
     .. math::
 
         g(\mathbf{x}) = \alpha \sum_{n=2}^{N} |x_n - x_{n-1}| + \sum_{n=1}^N \| x_n \|_1.
-    
+
     Specifically, if we first evaluate the proximal operator for the total variation penalty,
     followed by the proximal operator of the L1 penalty, then that is equivalent to
     evaluating the proximal operator of the sum of a TV and an L1 penalty :cite:p:`friedman2007pathwise`.
 
     To evaluate the proximal operator, we use the improved direct total variation algorithm
     by Laurent Condat :cite:p:`condat2013direct` (C code of the improved version is available
-    here: https://lcondat.github.io/publications.html). 
+    here: https://lcondat.github.io/publications.html).
 
     Parameters
     ----------
@@ -775,7 +779,7 @@ class TotalVariationPenalty(MatrixPenalty):
         Initialisation method for the auxiliary variables
     dual_init : {"random_uniform", "random_standard_normal", "zeros", tl.tensor(ndim=2), list of tl.tensor(ndim=2)}
         Initialisation method for the auxiliary variables
-    
+
     Note
     ----
     The C-code this penalty is based in has a CeCILL lisence, which is compatible with GPL, but
@@ -817,7 +821,7 @@ class TotalVariationPenalty(MatrixPenalty):
     def _penalty(self, x):
         penalty = self.reg_strength * tl.sum(tl.abs(np.diff(x, axis=0)))
         if self.l1_strength:
-            penalty = penalty + self.l1_strength * tl.sum(tl.abs(x))  # TODO: test this
+            penalty = penalty + self.l1_strength * tl.sum(tl.abs(x))  # TODO: Test this
         return penalty
 
     @copy_ancestor_docstring
@@ -830,7 +834,7 @@ class TotalVariationPenalty(MatrixPenalty):
 
 class L2Ball(HardConstraintMixin, MatrixPenalty):
     r"""Ensure that the L2-norm of component vectors are less than a given scalar.
-    
+
     This is a hard constraint on the L2-norm of the component vectors given by
 
     .. math::
@@ -862,10 +866,10 @@ class L2Ball(HardConstraintMixin, MatrixPenalty):
     projection onto a convex set that is the intersection of two other convex sets
     :math:`\mathcal{C} = \mathcal{C}_1 \cap \mathcal{C}_2`,
     :math:`\mathcal{P}_\mathcal{C}` is given by
-    
+
     .. math::
         \mathcal{P}_\mathcal{C} = \prod_{n=1}^\infty \mathcal{P}_{\mathcal{C}_1} \mathcal{P}_{\mathcal{C}_2},
-    
+
     where :math:`\mathcal{P}_{\mathcal{C}_1}` and :math:`\mathcal{P}_{\mathcal{C}_2}`
     are the projections onto :math:`\mathcal{C}_1` and :math:`\mathcal{C}_2`,
     respectively. In other words, to project only :math:`\mathcal{C}`, we can
@@ -880,11 +884,10 @@ class L2Ball(HardConstraintMixin, MatrixPenalty):
     .. math::
 
         \mathbf{x}^{(0.5)} = \frac{\min(\|\mathbf{x}\|_2, r) \mathbf{x}}{\|\mathbf{x}\|_2}.
-    
+
     If any entries in :math:`\mathbf{x}` are negative, then their sign will not change.
     Next, we project :math:`\mathbf{x}^{(0.5)}` onto the non-negative orthant:
 
-    
     .. math::
 
         x_n^{(1)} = \max(x_n^{(0.5)}, 0).
@@ -907,7 +910,7 @@ class L2Ball(HardConstraintMixin, MatrixPenalty):
     @copy_ancestor_docstring
     def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
         if self.non_negativity:
-            factor_matrix = tl.clip(factor_matrix, 0, float("inf"))  # TODO: test this
+            factor_matrix = tl.clip(factor_matrix, 0, float("inf"))  # TODO: Test this
         column_norms = tl.sqrt(tl.sum(factor_matrix ** 2, axis=0))
         column_norms = tl.clip(column_norms, self.norm_bound, float("inf"))
         return factor_matrix * self.norm_bound / column_norms
