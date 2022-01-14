@@ -10,13 +10,18 @@ from .coupled_matrices import CoupledMatrixFactorization, cmf_to_matrices
 
 __all__ = ["compute_feasibility_gaps", "AdmmVars", "DiagnosticMetrics", "cmf_aoadmm", "parafac2_aoadmm"]
 
-# TODO: If using precomputed decomposition, check weights
+
 def initialize_cmf(matrices, rank, init, svd_fun, random_state=None, init_params=None):
     random_state = tl.check_random_state(random_state)
 
     # Start by checking if init is a valid factorization. If so, use it
     if isinstance(init, (tuple, list, CoupledMatrixFactorization)):
-        return CoupledMatrixFactorization(init)
+        weights, (A, B_is, C) = init
+        if weights is not None:
+            scaled_A = weights * A
+            return CoupledMatrixFactorization((None, (scaled_A, B_is, C)))
+        else:
+            return CoupledMatrixFactorization(init)
 
     # Random uniform initialisation
     if init == "random":
@@ -80,7 +85,7 @@ def initialize_dual(matrices, rank, reg, random_state):
     return A_dual_list, B_dual_list, C_dual_list
 
 
-# TODO: Add option to scale the l2_penalty
+# TODO: Add option to scale the l2_penalty based on size (mostly relevant for B)
 def admm_update_A(
     matrices,
     reg,
@@ -262,7 +267,7 @@ def admm_update_C(
     inner_n_iter_max,
     inner_tol,
     feasibility_penalty_scale,
-    svd_fun,  # TODO: Fix svd_fun for all
+    svd_fun,
 ):
     weights, (A, B_is, C) = cmf
 
@@ -596,7 +601,6 @@ class DiagnosticMetrics(NamedTuple):
     message: str  #: Convergence message
 
 
-# TODO: Write what loss we minimise
 def cmf_aoadmm(
     matrices,
     rank,
@@ -836,12 +840,9 @@ def cmf_aoadmm(
     if not update_C:
         regs[2] = []
 
-    A_aux_list, B_is_aux_list, C_aux_list, = initialize_aux(
-        matrices, rank, regs, random_state=random_state
-    )  # TODO: Include cmf?
-    A_dual_list, B_is_dual_list, C_dual_list, = initialize_dual(
-        matrices, rank, regs, random_state=random_state
-    )  # TODO: Include cmf?
+    # TODO: Include cmf to initialize functions in case other init schemes require that?
+    A_aux_list, B_is_aux_list, C_aux_list, = initialize_aux(matrices, rank, regs, random_state=random_state)
+    A_dual_list, B_is_dual_list, C_dual_list, = initialize_dual(matrices, rank, regs, random_state=random_state)
     norm_matrices = _root_sum_squared_list(matrices)
     rec_errors = []
     feasibility_gaps = []
@@ -910,7 +911,6 @@ def cmf_aoadmm(
                 svd_fun=svd_fun,
             )
 
-        # TODO: Do we want normalisation?
         if tol or absolute_tol or return_errors:
             A_gaps, B_gaps, C_gaps = compute_feasibility_gaps(cmf, regs, A_aux_list, B_is_aux_list, C_aux_list)
             feasibility_gaps.append((A_gaps, B_gaps, C_gaps))
@@ -923,7 +923,6 @@ def cmf_aoadmm(
                     max_feasibility_gap = max((max(B_gaps), max_feasibility_gap))
                 if len(C_gaps):
                     max_feasibility_gap = max((max(C_gaps), max_feasibility_gap))
-                # max_feasibility_gap = max(max(A_gaps), max(B_gaps), max(C_gaps))
 
                 # Compute stopping criterions
                 feasibility_criterion = max_feasibility_gap < feasibility_tol
@@ -1005,7 +1004,6 @@ def cmf_aoadmm(
     # Save as validated factorization instead of tuple
     cmf = CoupledMatrixFactorization(cmf)
 
-    # TODO: Check return when only one constrain on B
     out = [cmf]
     if return_admm_vars:
         admm_vars = AdmmVars(
