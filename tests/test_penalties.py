@@ -109,18 +109,15 @@ class BaseTestADMMPenalty:
         init_matrix = penalty.init_aux(matrices, rank, mode=0, random_state=rng)
         assert init_matrix.shape[0] == len(shapes)
         assert init_matrix.shape[1] == rank
-        # TODO: Add normality test
 
         init_matrices = penalty.init_aux(matrices, rank, mode=1, random_state=rng)
         for init_matrix, shape in zip(init_matrices, shapes):
             assert init_matrix.shape[0] == shape[0]
             assert init_matrix.shape[1] == rank
-            # TODO: Add normality test
 
         init_matrix = penalty.init_aux(matrices, rank, mode=2, random_state=rng)
         assert init_matrix.shape[0] == shapes[0][1]
         assert init_matrix.shape[1] == rank
-        # TODO: Add normality test
 
         # Test that init works with zeros init
         penalty = self.PenaltyType(aux_init="zeros", dual_init=dual_init, **self.penalty_default_kwargs)
@@ -249,18 +246,15 @@ class BaseTestADMMPenalty:
         init_matrix = penalty.init_dual(matrices, rank, mode=0, random_state=rng)
         assert init_matrix.shape[0] == len(shapes)
         assert init_matrix.shape[1] == rank
-        # TODO: Add normality test
 
         init_matrices = penalty.init_dual(matrices, rank, mode=1, random_state=rng)
         for init_matrix, shape in zip(init_matrices, shapes):
             assert init_matrix.shape[0] == shape[0]
             assert init_matrix.shape[1] == rank
-            # TODO: Add normality test
 
         init_matrix = penalty.init_dual(matrices, rank, mode=2, random_state=rng)
         assert init_matrix.shape[0] == shapes[0][1]
         assert init_matrix.shape[1] == rank
-        # TODO: Add normality test
 
         # Test that init works with zeros init
         penalty = self.PenaltyType(aux_init=aux_init, dual_init="zeros", **self.penalty_default_kwargs)
@@ -357,7 +351,6 @@ class BaseTestADMMPenalty:
                 penalty.init_dual(matrices, rank, mode=mode, random_state=rng)
 
     def test_penalty(self, rng):
-        # TODO: Implement for all subclasses, where we check penalty with some known values
         raise NotImplementedError
 
     def test_subtract_from_aux(self, random_matrices):
@@ -683,11 +676,20 @@ class TestL2BallConstraint(MixinTestHardConstraint, BaseTestFactorMatrixPenalty)
 
     def test_input_is_checked(self):
         with pytest.raises(ValueError):
-            penalty = self.PenaltyType(norm_bound=0)
+            self.PenaltyType(norm_bound=0)
         with pytest.raises(ValueError):
-            penalty = self.PenaltyType(norm_bound=-1)
+            self.PenaltyType(norm_bound=-1)
 
-        penalty = self.PenaltyType(norm_bound=0.1)  # pragma: noqa
+        self.PenaltyType(norm_bound=0.1)
+
+    def test_non_negativity_sets_negative_values_to_zero(self):
+        negative_matrix = tl.ones((30, 5)) * (-100)
+        feasibility_penalty = 1
+        aux = None
+        l1_penalty = self.PenaltyType(1, non_negativity=True)
+
+        out = l1_penalty.factor_matrix_update(negative_matrix, feasibility_penalty, aux)
+        assert_array_equal(out, 0)
 
 
 class TestUnitSimplex(MixinTestHardConstraint, BaseTestFactorMatrixPenalty):
@@ -1033,7 +1035,7 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
 
     @pytest.mark.parametrize("dual_init", ["random_uniform", "random_standard_normal", "zeros"])
     def test_init_aux(self, rng, random_ragged_cmf, dual_init):
-        # TODO: split into several tests
+        # TODO: Split into several tests
         cmf, shapes, rank = random_ragged_cmf
         weights, (A, B_is, C) = cmf
         matrices = cmf.to_matrices()
