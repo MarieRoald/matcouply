@@ -1399,6 +1399,19 @@ def test_cmf_aoadmm(rng, random_ragged_cmf):
     assert len(aux[2]) == 0
     assert len(dual[2]) == 0
 
+    # Test that feasibility_tol can be None
+    regs = [[], [NonNegativity()], []]
+    out_cmf, diagnostics = decomposition.cmf_aoadmm(
+        matrices, rank, n_iter_max=10, return_errors=True, regs=regs, feasibility_tol=None
+    )
+
+    # Test that feasibility gap is computed even if tol = None and absolute_tol = None
+    regs = [[], [NonNegativity()], []]
+    out_cmf, diagnostics = decomposition.cmf_aoadmm(
+        matrices, rank, n_iter_max=10, return_errors=True, regs=regs, tol=None, absolute_tol=None
+    )
+    assert diagnostics.satisfied_feasibility_condition is not None
+
 
 def test_cmf_aoadmm_verbose(rng, random_ragged_cmf, capfd):
     cmf, shapes, rank = random_ragged_cmf
