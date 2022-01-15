@@ -598,6 +598,7 @@ class DiagnosticMetrics(NamedTuple):
     satisfied_feasibility_condition: Optional[
         bool
     ]  #: Boolean specifying whether the feasibility conditions were satisfied, None if no tolerance is set
+    n_iter: int  #: Number of iterations ran
     message: str  #: Convergence message
 
 
@@ -925,7 +926,7 @@ def cmf_aoadmm(
                     max_feasibility_gap = max((max(C_gaps), max_feasibility_gap))
 
                 # Compute stopping criterions
-                feasibility_criterion = max_feasibility_gap < feasibility_tol
+                feasibility_criterion = feasibility_tol and max_feasibility_gap < feasibility_tol
 
                 if not feasibility_criterion and not return_errors:
                     if verbose and it % verbose == 0:
@@ -985,6 +986,7 @@ def cmf_aoadmm(
         elif verbose and it % verbose == 0:
             print("Coupled matrix factorization iteration={}".format(it))
 
+    # Compute feasibility gaps to return with diagnostics
     if feasibility_tol and not (tol or absolute_tol):
         A_gaps, B_gaps, C_gaps = compute_feasibility_gaps(cmf, regs, A_aux_list, B_is_aux_list, C_aux_list)
         feasibility_gaps.append((A_gaps, B_gaps, C_gaps))
@@ -1021,6 +1023,7 @@ def cmf_aoadmm(
             satisfied_stopping_condition=satisfied_stopping_condition,
             satisfied_feasibility_condition=feasibility_criterion,
             message=message,
+            n_iter=it + 1,  # Plus one since this is the number of iterations, not the iteration number
         )
         out.append(diagnostic_metrics)
 
