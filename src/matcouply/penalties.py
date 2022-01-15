@@ -596,8 +596,7 @@ class GeneralizedL2Penalty(MatrixPenalty):
     is easy to compute with :math:`\mathbf{L}` known, but not wise-versa (e.g. if
     :math:`\mathbf{M}` is indefinite).
 
-    Graph Laplacian penalty
-    ^^^^^^^^^^^^^^^^^^^^^^^
+    **Graph Laplacian penalty**
 
     A special case of the generalized L2 penalty is the graph Laplacian penalty. This penalty
     is on the form
@@ -623,15 +622,14 @@ class GeneralizedL2Penalty(MatrixPenalty):
             \sum_m  & m = n
         \end{cases}.
 
-    The proximal operator
-    ^^^^^^^^^^^^^^^^^^^^^
-  
+    **The proximal operator:**
+
     The proximal operator of the generalised L2 penalty is obtained by solving
 
     .. math::
 
         \text{prox}_{\mathbf{x}^\mathsf{T} \mathbf{Mx}}(\mathbf{x}) 
-        = \left(\mathbf{M} + 0.5\rho\mathbf{I}\right)^{-1}\mathbf{x},
+        = \left(\mathbf{M} + 0.5\rho\mathbf{I}\right)^{-1}0.5\rho\mathbf{x},
  
     where :math:`\rho` is the scale parameter. There are several ways to solve this equation.
     One of which is via the SVD. Let :math:`\mathbf{M} = \mathbf{USU}^\mathsf{T}`, then, the
@@ -683,8 +681,6 @@ class GeneralizedL2Penalty(MatrixPenalty):
     """
     # TODO: Consider the preconditioner
     # TODO: Support sparse matrices
-    # TODO: Write why this is generalized L2 penalty
-    # TODO: Write about graph Laplacian penalty
     def __init__(
         self,
         norm_matrix,
@@ -1015,8 +1011,7 @@ class Parafac2(MatricesPenalty):
     for uniqueness is typically lower, and it is conjectured that uniquenes for any :math:`R` holds
     in practice whenever there are four or more matrices :cite:p:`kiers1999parafac2`.
 
-    Parametrization of matrix-collections that satisfy the PARAFAC2 constraint
-    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    **Parametrization of matrix-collections that satisfy the PARAFAC2 constraint**
 
     The standard way of parametrizing collections of matrices that satisfy the PARAFAC2 constraint
     is due to Kiers et al. :cite:p:`kiers1999parafac2`. If :math:`\{\mathbf{B}_i\}_{i=1}^I` satsify
@@ -1032,8 +1027,7 @@ class Parafac2(MatricesPenalty):
     is a tuple whose first element is a list of orthogonal basis matrices and second element
     is the coordinate matrix.
 
-    The proximal operator
-    ^^^^^^^^^^^^^^^^^^^^^
+    **The proximal operator**
 
     To evaluate the proximal operator, we use the projection scheme presented in
     :cite:p:`roald2021admm,roald2021parafac2`. Specifically, we project with a coordinate descent
