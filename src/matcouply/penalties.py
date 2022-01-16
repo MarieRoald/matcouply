@@ -684,23 +684,12 @@ class GeneralizedL2Penalty(MatrixPenalty):
     Alternatively, if the ``generalized_l2_penalty``-argument of ``matcouply.decomposition.cmf_aoadmm`` is
     used, then a ``GeneralizedL2Penalty`` is added with ``method="svd"``.
     """
-    # TODO: Consider the preconditioner
-    # TODO: Support sparse matrices
+
     def __init__(
-        self,
-        norm_matrix,
-        method="svd",
-        svd="truncated_svd",
-        aux_init="random_uniform",
-        dual_init="random_uniform",
-        preconditioner=None,
-        validate=True,
+        self, norm_matrix, svd="truncated_svd", aux_init="random_uniform", dual_init="random_uniform", validate=True,
     ):
         super().__init__(aux_init, dual_init)
         self.norm_matrix = norm_matrix
-        self.method = method
-        self.preconditioner = preconditioner
-
         sign_matrix = -tl.ones(tl.shape(norm_matrix))
         sign_matrix = sign_matrix + 2 * tl.eye(tl.shape(norm_matrix)[0])
         if validate and (
@@ -708,25 +697,21 @@ class GeneralizedL2Penalty(MatrixPenalty):
             # FIXME: Validate eigenvalues also when/if tensorly gets eigvals function
         ):
             raise ValueError("The norm matrix should be symmetric positive semidefinite")
-        if validate and tl.get_backend() == "numpy" and method == "svd":
+        if validate and tl.get_backend() == "numpy":
             eigvals = np.linalg.eigvals(norm_matrix)
             if np.any(eigvals < 0):
                 raise ValueError("The norm matrix should be symmetric positive semidefinite")
 
-        if not isinstance(self.method, str):
-            raise TypeError("Solve method must be string")
-
-        if self.method == "svd":
-            self.svd_fun = get_svd(svd)
-            self.U, self.s, _ = self.svd_fun(norm_matrix)  # Ignore Vh since norm matrix is symmetric
+        self.svd_fun = get_svd(svd)
+        self.U, self.s, _ = self.svd_fun(norm_matrix)  # Ignore Vh since norm matrix is symmetric
 
     @copy_ancestor_docstring
     def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
-        if self.method == "svd":
-            s_aug = self.s + 0.5 * feasibility_penalty
-            return (self.U * (1 / s_aug)) @ (self.U.T @ (0.5 * feasibility_penalty * factor_matrix))
-        else:
-            raise ValueError(f"Unknown solve method: {self.method}")
+        s_aug = self.s + 0.5 * feasibility_penalty
+        tmp = 0.5 * feasibility_penalty * factor_matrix
+        tmp = tl.dot(tl.transpose(self.U), tmp)
+        tmp = tl.dot((self.U * (1 / s_aug)), tmp)
+        return tmp
 
     def _penalty(self, x):
         return tl.trace(tl.dot(tl.dot(tl.transpose(x), self.norm_matrix), x))
