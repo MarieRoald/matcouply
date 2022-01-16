@@ -472,7 +472,9 @@ class BaseTestFactorMatricesPenalty(BaseTestADMMPenalty):  # e.g. PARAFAC2
 
         out = penalty.factor_matrices_update(stationary_matrices, feasibility_penalties, auxes)
         for stationary_matrix, out_matrix in zip(stationary_matrices, out):
-            assert_allclose(stationary_matrix, out_matrix, rtol=1e-6)  # 1e-6 due to PyTorch single precision
+            assert_allclose(
+                stationary_matrix, out_matrix, rtol=1e-6, atol=1e-10
+            )  # 1e-6 due to PyTorch single precision
 
     def test_factor_matrices_update_changes_input(self, non_stationary_matrices):
         feasibility_penalties = [10] * len(non_stationary_matrices)
@@ -481,7 +483,9 @@ class BaseTestFactorMatricesPenalty(BaseTestADMMPenalty):  # e.g. PARAFAC2
 
         out = penalty.factor_matrices_update(non_stationary_matrices, feasibility_penalties, auxes)
         for non_stationary_matrix, out_matrix in zip(non_stationary_matrices, out):
-            assert not np.allclose(out_matrix, non_stationary_matrix, rtol=1e-6)  # 1e-6 due to PyTorch single precision
+            assert not np.allclose(
+                out_matrix, non_stationary_matrix, rtol=1e-6, atol=1e-10
+            )  # 1e-6 due to PyTorch single precision
 
     def test_factor_matrices_update_reduces_penalty(self, random_matrices):
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
@@ -523,13 +527,15 @@ class BaseTestFactorMatrixPenalty(BaseTestFactorMatricesPenalty):  # e.g. unimod
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
 
         out = penalty.factor_matrix_update(stationary_matrix, 10, None)
-        assert_allclose(stationary_matrix, out, rtol=1e-6)  # 1e-6 due to PyTorch single precision
+        assert_allclose(stationary_matrix, out, rtol=1e-6, atol=1e-10)  # 1e-6 due to PyTorch single precision
 
     def test_factor_matrix_update_changes_input(self, non_stationary_matrix):
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
 
         out = penalty.factor_matrix_update(non_stationary_matrix, 10, None)
-        assert not np.allclose(out, non_stationary_matrix, rtol=1e-6)  # 1e-6 due to PyTorch single precision
+        assert not np.allclose(
+            out, non_stationary_matrix, rtol=1e-6, atol=1e-10
+        )  # 1e-6 due to PyTorch single precision
 
     def test_factor_matrix_update_reduces_penalty(self, random_matrix):
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
@@ -566,13 +572,13 @@ class BaseTestRowVectorPenalty(BaseTestFactorMatrixPenalty):  # e.g. non-negativ
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
 
         out = penalty.factor_matrix_row_update(stationary_row, 10, None)
-        assert_allclose(stationary_row, out, rtol=1e-6)  # 1e-6 due to PyTorch single precision
+        assert_allclose(stationary_row, out, rtol=1e-6, atol=1e-10)  # 1e-6 due to PyTorch single precision
 
     def test_row_update_changes_input(self, non_stationary_row):
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
 
         out = penalty.factor_matrix_row_update(non_stationary_row, 10, None)
-        assert not np.allclose(out, non_stationary_row, rtol=1e-6)  # 1e-6 due to PyTorch single precision
+        assert not np.allclose(out, non_stationary_row, rtol=1e-6, atol=1e-10)  # 1e-6 due to PyTorch single precision
 
     def test_row_update_reduces_penalty(self, random_row):
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
