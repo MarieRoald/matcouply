@@ -776,9 +776,6 @@ class TestUnitSimplex(MixinTestHardConstraint, BaseTestFactorMatrixPenalty):
         return 10 + random_matrix / col_sum
 
 
-# @pytest.mark.skipif(
-#    tl.get_backend() != "numpy", reason="The generalized L2 penalty is only supported with the Numpy backend"
-# )
 class TestGeneralizedL2Penalty(BaseTestFactorMatrixPenalty):
     PenaltyType = penalties.GeneralizedL2Penalty
     n_rows = 50
