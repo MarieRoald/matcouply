@@ -44,7 +44,7 @@ About
     :alt: Illustration of a coupled matrix factorization
 
 MatCoupLy is a Python library that adds support for coupled matrix factorization in 
-[TensorLy](https://github.com/tensorly/tensorly/). For optimization, MatCoupLy uses
+`TensorLy` <https://github.com/tensorly/tensorly/>`_. For optimization, MatCoupLy uses
 alternating updates with the alternating direction method of multipliers (AO-ADMM),
 which allows you to fit coupled matrix factorization (and PARAFAC2) models with flexible
 constraints in any mode of your data [1, 2]. Currently, MatCoupLy supports the NumPy and
