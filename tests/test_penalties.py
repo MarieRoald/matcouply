@@ -13,6 +13,8 @@ from matcouply import penalties
 from matcouply._utils import get_svd
 from matcouply.random import random_coupled_matrices
 
+from .utils import all_combinations
+
 
 @fixture
 def random_row(rng):
@@ -74,12 +76,9 @@ class BaseTestADMMPenalty:
     penalty_default_kwargs = {}
 
     @pytest.mark.parametrize("dual_init", ["random_uniform", "random_standard_normal", "zeros"])
-    def test_init_aux(self, rng, random_ragged_cmf, dual_init):
+    def test_uniform_init_aux(self, rng, random_ragged_cmf, dual_init):
         cmf, shapes, rank = random_ragged_cmf
         matrices = cmf.to_matrices()
-
-        # TODO: Separate this into multiple tests
-        # Test that init works with random uniform init
         penalty = self.PenaltyType(aux_init="random_uniform", dual_init=dual_init, **self.penalty_default_kwargs)
 
         init_matrix = penalty.init_aux(matrices, rank, mode=0, random_state=rng)
@@ -101,7 +100,10 @@ class BaseTestADMMPenalty:
         assert tl.all(init_matrix >= 0)
         assert tl.all(init_matrix < 1)
 
-        # Test that init works with random standard normal init
+    @pytest.mark.parametrize("dual_init", ["random_uniform", "random_standard_normal", "zeros"])
+    def test_standard_normal_init_aux(self, rng, random_ragged_cmf, dual_init):
+        cmf, shapes, rank = random_ragged_cmf
+        matrices = cmf.to_matrices()
         penalty = self.PenaltyType(
             aux_init="random_standard_normal", dual_init=dual_init, **self.penalty_default_kwargs
         )
@@ -119,7 +121,10 @@ class BaseTestADMMPenalty:
         assert init_matrix.shape[0] == shapes[0][1]
         assert init_matrix.shape[1] == rank
 
-        # Test that init works with zeros init
+    @pytest.mark.parametrize("dual_init", ["random_uniform", "random_standard_normal", "zeros"])
+    def test_zeros_init_aux(self, rng, random_ragged_cmf, dual_init):
+        cmf, shapes, rank = random_ragged_cmf
+        matrices = cmf.to_matrices()
         penalty = self.PenaltyType(aux_init="zeros", dual_init=dual_init, **self.penalty_default_kwargs)
 
         init_matrix = penalty.init_aux(matrices, rank, mode=0, random_state=rng)
@@ -138,25 +143,10 @@ class BaseTestADMMPenalty:
         assert init_matrix.shape[1] == rank
         assert_array_equal(init_matrix, 0)
 
-        # Test that mode and rank needs int input
-        with pytest.raises(TypeError):
-            penalty.init_aux(matrices, rank, mode=None)
-        with pytest.raises(TypeError):
-            penalty.init_aux(matrices, rank=None, mode=0)
-
-        # Test that mode needs to be between 0 and 2
-        with pytest.raises(ValueError):
-            penalty.init_aux(matrices, rank, mode=-1)
-        with pytest.raises(ValueError):
-            penalty.init_aux(matrices, rank, mode=3)
-
-        # Test that the init method must be a valid type
-        invalid_inits = [None, 1, 1.1]
-        for invalid_init in invalid_inits:
-            penalty = self.PenaltyType(aux_init=invalid_init, dual_init=dual_init, **self.penalty_default_kwargs)
-            for mode in range(2):
-                with pytest.raises(TypeError):
-                    penalty.init_aux(matrices, rank, mode=mode, random_state=rng)
+    @pytest.mark.parametrize("dual_init", ["random_uniform", "random_standard_normal", "zeros"])
+    def test_given_init_aux(self, rng, random_ragged_cmf, dual_init):
+        cmf, shapes, rank = random_ragged_cmf
+        matrices = cmf.to_matrices()
 
         # Check that aux_init can be tensor (for mode 0 and 2) or list for mode 1
         weights, (A, B_is, C) = cmf
@@ -171,8 +161,36 @@ class BaseTestADMMPenalty:
         for B_i, dual_B_i in zip(B_is, dual_B_is):
             assert_array_equal(B_i, dual_B_i)
 
+    @pytest.mark.parametrize(
+        "dual_init,aux_init",
+        all_combinations(
+            ["random_uniform", "random_standard_normal", "zeros"], ["random_uniform", "random_standard_normal", "zeros"]
+        ),
+    )
+    def test_rank_and_mode_validation_for_init_aux(self, rng, random_ragged_cmf, dual_init, aux_init):
+        cmf, shapes, rank = random_ragged_cmf
+        matrices = cmf.to_matrices()
+        penalty = self.PenaltyType(aux_init="zeros", dual_init=dual_init, **self.penalty_default_kwargs)
+        # Test that mode and rank needs int input
+        with pytest.raises(TypeError):
+            penalty.init_aux(matrices, rank, mode=None)
+        with pytest.raises(TypeError):
+            penalty.init_aux(matrices, rank=None, mode=0)
+
+        # Test that mode needs to be between 0 and 2
+        with pytest.raises(ValueError):
+            penalty.init_aux(matrices, rank, mode=-1)
+        with pytest.raises(ValueError):
+            penalty.init_aux(matrices, rank, mode=3)
+
+    @pytest.mark.parametrize("dual_init", ["random_uniform", "random_standard_normal", "zeros"])
+    def test_validating_given_init_aux(self, rng, random_ragged_cmf, dual_init):
+        cmf, shapes, rank = random_ragged_cmf
+        matrices = cmf.to_matrices()
+
         # Check that we get value error if aux_init is tensor of wrong size (mode 0 or 2)
         # and if any of the tensors have wrong size (mode 1) or the list has the wrong length (mode 1)
+        weights, (A, B_is, C) = cmf
         I = tl.shape(A)[0]
         J_is = [tl.shape(B_i)[0] for B_i in B_is]
         K = tl.shape(C)[0]
@@ -207,6 +225,18 @@ class BaseTestADMMPenalty:
         with pytest.raises(TypeError):
             penalty.init_aux(matrices, rank, 1, random_state=rng)
 
+    @pytest.mark.parametrize("dual_init", ["random_uniform", "random_standard_normal", "zeros"])
+    def test_input_validation_for_init_aux(self, rng, random_ragged_cmf, dual_init):
+        cmf, shapes, rank = random_ragged_cmf
+        matrices = cmf.to_matrices()
+        # Test that the init method must be a valid type
+        invalid_inits = [None, 1, 1.1]
+        for invalid_init in invalid_inits:
+            penalty = self.PenaltyType(aux_init=invalid_init, dual_init=dual_init, **self.penalty_default_kwargs)
+            for mode in range(2):
+                with pytest.raises(TypeError):
+                    penalty.init_aux(matrices, rank, mode=mode, random_state=rng)
+
         # Check that we get value error if aux init is str but not "random_uniform" or "random_standard_normal"
         penalty = self.PenaltyType(aux_init="invalid init name", dual_init=dual_init, **self.penalty_default_kwargs)
         for mode in range(2):
@@ -214,7 +244,7 @@ class BaseTestADMMPenalty:
                 penalty.init_aux(matrices, rank, mode=mode, random_state=None)
 
     @pytest.mark.parametrize("aux_init", ["random_uniform", "random_standard_normal", "zeros"])
-    def test_init_dual(self, rng, random_ragged_cmf, aux_init):
+    def test_uniform_init_dual(self, rng, random_ragged_cmf, aux_init):
         cmf, shapes, rank = random_ragged_cmf
         matrices = cmf.to_matrices()
 
@@ -240,6 +270,10 @@ class BaseTestADMMPenalty:
         assert tl.all(init_matrix >= 0)
         assert tl.all(init_matrix < 1)
 
+    @pytest.mark.parametrize("aux_init", ["random_uniform", "random_standard_normal", "zeros"])
+    def test_standard_normal_init_dual(self, rng, random_ragged_cmf, aux_init):
+        cmf, shapes, rank = random_ragged_cmf
+        matrices = cmf.to_matrices()
         # Test that init works with random standard normal init
         penalty = self.PenaltyType(aux_init=aux_init, dual_init="random_standard_normal", **self.penalty_default_kwargs)
 
@@ -256,6 +290,10 @@ class BaseTestADMMPenalty:
         assert init_matrix.shape[0] == shapes[0][1]
         assert init_matrix.shape[1] == rank
 
+    @pytest.mark.parametrize("aux_init", ["random_uniform", "random_standard_normal", "zeros"])
+    def test_zeros_init_dual(self, rng, random_ragged_cmf, aux_init):
+        cmf, shapes, rank = random_ragged_cmf
+        matrices = cmf.to_matrices()
         # Test that init works with zeros init
         penalty = self.PenaltyType(aux_init=aux_init, dual_init="zeros", **self.penalty_default_kwargs)
 
@@ -275,26 +313,10 @@ class BaseTestADMMPenalty:
         assert init_matrix.shape[1] == rank
         assert_array_equal(init_matrix, 0)
 
-        # Test that mode and rank needs int input
-        with pytest.raises(TypeError):
-            penalty.init_dual(matrices, rank, mode=None)
-        with pytest.raises(TypeError):
-            penalty.init_dual(matrices, rank=None, mode=0)
-
-        # Test that mode needs to be between 0 and 2
-        with pytest.raises(ValueError):
-            penalty.init_dual(matrices, rank, mode=-1)
-        with pytest.raises(ValueError):
-            penalty.init_dual(matrices, rank, mode=3)
-
-        # Test that the init method must be a valid type
-        invalid_inits = [None, 1, 1.1]
-        for invalid_init in invalid_inits:
-            penalty = self.PenaltyType(aux_init=aux_init, dual_init=invalid_init, **self.penalty_default_kwargs)
-            for mode in range(2):
-                with pytest.raises(TypeError):
-                    penalty.init_dual(matrices, rank, mode=mode, random_state=rng)
-
+    @pytest.mark.parametrize("aux_init", ["random_uniform", "random_standard_normal", "zeros"])
+    def test_given_init_dual(self, rng, random_ragged_cmf, aux_init):
+        cmf, shapes, rank = random_ragged_cmf
+        matrices = cmf.to_matrices()
         # Check that aux_init can be tensor (for mode 0 and 2) or list for mode 1
         weights, (A, B_is, C) = cmf
         penalty = self.PenaltyType(aux_init=aux_init, dual_init=A, **self.penalty_default_kwargs)
@@ -307,6 +329,12 @@ class BaseTestADMMPenalty:
         dual_B_is = penalty.init_dual(matrices, rank, 1, random_state=rng)
         for B_i, dual_B_i in zip(B_is, dual_B_is):
             assert_array_equal(B_i, dual_B_i)
+
+    @pytest.mark.parametrize("aux_init", ["random_uniform", "random_standard_normal", "zeros"])
+    def test_validating_given_init_dual(self, rng, random_ragged_cmf, aux_init):
+        cmf, shapes, rank = random_ragged_cmf
+        matrices = cmf.to_matrices()
+        weights, (A, B_is, C) = cmf
 
         # Check that we get value error if aux_init is tensor of wrong size (mode 0 or 2)
         # and if any of the tensors have wrong size (mode 1) or the list has the wrong length (mode 1)
@@ -343,6 +371,42 @@ class BaseTestADMMPenalty:
         penalty = self.PenaltyType(aux_init=aux_init, dual_init=A, **self.penalty_default_kwargs)
         with pytest.raises(TypeError):
             penalty.init_dual(matrices, rank, 1, random_state=rng)
+
+    @pytest.mark.parametrize(
+        "dual_init,aux_init",
+        all_combinations(
+            ["random_uniform", "random_standard_normal", "zeros"], ["random_uniform", "random_standard_normal", "zeros"]
+        ),
+    )
+    def test_rank_and_mode_validation_for_init_dual(self, rng, random_ragged_cmf, dual_init, aux_init):
+        cmf, shapes, rank = random_ragged_cmf
+        matrices = cmf.to_matrices()
+        # Test that init works with zeros init
+        penalty = self.PenaltyType(aux_init=aux_init, dual_init=dual_init, **self.penalty_default_kwargs)
+
+        # Test that mode and rank needs int input
+        with pytest.raises(TypeError):
+            penalty.init_dual(matrices, rank, mode=None)
+        with pytest.raises(TypeError):
+            penalty.init_dual(matrices, rank=None, mode=0)
+
+        # Test that mode needs to be between 0 and 2
+        with pytest.raises(ValueError):
+            penalty.init_dual(matrices, rank, mode=-1)
+        with pytest.raises(ValueError):
+            penalty.init_dual(matrices, rank, mode=3)
+
+    @pytest.mark.parametrize("aux_init", ["random_uniform", "random_standard_normal", "zeros"])
+    def test_input_validation_init_dual(self, rng, random_ragged_cmf, aux_init):
+        cmf, shapes, rank = random_ragged_cmf
+        matrices = cmf.to_matrices()
+        # Test that the init method must be a valid type
+        invalid_inits = [None, 1, 1.1]
+        for invalid_init in invalid_inits:
+            penalty = self.PenaltyType(aux_init=aux_init, dual_init=invalid_init, **self.penalty_default_kwargs)
+            for mode in range(2):
+                with pytest.raises(TypeError):
+                    penalty.init_dual(matrices, rank, mode=mode, random_state=rng)
 
         # Check that we get value error if aux init is str but not "random_uniform" or "random_standard_normal"
         penalty = self.PenaltyType(aux_init=aux_init, dual_init="invalid init name", **self.penalty_default_kwargs)
@@ -1033,14 +1097,18 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
         for random_matrix, out_matrix in zip(random_matrices, constructed_out):
             assert not np.allclose(random_matrix, out_matrix)
 
-    @pytest.mark.parametrize("dual_init", ["random_uniform", "random_standard_normal", "zeros"])
-    def test_init_aux(self, rng, random_ragged_cmf, dual_init):
-        # TODO: Split into several tests
+    @pytest.mark.parametrize(
+        "dual_init,aux_init",
+        all_combinations(
+            ["random_uniform", "random_standard_normal", "zeros"], ["random_uniform", "random_standard_normal", "zeros"]
+        ),
+    )
+    def test_rank_and_mode_validation_for_init_aux(self, rng, random_ragged_cmf, dual_init, aux_init):
         cmf, shapes, rank = random_ragged_cmf
         weights, (A, B_is, C) = cmf
         matrices = cmf.to_matrices()
 
-        penalty = self.PenaltyType(**self.penalty_default_kwargs)
+        penalty = self.PenaltyType(aux_init=aux_init, dual_init=dual_init, **self.penalty_default_kwargs)
         # Test that mode and rank needs int input
         with pytest.raises(TypeError):
             penalty.init_aux(matrices, rank, mode=None)
@@ -1053,19 +1121,11 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
         with pytest.raises(ValueError):
             penalty.init_aux(matrices, rank, 2, random_state=rng)
 
-        # Test that the init method must be a valid type
-        invalid_inits = [
-            None,
-            1,
-            1.1,
-            (None, None),
-            ([None] * len(matrices), tl.zeros((rank, rank))),
-            ([tl.eye(J_i, rank) for J_i, k in shapes], None),
-        ]
-        for invalid_init in invalid_inits:
-            penalty = self.PenaltyType(aux_init=invalid_init, dual_init=dual_init, **self.penalty_default_kwargs)
-            with pytest.raises(TypeError):
-                penalty.init_aux(matrices, rank, mode=1, random_state=rng)
+    @pytest.mark.parametrize("dual_init", ["random_uniform", "random_standard_normal", "zeros"])
+    def test_uniform_init_aux(self, rng, random_ragged_cmf, dual_init):
+        cmf, shapes, rank = random_ragged_cmf
+        weights, (A, B_is, C) = cmf
+        matrices = cmf.to_matrices()
 
         # Test that init works with random uniform init
         penalty = self.PenaltyType(aux_init="random_uniform", dual_init=dual_init, **self.penalty_default_kwargs)
@@ -1078,6 +1138,12 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
             assert_array_almost_equal(init_basis.T @ init_basis, tl.eye(rank))
             assert tl.shape(init_basis) == tl.shape(B_i)
 
+    @pytest.mark.parametrize("dual_init", ["random_uniform", "random_standard_normal", "zeros"])
+    def test_standard_normal_init_aux(self, rng, random_ragged_cmf, dual_init):
+        cmf, shapes, rank = random_ragged_cmf
+        weights, (A, B_is, C) = cmf
+        matrices = cmf.to_matrices()
+
         # Test that init works with random standard normal init
         penalty = self.PenaltyType(
             aux_init="random_standard_normal", dual_init=dual_init, **self.penalty_default_kwargs
@@ -1088,6 +1154,12 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
             assert_array_almost_equal(init_basis.T @ init_basis, tl.eye(rank))
             assert tl.shape(init_basis) == tl.shape(B_i)
 
+    @pytest.mark.parametrize("dual_init", ["random_uniform", "random_standard_normal", "zeros"])
+    def test_zeros_init_aux(self, rng, random_ragged_cmf, dual_init):
+        cmf, shapes, rank = random_ragged_cmf
+        weights, (A, B_is, C) = cmf
+        matrices = cmf.to_matrices()
+
         # Test that init works with zeros init
         penalty = self.PenaltyType(aux_init="zeros", dual_init=dual_init, **self.penalty_default_kwargs)
         init_bases, init_coordinates = penalty.init_aux(matrices, rank, mode=1, random_state=rng)
@@ -1097,7 +1169,15 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
             assert_array_almost_equal(init_basis.T @ init_basis, tl.eye(rank))
             assert tl.shape(init_basis) == tl.shape(B_i)
 
+    @pytest.mark.parametrize("dual_init", ["random_uniform", "random_standard_normal", "zeros"])
+    def test_given_init_aux(self, rng, random_ragged_cmf, dual_init):
+        cmf, shapes, rank = random_ragged_cmf
+        weights, (A, B_is, C) = cmf
+        matrices = cmf.to_matrices()
+
         # Test that init works with specified init
+        init_bases = [tl.eye(*tl.shape(B_i)) for B_i in B_is]
+        init_coordinates = rng.random_sample((rank, rank))
         penalty = self.PenaltyType(
             aux_init=(init_bases, init_coordinates), dual_init=dual_init, **self.penalty_default_kwargs
         )
@@ -1106,6 +1186,15 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
         for init_basis, init_basis_2 in zip(init_bases, init_bases_2):
             assert_array_equal(init_basis, init_basis_2)
 
+    @pytest.mark.parametrize("dual_init", ["random_uniform", "random_standard_normal", "zeros"])
+    def test_validating_given_init_aux(self, rng, random_ragged_cmf, dual_init):
+        cmf, shapes, rank = random_ragged_cmf
+        weights, (A, B_is, C) = cmf
+        matrices = cmf.to_matrices()
+
+        # Test that init works with specified init
+        init_bases = [tl.eye(*tl.shape(B_i)) for B_i in B_is]
+        init_coordinates = rng.random_sample((rank, rank))
         # Test with various invalid basis matrix lists
         all_invalid_bases = []
 
@@ -1141,6 +1230,25 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
             penalty = self.PenaltyType(aux_init=aux_init, dual_init=dual_init, **self.penalty_default_kwargs)
 
             with pytest.raises(ValueError):
+                penalty.init_aux(matrices, rank, mode=1, random_state=rng)
+
+    @pytest.mark.parametrize("dual_init", ["random_uniform", "random_standard_normal", "zeros"])
+    def test_input_validation_for_init_aux(self, rng, random_ragged_cmf, dual_init):
+        cmf, shapes, rank = random_ragged_cmf
+        weights, (A, B_is, C) = cmf
+        matrices = cmf.to_matrices()
+        # Test that the init method must be a valid type
+        invalid_inits = [
+            None,
+            1,
+            1.1,
+            (None, None),
+            ([None] * len(matrices), tl.zeros((rank, rank))),
+            ([tl.eye(J_i, rank) for J_i, k in shapes], None),
+        ]
+        for invalid_init in invalid_inits:
+            penalty = self.PenaltyType(aux_init=invalid_init, dual_init=dual_init, **self.penalty_default_kwargs)
+            with pytest.raises(TypeError):
                 penalty.init_aux(matrices, rank, mode=1, random_state=rng)
 
         # Check that we get value error if aux init is str but not "random_uniform" or "random_standard_normal"
