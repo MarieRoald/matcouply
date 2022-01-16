@@ -6,13 +6,14 @@ import numpy as np
 import pytest
 import tensorly as tl
 from tensorly.metrics.factors import congruence_coefficient
-from tensorly.testing import assert_array_almost_equal, assert_array_equal
+from tensorly.testing import assert_array_equal
 
 import matcouply
 from matcouply import coupled_matrices, decomposition, penalties
 from matcouply._utils import get_svd
 from matcouply.coupled_matrices import CoupledMatrixFactorization
 from matcouply.penalties import NonNegativity
+from matcouply.testing import assert_allclose
 
 from .utils import all_combinations
 
@@ -49,10 +50,10 @@ def test_initialize_cmf_init_with_cmf(rng, random_ragged_cmf):
         cmf.to_matrices(), rank, init=cmf, n_iter_max=0, return_errors=False, return_admm_vars=False
     )
     assert out_weights is None
-    assert_array_almost_equal(out_A, weights * A)
+    assert_allclose(out_A, weights * A)
     for out_B_i, B_i in zip(out_B_is, B_is):
-        assert_array_almost_equal(out_B_i, B_i)
-    assert_array_almost_equal(out_C, C)
+        assert_allclose(out_B_i, B_i)
+    assert_allclose(out_C, C)
 
     with pytest.raises(ValueError):
         invalid_init = None, (A, B_is, tl.zeros((tl.shape(C)[0], rank + 1)))
@@ -1009,7 +1010,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
 
 
 @pytest.mark.parametrize(
-    "feasibility_penalty_scale,constant_feasibility_penalty", all_combinations([0.5, 1, 10], [True, False])
+    "feasibility_penalty_scale,constant_feasibility_penalty", all_combinations([0.5, 1, 2], [True, False])
 )
 def test_admm_update_A(rng, random_ragged_cmf, feasibility_penalty_scale, constant_feasibility_penalty):
     cmf, shapes, rank = random_ragged_cmf
@@ -1036,7 +1037,7 @@ def test_admm_update_A(rng, random_ragged_cmf, feasibility_penalty_scale, consta
     out_cmf, out_A_auxes, out_A_duals = out
     out_A_normalized = normalize(out_cmf[1][0])
     A_normalized = normalize(A)
-    assert_array_almost_equal(out_A_normalized, A_normalized)
+    assert_allclose(out_A_normalized, A_normalized, rtol=1e-4)
 
     # Test that ADMM update with NN constraints finds the correct A-matrix
     # when Bi-s and C is correct but A is incorrect
@@ -1066,10 +1067,10 @@ def test_admm_update_A(rng, random_ragged_cmf, feasibility_penalty_scale, consta
     out_nn_cmf, out_nn_A_auxes, out_nn_A_duals = out
     out_nn_A_normalized = normalize(out_nn_cmf[1][0])
     nn_A_normalized = normalize(nn_A)
-    assert_array_almost_equal(out_nn_A_normalized, nn_A_normalized, decimal=3)
+    assert_allclose(out_nn_A_normalized, nn_A_normalized, rtol=1e-4)
 
     # Check that the feasibility gap is low
-    assert_array_almost_equal(out_nn_cmf[1][0], out_nn_A_auxes[0])
+    assert_allclose(out_nn_cmf[1][0], out_nn_A_auxes[0])
 
     # Test for l2_penalty > 0 by constructing and solving the regularized normal equations
     X = cmf.to_matrices()
@@ -1091,11 +1092,11 @@ def test_admm_update_A(rng, random_ragged_cmf, feasibility_penalty_scale, consta
     for a_i, X_i, B_i in zip(out_A, X, B_is):
         lhs = tl.dot(tl.transpose(B_i), B_i) * tl.dot(tl.transpose(C), C) + tl.eye(rank)
         rhs = tl.diag(tl.dot(tl.dot(tl.transpose(B_i), X_i), C))
-        assert_array_almost_equal(a_i, tl.solve(lhs, rhs), decimal=3)
+        assert_allclose(a_i, tl.solve(lhs, rhs), rtol=1e-4)
 
 
 @pytest.mark.parametrize(
-    "feasibility_penalty_scale,constant_feasibility_penalty", all_combinations([0.5, 1, 10], [True, False])
+    "feasibility_penalty_scale,constant_feasibility_penalty", all_combinations([0.5, 1, 2], [True, False])
 )
 def test_admm_update_B(rng, random_ragged_cmf, feasibility_penalty_scale, constant_feasibility_penalty):
     cmf, shapes, rank = random_ragged_cmf
@@ -1132,7 +1133,7 @@ def test_admm_update_B(rng, random_ragged_cmf, feasibility_penalty_scale, consta
     B_is_normalized = [normalize(B_i) for B_i in B_is]
 
     for B_i, out_B_i in zip(B_is_normalized, out_B_is_normalized):
-        assert_array_almost_equal(B_i, out_B_i, decimal=3)
+        assert_allclose(B_i, out_B_i, rtol=1e-3)  # 1e-3 due to single precision in PyTorch
 
     # WITH NON NEGATIVITY
     # Test that ADMM update with NN constraints finds the correct B_i-matrices
@@ -1165,11 +1166,11 @@ def test_admm_update_B(rng, random_ragged_cmf, feasibility_penalty_scale, consta
     nn_B_is_normalized = [normalize(B_i) for B_i in nn_B_is]
 
     for B_i, out_B_i in zip(nn_B_is_normalized, out_nn_B_is_normalized):
-        assert_array_almost_equal(B_i, out_B_i, decimal=3)
+        assert_allclose(B_i, out_B_i, rtol=1e-3)  # 1e-3 due to single precision in PyTorch
 
     # Check that the feasibility gap is low
     for aux_B_i, out_B_i in zip(out_nn_B_auxes[0], out_nn_B_is):
-        assert_array_almost_equal(aux_B_i, out_B_i, decimal=3)
+        assert_allclose(aux_B_i, out_B_i, rtol=1e-4)
 
     # Test for l2_penalty > 0 by constructing and solving the regularized normal equations
     X = cmf.to_matrices()
@@ -1193,10 +1194,10 @@ def test_admm_update_B(rng, random_ragged_cmf, feasibility_penalty_scale, consta
     for a_i, X_i, B_i in zip(A, X, out_B_is):
         lhs = tl.dot(tl.transpose(a_i * C), (a_i * C)) + tl.eye(rank)
         rhs = tl.transpose(tl.dot(X_i, a_i * C))
-        assert_array_almost_equal(B_i, tl.transpose(tl.solve(lhs, rhs)), decimal=3)
+        assert_allclose(B_i, tl.transpose(tl.solve(lhs, rhs)), rtol=1e-3)  # 1e-3 due to single precision in PyTorch
 
 
-@pytest.mark.parametrize("feasibility_penalty_scale", [0.5, 1, 10])
+@pytest.mark.parametrize("feasibility_penalty_scale", [0.5, 1, 2])
 def test_admm_update_C(rng, random_ragged_cmf, feasibility_penalty_scale):
     cmf, shapes, rank = random_ragged_cmf
     weights, (A, B_is, C) = cmf
@@ -1220,7 +1221,7 @@ def test_admm_update_C(rng, random_ragged_cmf, feasibility_penalty_scale):
     )
     out_C_normalized = normalize(out[0][1][2])
     C_normalized = normalize(C)
-    assert_array_almost_equal(out_C_normalized, C_normalized)
+    assert_allclose(out_C_normalized, C_normalized, rtol=1e-4)
 
     # Test that ADMM update with NN constraints finds the correct C-matrix
     # when Bi-s and A is correct but C is incorrect
@@ -1250,10 +1251,10 @@ def test_admm_update_C(rng, random_ragged_cmf, feasibility_penalty_scale):
     nn_out_cmf, nn_out_C_auxes, nn_out_C_duals = out
     out_nn_C_normalized = normalize(nn_out_cmf[1][2])
     nn_C_normalized = normalize(nn_C)
-    assert_array_almost_equal(out_nn_C_normalized, nn_C_normalized, decimal=3)
+    assert_allclose(out_nn_C_normalized, nn_C_normalized, rtol=1e-4)
 
     # Check that the feasibility gap is low
-    assert_array_almost_equal(nn_out_cmf[1][2], nn_out_C_auxes[0])
+    assert_allclose(nn_out_cmf[1][2], nn_out_C_auxes[0])
 
     # Test for l2_penalty > 0 by constructing and solving the regularized normal equations
     X = cmf.to_matrices()
@@ -1275,7 +1276,7 @@ def test_admm_update_C(rng, random_ragged_cmf, feasibility_penalty_scale):
     for a_i, X_i, B_i in zip(A, X, B_is):
         lhs += tl.dot(tl.transpose(a_i * B_i), a_i * B_i)
         rhs += tl.dot(tl.transpose(a_i * B_i), X_i)
-    assert_array_almost_equal(out_C, tl.transpose(tl.solve(lhs, rhs)), decimal=3)
+    assert_allclose(out_C, tl.transpose(tl.solve(lhs, rhs)), rtol=1e-4)
 
 
 def test_cmf_aoadmm(rng, random_ragged_cmf):
@@ -1478,7 +1479,7 @@ def test_cmf_aoadmm_not_updating_A_works(rng, random_rank5_ragged_cmf):
     )
 
     out_weights, (out_A, out_B_is, out_C) = out_cmf
-    assert_array_almost_equal(wrong_A, out_A)
+    assert_allclose(wrong_A, out_A)
     assert not np.all(tl.to_numpy(out_C) == tl.to_numpy(C))
     for B_i, out_B_i in zip(B_is, out_B_is):
         assert not np.all(tl.to_numpy(B_i) == tl.to_numpy(out_B_i))
@@ -1501,7 +1502,7 @@ def test_cmf_aoadmm_not_updating_C_works(rng, random_rank5_ragged_cmf):
     )
 
     out_weights, (out_A, out_B_is, out_C) = out_cmf
-    assert_array_almost_equal(wrong_C, out_C)
+    assert_allclose(wrong_C, out_C)
     assert not np.all(tl.to_numpy(out_A) == tl.to_numpy(A))
     for B_i, out_B_i in zip(B_is, out_B_is):
         assert not np.all(tl.to_numpy(B_i) == tl.to_numpy(out_B_i))
@@ -1526,7 +1527,7 @@ def test_cmf_aoadmm_not_updating_B_is_works(rng, random_rank5_ragged_cmf):
     assert not np.all(tl.to_numpy(out_C) == tl.to_numpy(C))
     assert not np.all(tl.to_numpy(out_A) == tl.to_numpy(A))
     for B_i, out_B_i in zip(wrong_B_is, out_B_is):
-        assert_array_almost_equal(B_i, out_B_i)
+        assert_allclose(B_i, out_B_i)
 
 
 def test_parafac2_aoadmm(rng, random_ragged_cmf):

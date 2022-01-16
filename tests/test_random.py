@@ -1,9 +1,9 @@
 import pytest
 import tensorly as tl
 from numpy.linalg import matrix_rank
-from tensorly.testing import assert_array_almost_equal
 
 from matcouply.random import random_coupled_matrices
+from matcouply.testing import assert_allclose
 
 
 def test_random_coupled_matrices():
@@ -29,15 +29,15 @@ def test_random_coupled_matrices():
     # Check that normalising B_is gives B_is with unit normed columns
     weights, (A, B_is, C) = random_coupled_matrices(shapes, rank, full=False, normalise_B=True, normalise_factors=False)
     for B_i in B_is:
-        assert_array_almost_equal(tl.norm(B_i, axis=0), tl.ones(rank))
-    assert_array_almost_equal(weights, tl.ones(rank))
+        assert_allclose(tl.norm(B_i, axis=0), tl.ones(rank), rtol=1e-6)  # rtol=1e-6 due to PyTorch single precision
+    assert_allclose(weights, tl.ones(rank), rtol=1e-6)  # rtol=1e-6 due to PyTorch single precision
 
     # Check that normalising all factors gives factor matrices with unit normed columns
     weights, (A, B_is, C) = random_coupled_matrices(shapes, rank, full=False, normalise_factors=True)
-    assert_array_almost_equal(tl.norm(A, axis=0), tl.ones(rank))
+    assert_allclose(tl.norm(A, axis=0), tl.ones(rank), rtol=1e-6)  # rtol=1e-6 due to PyTorch single precision
     for B_i in B_is:
-        assert_array_almost_equal(tl.norm(B_i, axis=0), tl.ones(rank))
-    assert_array_almost_equal(tl.norm(C, axis=0), tl.ones(rank))
+        assert_allclose(tl.norm(B_i, axis=0), tl.ones(rank), rtol=1e-6)  # rtol=1e-6 due to PyTorch single precision
+    assert_allclose(tl.norm(C, axis=0), tl.ones(rank), rtol=1e-6)  # rtol=1e-6 due to PyTorch single precision
 
     # Should fail when shapes have different value for the number of columns
     shapes = [(10, 10), (12, 11), (9, 11), (10, 11), (15, 11)]

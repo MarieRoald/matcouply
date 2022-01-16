@@ -7,11 +7,12 @@ import pytest
 import scipy.stats as stats
 import tensorly as tl
 from pytest import fixture
-from tensorly.testing import assert_array_almost_equal, assert_array_equal
+from tensorly.testing import assert_array_equal
 
 from matcouply import penalties
 from matcouply._utils import get_svd
 from matcouply.random import random_coupled_matrices
+from matcouply.testing import assert_allclose
 
 from .utils import all_combinations
 
@@ -471,7 +472,7 @@ class BaseTestFactorMatricesPenalty(BaseTestADMMPenalty):  # e.g. PARAFAC2
 
         out = penalty.factor_matrices_update(stationary_matrices, feasibility_penalties, auxes)
         for stationary_matrix, out_matrix in zip(stationary_matrices, out):
-            assert_array_almost_equal(stationary_matrix, out_matrix)
+            assert_allclose(stationary_matrix, out_matrix, rtol=1e-6)  # 1e-6 due to PyTorch single precision
 
     def test_factor_matrices_update_changes_input(self, non_stationary_matrices):
         feasibility_penalties = [10] * len(non_stationary_matrices)
@@ -480,7 +481,7 @@ class BaseTestFactorMatricesPenalty(BaseTestADMMPenalty):  # e.g. PARAFAC2
 
         out = penalty.factor_matrices_update(non_stationary_matrices, feasibility_penalties, auxes)
         for non_stationary_matrix, out_matrix in zip(non_stationary_matrices, out):
-            assert not np.allclose(out_matrix, non_stationary_matrix)
+            assert not np.allclose(out_matrix, non_stationary_matrix, rtol=1e-6)  # 1e-6 due to PyTorch single precision
 
     def test_factor_matrices_update_reduces_penalty(self, random_matrices):
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
@@ -522,13 +523,13 @@ class BaseTestFactorMatrixPenalty(BaseTestFactorMatricesPenalty):  # e.g. unimod
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
 
         out = penalty.factor_matrix_update(stationary_matrix, 10, None)
-        assert_array_almost_equal(stationary_matrix, out)
+        assert_allclose(stationary_matrix, out, rtol=1e-6)  # 1e-6 due to PyTorch single precision
 
     def test_factor_matrix_update_changes_input(self, non_stationary_matrix):
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
 
         out = penalty.factor_matrix_update(non_stationary_matrix, 10, None)
-        assert not np.allclose(out, non_stationary_matrix)
+        assert not np.allclose(out, non_stationary_matrix, rtol=1e-6)  # 1e-6 due to PyTorch single precision
 
     def test_factor_matrix_update_reduces_penalty(self, random_matrix):
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
@@ -565,13 +566,13 @@ class BaseTestRowVectorPenalty(BaseTestFactorMatrixPenalty):  # e.g. non-negativ
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
 
         out = penalty.factor_matrix_row_update(stationary_row, 10, None)
-        assert_array_almost_equal(stationary_row, out)
+        assert_allclose(stationary_row, out, rtol=1e-6)  # 1e-6 due to PyTorch single precision
 
     def test_row_update_changes_input(self, non_stationary_row):
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
 
         out = penalty.factor_matrix_row_update(non_stationary_row, 10, None)
-        assert not np.allclose(out, non_stationary_row)
+        assert not np.allclose(out, non_stationary_row, rtol=1e-6)  # 1e-6 due to PyTorch single precision
 
     def test_row_update_reduces_penalty(self, random_row):
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
@@ -601,7 +602,7 @@ class TestL1Penalty(BaseTestRowVectorPenalty):
         l1_penalty = penalties.L1Penalty(0.1, non_negativity=non_negativity)
 
         out = l1_penalty.factor_matrix_row_update(stationary_matrix_row, 10, None)
-        assert_array_almost_equal(stationary_matrix_row, out)
+        assert_allclose(stationary_matrix_row, out)
 
     @pytest.mark.parametrize("non_negativity", [True, False])
     def test_factor_matrix_update_stationary_point(self, non_negativity):
@@ -609,7 +610,7 @@ class TestL1Penalty(BaseTestRowVectorPenalty):
         l1_penalty = penalties.L1Penalty(0.1, non_negativity=non_negativity)
 
         out = l1_penalty.factor_matrix_update(stationary_matrix, 10, None)
-        assert_array_almost_equal(stationary_matrix, out)
+        assert_allclose(stationary_matrix, out)
 
     @pytest.mark.parametrize("non_negativity", [True, False])
     def test_factor_matrices_update_stationary_point(self, non_negativity):
@@ -620,7 +621,7 @@ class TestL1Penalty(BaseTestRowVectorPenalty):
 
         out = l1_penalty.factor_matrices_update(stationary_matrices, feasibility_penalties, auxes)
         for stationary_matrix, out_matrix in zip(stationary_matrices, out):
-            assert_array_almost_equal(stationary_matrix, out_matrix)
+            assert_allclose(stationary_matrix, out_matrix)
 
     @pytest.mark.parametrize("non_negativity", [True, False])
     def test_row_update_reduces_penalty(self, random_row, non_negativity):
@@ -679,7 +680,7 @@ class TestL1Penalty(BaseTestRowVectorPenalty):
         l1_penalty = penalties.L1Penalty(1, non_negativity=non_negativity)
 
         out = l1_penalty.factor_matrix_update(random_matrix, feasibility_penalty, aux)
-        assert_array_almost_equal(out, 0)
+        assert_allclose(out, 0)
 
     def test_non_negativity_sets_negative_values_to_zero(self):
         negative_matrix = tl.ones((30, 5)) * (-100)
@@ -1025,19 +1026,33 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
         assert error_5it < error_1it
 
     def test_factor_matrices_update_stationary_point(self, rng):
-        svd = get_svd("truncated_svd")
-        deltaB = tl.tensor(rng.standard_normal((3, 3)))
-        P_is = [svd(tl.tensor(rng.standard_normal(size=(10, 3))), n_eigenvecs=3)[0] for _ in range(5)]
+        svd = get_svd("numpy_svd")
+
+        # Construct stationary matrices in NumPy for double precision
+        def random_orthogonal(size):
+            X = rng.standard_normal(size)
+            return np.linalg.qr(X)[0]
+
+        deltaB = rng.standard_normal((3, 3))
+        P_is = [random_orthogonal((10, 3)) for _ in range(5)]
+        stationary_matrices = [P_i @ deltaB for P_i in P_is]
+
+        deltaB = tl.tensor(deltaB)
+        P_is = [tl.tensor(P_i) for P_i in P_is]
+        stationary_matrices = [tl.tensor(B_i) for B_i in stationary_matrices]
         auxes = P_is, deltaB
-        stationary_matrices = [tl.matmul(P_i, deltaB) for P_i in P_is]
 
         feasibility_penalties = [10] * len(stationary_matrices)
         pf2_penalty = penalties.Parafac2()
 
         out = pf2_penalty.factor_matrices_update(stationary_matrices, feasibility_penalties, auxes)
-        assert_array_almost_equal(deltaB, out[1], decimal=4)
+        assert_allclose(deltaB, out[1], rtol=1e-4)
         for P_i, out_matrix in zip(P_is, out[0]):
-            assert_array_almost_equal(P_i, out_matrix, decimal=4)
+            if tl.get_backend() == "pytorch":
+                rtol = 1e-3
+            else:
+                rtol = 1e-7
+            assert_allclose(P_i, out_matrix, rtol=rtol)
 
     def test_not_updating_basis_matrices_works(self, rng):
         svd = get_svd("truncated_svd")
@@ -1053,7 +1068,7 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
         out = pf2_penalty.factor_matrices_update(B_is, feasibility_penalties, auxes)
         assert not tl.all(deltaB == out[1])
         for P_i, out_matrix in zip(wrong_P_is, out[0]):
-            assert_array_almost_equal(P_i, out_matrix)
+            assert_allclose(P_i, out_matrix)
 
     def test_not_updating_coordinate_matrix_works(self, rng):
         svd = get_svd("truncated_svd")
@@ -1066,7 +1081,7 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
         feasibility_penalties = [10] * len(B_is)
         pf2_penalty = penalties.Parafac2(update_coordinate_matrix=False)
         out = pf2_penalty.factor_matrices_update(B_is, feasibility_penalties, auxes)
-        assert_array_almost_equal(wrong_deltaB, out[1])
+        assert_allclose(wrong_deltaB, out[1])
         for P_i, out_matrix in zip(P_is, out[0]):
             assert not tl.all(P_i == out_matrix)
 
@@ -1135,7 +1150,7 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
         assert tl.all(init_coordinates <= 1)
 
         for init_basis, B_i in zip(init_bases, B_is):
-            assert_array_almost_equal(init_basis.T @ init_basis, tl.eye(rank))
+            assert_allclose(init_basis.T @ init_basis, tl.eye(rank))
             assert tl.shape(init_basis) == tl.shape(B_i)
 
     @pytest.mark.parametrize("dual_init", ["random_uniform", "random_standard_normal", "zeros"])
@@ -1151,7 +1166,7 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
         init_bases, init_coordinates = penalty.init_aux(matrices, rank, mode=1, random_state=rng)
         assert tl.shape(init_coordinates) == (rank, rank)
         for init_basis, B_i in zip(init_bases, B_is):
-            assert_array_almost_equal(init_basis.T @ init_basis, tl.eye(rank))
+            assert_allclose(init_basis.T @ init_basis, tl.eye(rank))
             assert tl.shape(init_basis) == tl.shape(B_i)
 
     @pytest.mark.parametrize("dual_init", ["random_uniform", "random_standard_normal", "zeros"])
@@ -1166,7 +1181,7 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
         assert tl.shape(init_coordinates) == (rank, rank)
         assert_array_equal(init_coordinates, 0)
         for init_basis, B_i in zip(init_bases, B_is):
-            assert_array_almost_equal(init_basis.T @ init_basis, tl.eye(rank))
+            assert_allclose(init_basis.T @ init_basis, tl.eye(rank), rtol=1e-6)
             assert tl.shape(init_basis) == tl.shape(B_i)
 
     @pytest.mark.parametrize("dual_init", ["random_uniform", "random_standard_normal", "zeros"])
@@ -1177,7 +1192,7 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
 
         # Test that init works with specified init
         init_bases = [tl.eye(*tl.shape(B_i)) for B_i in B_is]
-        init_coordinates = rng.random_sample((rank, rank))
+        init_coordinates = tl.tensor(rng.random_sample((rank, rank)))
         penalty = self.PenaltyType(
             aux_init=(init_bases, init_coordinates), dual_init=dual_init, **self.penalty_default_kwargs
         )
@@ -1194,7 +1209,7 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
 
         # Test that init works with specified init
         init_bases = [tl.eye(*tl.shape(B_i)) for B_i in B_is]
-        init_coordinates = rng.random_sample((rank, rank))
+        init_coordinates = tl.tensor(rng.random_sample((rank, rank)))
         # Test with various invalid basis matrix lists
         all_invalid_bases = []
 
@@ -1276,7 +1291,7 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
             aux = aux_matrices[i]
             aux_diff = aux_diffs[i]
 
-            assert_array_almost_equal(aux_diff, aux - B_i)
+            assert_allclose(aux_diff, aux - B_i)
 
     def test_aux_as_matrix(self, random_matrix):
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
@@ -1297,7 +1312,7 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
             aux = aux_matrices[i]
             basis_i = auxes[0][i]
 
-            assert_array_almost_equal(aux, basis_i @ auxes[1])
+            assert_allclose(aux, basis_i @ auxes[1])
 
     def test_penalty(self, random_ragged_cmf):
         cmf, shapes, rank = random_ragged_cmf
