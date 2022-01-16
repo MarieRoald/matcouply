@@ -69,7 +69,6 @@ class ADMMPenalty(ABC, metaclass=InheritableDocstrings):
             raise TypeError("Mode must be int, not {}".format(type(mode)))
         elif mode not in [0, 1, 2]:
             raise ValueError("Mode must be 0, 1, or 2.")
-
         if (
             not isinstance(self.aux_init, str)
             and not tl.is_tensor(self.aux_init)
@@ -80,7 +79,47 @@ class ADMMPenalty(ABC, metaclass=InheritableDocstrings):
                     type(self.aux_init)
                 )
             )
-        elif self.aux_init == "random_uniform":
+
+        # Initialize using given aux variables
+        if mode in {0, 2} and tl.is_tensor(self.aux_init):
+            length_, rank_ = tl.shape(self.aux_init)
+            I = len(matrices)
+            K = tl.shape(matrices[0])[1]
+            if rank != rank_ or (mode == 0 and length_ != I):
+                raise ValueError(
+                    "Invalid shape for pre-specified auxiliary variable for mode 0"
+                    "\nShould have shape {}, but has shape {}".format((I, rank), (length_, rank_))
+                )
+            elif rank != rank_ or (mode == 2 and length_ != K):
+                raise ValueError(
+                    "Invalid shape for pre-specified auxiliary variable for mode 2"
+                    "\nShould have shape {}, but has shape {}".format((K, rank), (length_, rank_))
+                )
+
+            return self.aux_init
+        elif mode in {0, 2} and isinstance(self.aux_init, list):
+            raise TypeError("Cannot use list of matrices to initialize auxiliary matrices for mode 0 or 2.")
+        elif mode == 1 and isinstance(self.aux_init, list):
+            J_is = (tl.shape(matrix)[0] for matrix in matrices)
+            shapes = ((J_i, rank) for J_i in J_is)
+            if any(tl.shape(aux) != shape for aux, shape in zip(self.aux_init, shapes)):
+                raise ValueError(
+                    "Invalid shape for at least one of matrices in the auxiliary variable list for mode 1."
+                )
+            elif len(self.aux_init) != len(matrices):
+                raise ValueError(
+                    "Different number of pre-specified auxiliary factor matrices for mode 1 "
+                    "than the number of coupled matrices."
+                )
+
+            return self.aux_init
+        elif mode == 1 and tl.is_tensor(self.aux_init):
+            raise TypeError(
+                "Cannot use a tensor (matrix) to initialize auxiliary matrices for mode 1. Must be a list instead."
+            )
+
+        # Generate initialization based on option
+        if self.aux_init == "random_uniform":
             if mode == 0:
                 return tl.tensor(random_state.uniform(size=(len(matrices), rank)))
             elif mode == 1:
@@ -102,44 +141,7 @@ class ADMMPenalty(ABC, metaclass=InheritableDocstrings):
             elif mode == 2:
                 return tl.zeros((matrices[0].shape[1], rank))
         else:
-            if mode in {0, 2} and tl.is_tensor(self.aux_init):
-                length_, rank_ = tl.shape(self.aux_init)
-                I = len(matrices)
-                K = tl.shape(matrices[0])[1]
-                if rank != rank_ or (mode == 0 and length_ != I):
-                    raise ValueError(
-                        "Invalid shape for pre-specified auxiliary variable for mode 0"
-                        "\nShould have shape {}, but has shape {}".format((I, rank), (length_, rank_))
-                    )
-                elif rank != rank_ or (mode == 2 and length_ != K):
-                    raise ValueError(
-                        "Invalid shape for pre-specified auxiliary variable for mode 2"
-                        "\nShould have shape {}, but has shape {}".format((K, rank), (length_, rank_))
-                    )
-
-                return self.aux_init
-            elif mode in {0, 2} and isinstance(self.aux_init, list):
-                raise TypeError("Cannot use list of matrices to initialize auxiliary matrices for mode 0 or 2.")
-            elif mode == 1 and isinstance(self.aux_init, list):
-                J_is = (tl.shape(matrix)[0] for matrix in matrices)
-                shapes = ((J_i, rank) for J_i in J_is)
-                if any(tl.shape(aux) != shape for aux, shape in zip(self.aux_init, shapes)):
-                    raise ValueError(
-                        "Invalid shape for at least one of matrices in the auxiliary variable list for mode 1."
-                    )
-                elif len(self.aux_init) != len(matrices):
-                    raise ValueError(
-                        "Different number of pre-specified auxiliary factor matrices for mode 1 "
-                        "than the number of coupled matrices."
-                    )
-
-                return self.aux_init
-            elif mode == 1 and tl.is_tensor(self.aux_init):
-                raise TypeError(
-                    "Cannot use a tensor (matrix) to initialize auxiliary matrices for mode 1. Must be a list instead."
-                )
-            else:
-                raise ValueError("Unknown aux init: {}".format(self.aux_init))
+            raise ValueError("Unknown aux init: {}".format(self.aux_init))
 
     def init_dual(self, matrices, rank, mode, random_state=None):
         """Initialize the dual variables
@@ -154,7 +156,7 @@ class ADMMPenalty(ABC, metaclass=InheritableDocstrings):
             initialized as zero.
          * tl.tensor(ndim=2) : Pre-computed dual variables (mode=0 or mode=2)
          * list of tl.tensor(ndim=2): Pre-computed dual variables (mode=1)
-        
+
         Parameters
         ----------
         matrices : list of tensor(ndim=2) or tensor(ndim=3)
@@ -191,6 +193,46 @@ class ADMMPenalty(ABC, metaclass=InheritableDocstrings):
                     type(self.dual_init)
                 )
             )
+
+        # Initialize using given dual variables
+        if mode in {0, 2} and tl.is_tensor(self.dual_init):
+            length_, rank_ = tl.shape(self.dual_init)
+            I = len(matrices)
+            K = tl.shape(matrices[0])[1]
+            if rank != rank_ or (mode == 0 and length_ != I):
+                raise ValueError(
+                    "Invalid shape for pre-specified auxiliary variable for mode 0"
+                    "\nShould have shape {}, but has shape {}".format((I, rank), (length_, rank_))
+                )
+            elif rank != rank_ or (mode == 2 and length_ != K):
+                raise ValueError(
+                    "Invalid shape for pre-specified auxiliary variable for mode 2"
+                    "\nShould have shape {}, but has shape {}".format((K, rank), (length_, rank_))
+                )
+
+            return self.dual_init
+        elif mode in {0, 2} and isinstance(self.dual_init, list):
+            raise TypeError("Cannot use list of matrices to initialize auxiliary matrices for mode 0 or 2.")
+        elif mode == 1 and isinstance(self.dual_init, list):
+            J_is = (tl.shape(matrix)[0] for matrix in matrices)
+            shapes = ((J_i, rank) for J_i in J_is)
+            if any(tl.shape(dual) != shape for dual, shape in zip(self.dual_init, shapes)):
+                raise ValueError(
+                    "Invalid shape for at least one of matrices in the auxiliary variable list for mode 1."
+                )
+            elif len(self.dual_init) != len(matrices):
+                raise ValueError(
+                    "Different number of pre-specified auxiliary factor matrices for mode 1 "
+                    "than the number of coupled matrices."
+                )
+
+            return self.dual_init
+        elif mode == 1 and tl.is_tensor(self.dual_init):
+            raise TypeError(
+                "Cannot use a tensor (matrix) to initialize auxiliary matrices for mode 1. Must be a list instead."
+            )
+
+        # Generate initialization based on option
         if self.dual_init == "random_uniform":
             if mode == 0:
                 return tl.tensor(random_state.uniform(size=(len(matrices), rank)))
@@ -213,44 +255,7 @@ class ADMMPenalty(ABC, metaclass=InheritableDocstrings):
             elif mode == 2:
                 return tl.zeros((matrices[0].shape[1], rank))
         else:
-            if mode in {0, 2} and tl.is_tensor(self.dual_init):
-                length_, rank_ = tl.shape(self.dual_init)
-                I = len(matrices)
-                K = tl.shape(matrices[0])[1]
-                if rank != rank_ or (mode == 0 and length_ != I):
-                    raise ValueError(
-                        "Invalid shape for pre-specified auxiliary variable for mode 0"
-                        "\nShould have shape {}, but has shape {}".format((I, rank), (length_, rank_))
-                    )
-                elif rank != rank_ or (mode == 2 and length_ != K):
-                    raise ValueError(
-                        "Invalid shape for pre-specified auxiliary variable for mode 2"
-                        "\nShould have shape {}, but has shape {}".format((K, rank), (length_, rank_))
-                    )
-
-                return self.dual_init
-            elif mode in {0, 2} and isinstance(self.dual_init, list):
-                raise TypeError("Cannot use list of matrices to initialize auxiliary matrices for mode 0 or 2.")
-            elif mode == 1 and isinstance(self.dual_init, list):
-                J_is = (tl.shape(matrix)[0] for matrix in matrices)
-                shapes = ((J_i, rank) for J_i in J_is)
-                if any(tl.shape(dual) != shape for dual, shape in zip(self.dual_init, shapes)):
-                    raise ValueError(
-                        "Invalid shape for at least one of matrices in the auxiliary variable list for mode 1."
-                    )
-                elif len(self.dual_init) != len(matrices):
-                    raise ValueError(
-                        "Different number of pre-specified auxiliary factor matrices for mode 1 "
-                        "than the number of coupled matrices."
-                    )
-
-                return self.dual_init
-            elif mode == 1 and tl.is_tensor(self.dual_init):
-                raise TypeError(
-                    "Cannot use a tensor (matrix) to initialize auxiliary matrices for mode 1. Must be a list instead."
-                )
-            else:
-                raise ValueError("Unknown aux init: {}".format(self.dual_init))
+            raise ValueError("Unknown aux init: {}".format(self.dual_init))
 
     @abstractmethod
     def penalty(self, x):  # pragma: nocover
@@ -659,7 +664,7 @@ class GeneralizedL2Penalty(MatrixPenalty):
         Which preconditioner to use (for iterative methods)
     validate : bool (default=True)
         Enable naive validation of the norm matrix.
-    
+
     Examples
     --------
     This example creates a generalised L2 penalty for a simple Laplacian penalty on
