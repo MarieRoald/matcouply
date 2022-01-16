@@ -333,6 +333,13 @@ def _validate_cmf(cmf):
             )
         )
 
+    # TODO: Test this
+    if tl.shape(A)[0] != len(B_is):
+        raise ValueError(
+            "The number of rows in A should be the same as the number of B_i matrices"
+            "However, tl.shape(A)[0]={}, but len(B_is)={}".format(tl.shape(A)[0], len(B_is))
+        )
+
     return tuple(shape), rank
 
 
