@@ -76,6 +76,9 @@ class BaseTestADMMPenalty:
     PenaltyType = penalties.ADMMPenalty
     penalty_default_kwargs = {}
 
+    rtol = 1e-5
+    atol = 1e-10
+
     @pytest.mark.parametrize("dual_init", ["random_uniform", "random_standard_normal", "zeros"])
     def test_uniform_init_aux(self, rng, random_ragged_cmf, dual_init):
         cmf, shapes, rank = random_ragged_cmf
@@ -472,9 +475,7 @@ class BaseTestFactorMatricesPenalty(BaseTestADMMPenalty):  # e.g. PARAFAC2
 
         out = penalty.factor_matrices_update(stationary_matrices, feasibility_penalties, auxes)
         for stationary_matrix, out_matrix in zip(stationary_matrices, out):
-            assert_allclose(
-                stationary_matrix, out_matrix, rtol=1e-6, atol=1e-10
-            )  # 1e-6 due to PyTorch single precision
+            assert_allclose(stationary_matrix, out_matrix, rtol=self.rtol, atol=self.atol)
 
     def test_factor_matrices_update_changes_input(self, non_stationary_matrices):
         feasibility_penalties = [10] * len(non_stationary_matrices)
@@ -483,9 +484,7 @@ class BaseTestFactorMatricesPenalty(BaseTestADMMPenalty):  # e.g. PARAFAC2
 
         out = penalty.factor_matrices_update(non_stationary_matrices, feasibility_penalties, auxes)
         for non_stationary_matrix, out_matrix in zip(non_stationary_matrices, out):
-            assert not np.allclose(
-                out_matrix, non_stationary_matrix, rtol=1e-6, atol=1e-10
-            )  # 1e-6 due to PyTorch single precision
+            assert not np.allclose(out_matrix, non_stationary_matrix, rtol=self.rtol, atol=self.atol)
 
     def test_factor_matrices_update_reduces_penalty(self, random_matrices):
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
@@ -496,7 +495,7 @@ class BaseTestFactorMatricesPenalty(BaseTestADMMPenalty):  # e.g. PARAFAC2
         assert penalty.penalty(out) <= initial_penalty
 
 
-class BaseTestFactorMatrixPenalty(BaseTestFactorMatricesPenalty):  # e.g. unimodality
+class BaseTestFactorMatrixPenalty(BaseTestFactorMatricesPenalty):
     def get_stationary_matrix(self, rng, shape):
         raise NotImplementedError
 
@@ -527,15 +526,13 @@ class BaseTestFactorMatrixPenalty(BaseTestFactorMatricesPenalty):  # e.g. unimod
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
 
         out = penalty.factor_matrix_update(stationary_matrix, 10, None)
-        assert_allclose(stationary_matrix, out, rtol=1e-6, atol=1e-10)  # 1e-6 due to PyTorch single precision
+        assert_allclose(stationary_matrix, out, rtol=self.rtol, atol=self.atol)
 
     def test_factor_matrix_update_changes_input(self, non_stationary_matrix):
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
 
         out = penalty.factor_matrix_update(non_stationary_matrix, 10, None)
-        assert not np.allclose(
-            out, non_stationary_matrix, rtol=1e-6, atol=1e-10
-        )  # 1e-6 due to PyTorch single precision
+        assert not np.allclose(out, non_stationary_matrix, rtol=self.rtol, atol=self.atol)
 
     def test_factor_matrix_update_reduces_penalty(self, random_matrix):
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
@@ -572,13 +569,13 @@ class BaseTestRowVectorPenalty(BaseTestFactorMatrixPenalty):  # e.g. non-negativ
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
 
         out = penalty.factor_matrix_row_update(stationary_row, 10, None)
-        assert_allclose(stationary_row, out, rtol=1e-6, atol=1e-10)  # 1e-6 due to PyTorch single precision
+        assert_allclose(stationary_row, out, rtol=self.rtol, atol=self.atol)
 
     def test_row_update_changes_input(self, non_stationary_row):
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
 
         out = penalty.factor_matrix_row_update(non_stationary_row, 10, None)
-        assert not np.allclose(out, non_stationary_row, rtol=1e-6, atol=1e-10)  # 1e-6 due to PyTorch single precision
+        assert not np.allclose(out, non_stationary_row, rtol=self.rtol, atol=self.atol)
 
     def test_row_update_reduces_penalty(self, random_row):
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
@@ -765,6 +762,8 @@ class TestL2BallConstraint(MixinTestHardConstraint, BaseTestFactorMatrixPenalty)
 
 class TestUnitSimplex(MixinTestHardConstraint, BaseTestFactorMatrixPenalty):
     PenaltyType = penalties.UnitSimplex
+    rtol = 1e-4
+    atol = 1e-8
 
     def get_stationary_matrix(self, rng, shape):
         random_matrix = tl.tensor(rng.uniform(size=shape))
@@ -777,9 +776,9 @@ class TestUnitSimplex(MixinTestHardConstraint, BaseTestFactorMatrixPenalty):
         return 10 + random_matrix / col_sum
 
 
-@pytest.mark.skipif(
-    tl.get_backend() != "numpy", reason="The generalized L2 penalty is only supported with the Numpy backend"
-)
+# @pytest.mark.skipif(
+#    tl.get_backend() != "numpy", reason="The generalized L2 penalty is only supported with the Numpy backend"
+# )
 class TestGeneralizedL2Penalty(BaseTestFactorMatrixPenalty):
     PenaltyType = penalties.GeneralizedL2Penalty
     n_rows = 50
@@ -800,7 +799,7 @@ class TestGeneralizedL2Penalty(BaseTestFactorMatrixPenalty):
         [zeros_matrix, norm_matrix2]
     ]))
     # fmt: on
-    penalty_default_kwargs = {"norm_matrix": norm_matrix, "method": "svd"}
+    penalty_default_kwargs = {"norm_matrix": norm_matrix}
 
     def get_stationary_matrix(self, rng, shape):
         if shape[0] != self.n_rows:
@@ -808,7 +807,7 @@ class TestGeneralizedL2Penalty(BaseTestFactorMatrixPenalty):
         return tl.ones(shape)
 
     def get_non_stationary_matrix(self, rng, shape):
-        return rng.random(size=shape)
+        return tl.tensor(rng.random(size=shape))
 
     @pytest.fixture
     def stationary_matrix(self, rng):
@@ -848,12 +847,12 @@ class TestGeneralizedL2Penalty(BaseTestFactorMatrixPenalty):
     @pytest.fixture
     def random_matrix(self, rng):
         shape = self.n_rows, rng.randint(1, 10)
-        return rng.random(size=shape)
+        return tl.tensor(rng.random(size=shape))
 
     @pytest.fixture
     def random_matrices(self, rng):
         shape = self.n_rows, rng.randint(1, 10)
-        return [rng.random(size=shape) for _ in range(rng.randint(2, 10))]
+        return [tl.tensor(rng.random(size=shape)) for _ in range(rng.randint(2, 10))]
 
     def test_penalty(self, random_regular_cmf):
         cmf, shapes, rank = random_regular_cmf
