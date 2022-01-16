@@ -1071,9 +1071,9 @@ def parafac2_aoadmm(
 
     See also
     --------
-    cmf_aoadmm : General coupled matrix factorization with AO-ADMM
-    penalties.Parafac2 : Class for PARAFAC2 constraint with more information about its properties
-    """  # FIXME: crossref penalties.Parafac2 correctly
+    matcouply.decomposition.cmf_aoadmm : General coupled matrix factorization with AO-ADMM
+    matcouply.penalties.Parafac2 : Class for PARAFAC2 constraint with more information about its properties
+    """
 
     return cmf_aoadmm(
         matrices=matrices,
