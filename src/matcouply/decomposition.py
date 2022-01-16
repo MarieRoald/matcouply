@@ -861,7 +861,7 @@ def cmf_aoadmm(
 
     A_gaps, B_gaps, C_gaps = compute_feasibility_gaps(cmf, regs, A_aux_list, B_is_aux_list, C_aux_list)
     feasibility_gaps.append((A_gaps, B_gaps, C_gaps))
-    if verbose:
+    if verbose and verbose > 0:
         print("Duality gaps for A: {}".format(A_gaps))
         print("Duality gaps for the Bi-matrices: {}".format(B_gaps))
         print("Duality gaps for C: {}".format(C_gaps))
@@ -929,7 +929,7 @@ def cmf_aoadmm(
                 feasibility_criterion = feasibility_tol and max_feasibility_gap < feasibility_tol
 
                 if not feasibility_criterion and not return_errors:
-                    if verbose and it % verbose == 0:
+                    if verbose and it % verbose == 0 and verbose > 0:
                         print(
                             "Coupled matrix factorization iteration={}, ".format(it)
                             + "reconstruction error=NOT COMPUTED, "
@@ -954,7 +954,7 @@ def cmf_aoadmm(
             l2_reg = _compute_l2_penalty(cmf, l2_penalty)
             losses.append(0.5 * rec_error ** 2 + l2_reg + reg_penalty)
 
-            if verbose and it % verbose == 0:
+            if verbose and it % verbose == 0 and verbose > 0:
                 print(
                     "Coupled matrix factorization iteration={}, ".format(it)
                     + "reconstruction error={}, ".format(rec_errors[-1])
@@ -983,8 +983,11 @@ def cmf_aoadmm(
                         print("converged in {} iterations: {}".format(it, message))
                     break
 
-        elif verbose and it % verbose == 0:
+        elif verbose and it % verbose == 0 and verbose > 0:
             print("Coupled matrix factorization iteration={}".format(it))
+    else:
+        if verbose:
+            print("REACHED MAXIMUM NUMBER OF ITERATIONS")
 
     # Compute feasibility gaps to return with diagnostics
     if feasibility_tol and not (tol or absolute_tol):
