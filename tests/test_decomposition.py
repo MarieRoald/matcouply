@@ -1,5 +1,4 @@
 import inspect
-import itertools
 from copy import copy
 from unittest.mock import patch
 
@@ -15,18 +14,7 @@ from matcouply._utils import get_svd
 from matcouply.coupled_matrices import CoupledMatrixFactorization
 from matcouply.penalties import NonNegativity
 
-
-def all_combinations(*args):
-    """All combinations of the input iterables.
-
-    Each argument must be an iterable.
-
-    Examples:
-    ---------
-    >>> all_combinations([1, 2], ["ab", "cd"])
-    [(1, 'ab'), (1, 'cd'), (2, 'ab'), (2, 'cd')]
-    """
-    return list(itertools.product(*args))
+from .utils import all_combinations
 
 
 def normalize(X):
