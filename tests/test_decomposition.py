@@ -1433,19 +1433,19 @@ def test_cmf_aoadmm_verbose(rng, random_ragged_cmf, capfd):
 
 def test_parafac2_makes_nn_cmf_unique(rng):
     rank = 2
-    A = tl.tensor(rng.uniform(0.1, 1.1, size=(5, rank)))
+    A = tl.tensor(rng.uniform(0.1, 1.1, size=(10, rank)))
     B_0 = rng.uniform(0, 1, size=(7, rank))
-    B_is = [tl.tensor(np.roll(B_0, i, axis=1)) for i in range(15)]
-    C = tl.tensor(rng.uniform(0, 1, size=(20, rank)))
+    B_is = [tl.tensor(np.roll(B_0, i, axis=1)) for i in range(10)]
+    C = tl.tensor(rng.uniform(0, 1, size=(10, rank)))
     weights = None
 
     cmf = CoupledMatrixFactorization((weights, (A, B_is, C)))
     matrices = cmf.to_matrices()
 
     rec_errors = [float("inf")]
-    for init in range(3):
+    for init in range(5):
         out, diagnostics = decomposition.cmf_aoadmm(
-            matrices, rank, n_iter_max=3_000, return_errors=True, non_negative=[True, True, True], parafac2=True,
+            matrices, rank, n_iter_max=1_000, return_errors=True, non_negative=[True, True, True], parafac2=True,
         )
 
         if diagnostics.rec_errors[-1] < rec_errors[-1] and diagnostics.satisfied_feasibility_condition:
