@@ -163,6 +163,12 @@ def test_validate_cmf(rng, random_ragged_cmf):
     with pytest.raises(ValueError):
         coupled_matrices._validate_cmf((weights, (A, invalid_B_is_2, C)))
 
+    # Number of rows in A does not match number of B_is
+    with pytest.raises(ValueError):
+        coupled_matrices._validate_cmf((weights, (A[:-1, :], B_is, C)))
+    with pytest.raises(ValueError):
+        coupled_matrices._validate_cmf((weights, (A, B_is[:-1], C)))
+
 
 def test_cmf_to_matrix(rng, random_ragged_cmf):
     cmf, shapes, rank = random_ragged_cmf
