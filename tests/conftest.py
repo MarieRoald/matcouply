@@ -29,23 +29,30 @@ def rng(seed):
     return tl.check_random_state(seed)
 
 
+def random_length(rng, min=2, mean=5):
+    """Generate a random dimension length.
+    
+    Use Poisson distribution since it is discrete and centered around the mean.
+    """
+    if min >= mean:
+        raise ValueError("Min must be less than mean.")
+    return min + round(rng.poisson(mean - min))
+
+
 @pytest.fixture
 def random_ragged_shapes(rng):
-    I = rng.randint(1, 20)
-    K = rng.randint(2, 20)
+    I = random_length(rng)
+    K = random_length(rng)
 
-    def random_J():
-        return max(2, round(rng.normal(loc=8, scale=2)))
-
-    shapes = tuple((random_J(), K) for i in range(I))
+    shapes = tuple((random_length(rng), K) for i in range(I))
     return shapes
 
 
 @pytest.fixture
 def random_regular_shapes(rng):
-    I = rng.randint(1, 20)
-    J = rng.randint(2, 20)
-    K = rng.randint(2, 20)
+    I = random_length(rng)
+    J = random_length(rng)
+    K = random_length(rng)
     shapes = tuple((J, K) for i in range(I))
     return shapes
 
@@ -66,9 +73,9 @@ def random_ragged_cmf(
 def random_rank5_ragged_cmf(rng):
     from matcouply.random import random_coupled_matrices
 
-    I = rng.randint(1, 20)
-    K = rng.randint(2, 20)
-    random_ragged_shapes = tuple((rng.randint(5, 20), K) for i in range(I))
+    I = random_length(rng)
+    K = random_length(rng)
+    random_ragged_shapes = tuple((random_length(rng, min=5, mean=7), K) for i in range(I))
     rank = 5
     cmf = random_coupled_matrices(random_ragged_shapes, rank, random_state=rng)
     return cmf, random_ragged_shapes, rank
