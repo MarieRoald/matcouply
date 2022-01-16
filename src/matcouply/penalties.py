@@ -705,7 +705,7 @@ class GeneralizedL2Penalty(MatrixPenalty):
         sign_matrix = sign_matrix + 2 * tl.eye(tl.shape(norm_matrix)[0])
         if validate and (
             not tl.all(tl.transpose(norm_matrix) == norm_matrix)
-            # TODO: Validate eigenvalues also when/if tensorly gets eigvals function
+            # FIXME: Validate eigenvalues also when/if tensorly gets eigvals function
         ):
             raise ValueError("The norm matrix should be symmetric positive semidefinite")
         if validate and tl.get_backend() == "numpy" and method == "svd":

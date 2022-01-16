@@ -85,7 +85,7 @@ def initialize_dual(matrices, rank, reg, random_state):
     return A_dual_list, B_dual_list, C_dual_list
 
 
-# TODO: Add option to scale the l2_penalty based on size (mostly relevant for B)
+# TODO (Improvement): Add option to scale the l2_penalty based on size (mostly relevant for B)
 def admm_update_A(
     matrices,
     reg,
@@ -841,7 +841,7 @@ def cmf_aoadmm(
     if not update_C:
         regs[2] = []
 
-    # TODO: Include cmf to initialize functions in case other init schemes require that?
+    # TODO  (Improvement): Include cmf to initialize functions in case other init schemes require that?
     A_aux_list, B_is_aux_list, C_aux_list, = initialize_aux(matrices, rank, regs, random_state=random_state)
     A_dual_list, B_is_dual_list, C_dual_list, = initialize_dual(matrices, rank, regs, random_state=random_state)
     norm_matrices = _root_sum_squared_list(matrices)
