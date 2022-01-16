@@ -43,9 +43,12 @@ About
 .. image:: docs/figures/CMF_multiblock.svg
     :alt: Illustration of a coupled matrix factorization
 
-MatCoupLy uses AO-ADMM to fit constrained and regularized coupled matrix factorization (and PARAFAC2) models.
-It uses the alternating updates with the alternating direction method of multipliers (AO-ADMM) algorithm,
-which is very flexible in terms of constraints [1, 2]
+MatCoupLy is a Python library that adds support for coupled matrix factorization in 
+[TensorLy](https://github.com/tensorly/tensorly/). For optimization, MatCoupLy uses
+alternating updates with the alternating direction method of multipliers (AO-ADMM),
+which allows you to fit coupled matrix factorization (and PARAFAC2) models with flexible
+constraints in any mode of your data [1, 2]. Currently, MatCoupLy supports the NumPy and
+PyTorch backends of TensorLy.
 
 
 Example
@@ -57,6 +60,7 @@ the maximum norm of the **A** and **Bᵢ** matrices and unimodality constraints 
 vectors in the **Bᵢ** matrices. For more examples, see the `Gallery of examples <https://matcouply.readthedocs.io/en/latest/auto_examples/index.html>`_
 in the `online documentation <https://matcouply.readthedocs.io/en/latest/index.html>`_.
 
+
 .. code:: python
 
     import matplotlib.pyplot as plt
@@ -64,40 +68,16 @@ in the `online documentation <https://matcouply.readthedocs.io/en/latest/index.h
     import scipy.stats as stats
     import tensorly as tl
 
-    from matcouply.coupled_matrices import CoupledMatrixFactorization
+    from matcouply.data import get_simple_simulated_data
     from matcouply.decomposition import cmf_aoadmm
 
-    rank = 3
-    I, J, K = 15, 50, 20
+    noisy_matrices, cmf = get_simple_simulated_data(noise_level=0.2, random_state=1)
+    rank = cmf.rank
+    weights, (A, B_is, C) = cmf
 
-    np.random.seed(1)
-
-    # Uniformly distributed A
-    A = np.random.uniform(size=(I, rank)) + 0.1  # Add 0.1 to ensure that there is signal for all components for all slices
-    A = tl.tensor(A)
-
-    # Generate B-matrix as shifting normal distributions
-    t = np.linspace(-10, 10, J)
-    B_blueprint = np.stack([stats.norm.pdf(t, loc=-5), stats.norm.pdf(t, loc=0), stats.norm.pdf(t, loc=2),], axis=-1)
-    B_is = [np.roll(B_blueprint, i, axis=0) for i in range(I)]  # Cyclically permute to get changing B_i matrices
-    B_is = [tl.tensor(B_i) for B_i in B_is]
-
-    # Truncated normal distributed C
-    C = np.random.standard_normal(size=(K, rank))
-    C[C < 0] = 0
-    C = tl.tensor(C)
-
-    # Construct decomposition and data matrix
-    cmf = CoupledMatrixFactorization((None, (A, B_is, C)))
-    matrices = cmf.to_matrices()
-
-    # Add noise
-    noise = [np.random.standard_normal(size=M.shape) for M in matrices]
-    noise = [0.2 * np.linalg.norm(M) * N / np.linalg.norm(N) for M, N in zip(matrices, noise)]
-    matrices = [M + N for M, N in zip(matrices, noise)]
-
+    # Decompose the dataset
     estimated_cmf = cmf_aoadmm(
-        matrices,
+        noisy_matrices,
         rank=rank,
         non_negative=True,  # Constrain all components to be non-negative
         l1_penalty={2: 0.1},  # Sparsity on C
@@ -106,18 +86,23 @@ in the `online documentation <https://matcouply.readthedocs.io/en/latest/index.h
         unimodal={1: True},  # Unimodality (one peak) on the B_i component vectors
         constant_feasibility_penalty=True,  # Must be set to apply l2_norm_penalty (row-penalty) on A. See documentation for more details
         verbose=-1,  # Negative verbosity level for minimal (nonzero) printouts
+        random_state=0,  # A seed can be given similar to how it's done in TensorLy
     )
 
     est_weights, (est_A, est_B_is, est_C) = estimated_cmf
 
-    fig, axes = plt.subplots(2, 3, figsize=(5, 2))
-    axes[0, 0].plot(A)
-    axes[0, 1].plot(B_is[0])
-    axes[0, 2].plot(C)
+    # Code to display the results
+    def normalize(M):
+        return M / np.linalg.norm(M, axis=0)
 
-    axes[1, 0].plot(est_A)
-    axes[1, 1].plot(est_B_is[0])
-    axes[1, 2].plot(est_C)
+    fig, axes = plt.subplots(2, 3, figsize=(5, 2))
+    axes[0, 0].plot(normalize(A))
+    axes[0, 1].plot(normalize(B_is[0]))
+    axes[0, 2].plot(normalize(C))
+
+    axes[1, 0].plot(normalize(est_A))
+    axes[1, 1].plot(normalize(est_B_is[0]))
+    axes[1, 2].plot(normalize(est_C))
 
     axes[0, 0].set_title(r"$\mathbf{A}$")
     axes[0, 1].set_title(r"$\mathbf{B}_0$")
@@ -134,9 +119,11 @@ in the `online documentation <https://matcouply.readthedocs.io/en/latest/index.h
     plt.savefig("figures/readme_components.png", dpi=300)
 
 
+
+
 .. code:: raw
 
-    Added mode 0 penalties and constraints:
+    Added mode 0 penalties and constraints:    
     * L2 ball constraint (with non-negativity)
     Added mode 1 penalties and constraints:
     * PARAFAC2
@@ -144,8 +131,8 @@ in the `online documentation <https://matcouply.readthedocs.io/en/latest/index.h
     * L2 ball constraint (with non-negativity)
     Added mode 2 penalties and constraints:
     * L1 penalty (with non-negativity)
-    converged in 393 iterations: FEASIBILITY GAP CRITERION AND RELATIVE LOSS CRITERION SATISFIED
-        
+    converged in 175 iterations: FEASIBILITY GAP CRITERION AND RELATIVE LOSS CRITERION SATISFIED
+
 .. image:: figures/readme_components.png
     :alt: Plot of simulated and estimated components
 
