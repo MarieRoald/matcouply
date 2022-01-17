@@ -65,8 +65,6 @@ in the `online documentation <https://matcouply.readthedocs.io/en/latest/index.h
 
     import matplotlib.pyplot as plt
     import numpy as np
-    import scipy.stats as stats
-    import tensorly as tl
 
     from matcouply.data import get_simple_simulated_data
     from matcouply.decomposition import cmf_aoadmm
