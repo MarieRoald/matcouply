@@ -21,7 +21,7 @@ def test_get_simple_simulated_data():
     simulated_data2, cmf2 = data.get_simple_simulated_data(random_state=1)
 
     for X1, X2 in zip(simulated_data1, simulated_data2):
-        assert_array_equal(simulated_data1, simulated_data2)
+        assert_array_equal(X1, X2)
 
     assert_array_equal(cmf1[1][0], cmf2[1][0])  # check A
     assert_array_equal(cmf1[1][2], cmf2[1][2])  # check C
