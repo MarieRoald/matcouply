@@ -14,7 +14,7 @@ from matcouply._utils import get_svd
 from matcouply.random import random_coupled_matrices
 from matcouply.testing import assert_allclose
 
-from .utils import all_combinations
+from .utils import RTOL_SCALE, all_combinations
 
 
 @fixture
@@ -76,7 +76,7 @@ class BaseTestADMMPenalty:
     PenaltyType = penalties.ADMMPenalty
     penalty_default_kwargs = {}
 
-    rtol = 1e-5
+    rtol = 1e-6 * RTOL_SCALE
     atol = 1e-10
 
     @pytest.mark.parametrize("dual_init", ["random_uniform", "random_standard_normal", "zeros"])
@@ -762,7 +762,7 @@ class TestL2BallConstraint(MixinTestHardConstraint, BaseTestFactorMatrixPenalty)
 
 class TestUnitSimplex(MixinTestHardConstraint, BaseTestFactorMatrixPenalty):
     PenaltyType = penalties.UnitSimplex
-    rtol = 1e-4
+    rtol = 1e-5 * RTOL_SCALE
     atol = 1e-8
 
     def get_stationary_matrix(self, rng, shape):
@@ -1028,7 +1028,7 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
         assert error_5it < error_1it
 
     def test_factor_matrices_update_stationary_point(self, rng):
-        svd = get_svd("numpy_svd")
+        svd = get_svd("truncated_svd")
 
         # Construct stationary matrices in NumPy for double precision
         def random_orthogonal(size):
@@ -1050,11 +1050,9 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
         out = pf2_penalty.factor_matrices_update(stationary_matrices, feasibility_penalties, auxes)
         assert_allclose(deltaB, out[1], rtol=1e-4)
         for P_i, out_matrix in zip(P_is, out[0]):
-            if tl.get_backend() == "pytorch":
-                rtol = 1e-3
-            else:
-                rtol = 1e-7
-            assert_allclose(P_i, out_matrix, rtol=rtol)
+            assert_allclose(
+                P_i, out_matrix, rtol=1e-5 * RTOL_SCALE, err_msg="This can be somewhat unstable with single precision"
+            )
 
     def test_not_updating_basis_matrices_works(self, rng):
         svd = get_svd("truncated_svd")
