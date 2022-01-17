@@ -15,7 +15,7 @@ from matcouply.coupled_matrices import CoupledMatrixFactorization
 from matcouply.penalties import NonNegativity
 from matcouply.testing import assert_allclose
 
-from .utils import all_combinations
+from .utils import RTOL_SCALE, all_combinations
 
 
 def normalize(X):
@@ -1037,7 +1037,7 @@ def test_admm_update_A(rng, random_ragged_cmf, feasibility_penalty_scale, consta
     out_cmf, out_A_auxes, out_A_duals = out
     out_A_normalized = normalize(out_cmf[1][0])
     A_normalized = normalize(A)
-    assert_allclose(out_A_normalized, A_normalized, rtol=1e-4)
+    assert_allclose(out_A_normalized, A_normalized, rtol=1e-6 * RTOL_SCALE)
 
     # Test that ADMM update with NN constraints finds the correct A-matrix
     # when Bi-s and C is correct but A is incorrect
@@ -1067,7 +1067,7 @@ def test_admm_update_A(rng, random_ragged_cmf, feasibility_penalty_scale, consta
     out_nn_cmf, out_nn_A_auxes, out_nn_A_duals = out
     out_nn_A_normalized = normalize(out_nn_cmf[1][0])
     nn_A_normalized = normalize(nn_A)
-    assert_allclose(out_nn_A_normalized, nn_A_normalized, rtol=1e-4)
+    assert_allclose(out_nn_A_normalized, nn_A_normalized, rtol=1e-5 * RTOL_SCALE)
 
     # Check that the feasibility gap is low
     assert_allclose(out_nn_cmf[1][0], out_nn_A_auxes[0])
@@ -1092,7 +1092,7 @@ def test_admm_update_A(rng, random_ragged_cmf, feasibility_penalty_scale, consta
     for a_i, X_i, B_i in zip(out_A, X, B_is):
         lhs = tl.dot(tl.transpose(B_i), B_i) * tl.dot(tl.transpose(C), C) + tl.eye(rank)
         rhs = tl.diag(tl.dot(tl.dot(tl.transpose(B_i), X_i), C))
-        assert_allclose(a_i, tl.solve(lhs, rhs), rtol=1e-4)
+        assert_allclose(a_i, tl.solve(lhs, rhs), rtol=1e-6 * RTOL_SCALE)
 
 
 @pytest.mark.parametrize(
@@ -1133,7 +1133,7 @@ def test_admm_update_B(rng, random_ragged_cmf, feasibility_penalty_scale, consta
     B_is_normalized = [normalize(B_i) for B_i in B_is]
 
     for B_i, out_B_i in zip(B_is_normalized, out_B_is_normalized):
-        assert_allclose(B_i, out_B_i, rtol=1e-3)  # 1e-3 due to single precision in PyTorch
+        assert_allclose(B_i, out_B_i, rtol=1e-5 * RTOL_SCALE)
 
     # WITH NON NEGATIVITY
     # Test that ADMM update with NN constraints finds the correct B_i-matrices
@@ -1166,11 +1166,11 @@ def test_admm_update_B(rng, random_ragged_cmf, feasibility_penalty_scale, consta
     nn_B_is_normalized = [normalize(B_i) for B_i in nn_B_is]
 
     for B_i, out_B_i in zip(nn_B_is_normalized, out_nn_B_is_normalized):
-        assert_allclose(B_i, out_B_i, rtol=1e-3)  # 1e-3 due to single precision in PyTorch
+        assert_allclose(B_i, out_B_i, rtol=1e-5 * RTOL_SCALE)
 
     # Check that the feasibility gap is low
     for aux_B_i, out_B_i in zip(out_nn_B_auxes[0], out_nn_B_is):
-        assert_allclose(aux_B_i, out_B_i, rtol=1e-4)
+        assert_allclose(aux_B_i, out_B_i, rtol=1e-6 * RTOL_SCALE)
 
     # Test for l2_penalty > 0 by constructing and solving the regularized normal equations
     X = cmf.to_matrices()
@@ -1194,7 +1194,7 @@ def test_admm_update_B(rng, random_ragged_cmf, feasibility_penalty_scale, consta
     for a_i, X_i, B_i in zip(A, X, out_B_is):
         lhs = tl.dot(tl.transpose(a_i * C), (a_i * C)) + tl.eye(rank)
         rhs = tl.transpose(tl.dot(X_i, a_i * C))
-        assert_allclose(B_i, tl.transpose(tl.solve(lhs, rhs)), rtol=1e-3)  # 1e-3 due to single precision in PyTorch
+        assert_allclose(B_i, tl.transpose(tl.solve(lhs, rhs)), rtol=1e-5 * RTOL_SCALE)
 
 
 @pytest.mark.parametrize("feasibility_penalty_scale", [0.5, 1, 2])
@@ -1221,7 +1221,7 @@ def test_admm_update_C(rng, random_ragged_cmf, feasibility_penalty_scale):
     )
     out_C_normalized = normalize(out[0][1][2])
     C_normalized = normalize(C)
-    assert_allclose(out_C_normalized, C_normalized, rtol=1e-4)
+    assert_allclose(out_C_normalized, C_normalized, rtol=1e-6 * RTOL_SCALE)
 
     # Test that ADMM update with NN constraints finds the correct C-matrix
     # when Bi-s and A is correct but C is incorrect
@@ -1251,7 +1251,7 @@ def test_admm_update_C(rng, random_ragged_cmf, feasibility_penalty_scale):
     nn_out_cmf, nn_out_C_auxes, nn_out_C_duals = out
     out_nn_C_normalized = normalize(nn_out_cmf[1][2])
     nn_C_normalized = normalize(nn_C)
-    assert_allclose(out_nn_C_normalized, nn_C_normalized, rtol=1e-4)
+    assert_allclose(out_nn_C_normalized, nn_C_normalized, rtol=1e-5 * RTOL_SCALE)
 
     # Check that the feasibility gap is low
     assert_allclose(nn_out_cmf[1][2], nn_out_C_auxes[0])
@@ -1276,7 +1276,7 @@ def test_admm_update_C(rng, random_ragged_cmf, feasibility_penalty_scale):
     for a_i, X_i, B_i in zip(A, X, B_is):
         lhs += tl.dot(tl.transpose(a_i * B_i), a_i * B_i)
         rhs += tl.dot(tl.transpose(a_i * B_i), X_i)
-    assert_allclose(out_C, tl.transpose(tl.solve(lhs, rhs)), rtol=1e-4)
+    assert_allclose(out_C, tl.transpose(tl.solve(lhs, rhs)), rtol=1e-6 * RTOL_SCALE)
 
 
 def test_cmf_aoadmm(rng, random_ragged_cmf):
