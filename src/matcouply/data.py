@@ -18,10 +18,6 @@ DATASET_PARENT = Path(__file__).parent / "datasets"
 DOWNLOADED_PARENT = DATASET_PARENT / "downloads"
 
 
-# TODO: Test this
-#  * Check that seeding with different values yields different datasets and decompositions
-#  * Check that seeding with same values yields same datasets and decompositions
-#  * Check that noise level is correct
 def get_simple_simulated_data(noise_level=0.2, random_state=1):
     r"""Generate a simple simulated dataset with shifting unimodal :math:`\mathbf{B}_i` matrices.
 
@@ -72,7 +68,7 @@ def get_simple_simulated_data(noise_level=0.2, random_state=1):
 
     # Generate B-matrix as shifting normal distributions
     t = np.linspace(-10, 10, J)
-    B_blueprint = np.stack([stats.norm.pdf(t, loc=-5), stats.norm.pdf(t, loc=0), stats.norm.pdf(t, loc=2),], axis=-1)
+    B_blueprint = np.stack([stats.norm.pdf(t, loc=-5), stats.norm.pdf(t, loc=0), stats.norm.pdf(t, loc=2)], axis=-1)
     B_is = [np.roll(B_blueprint, i, axis=0) for i in range(I)]  # Cyclically permute to get changing B_i matrices
     B_is = [tl.tensor(B_i) for B_i in B_is]
 
@@ -87,8 +83,8 @@ def get_simple_simulated_data(noise_level=0.2, random_state=1):
 
     # Add noise
     noise = [tl.tensor(rng.standard_normal(size=M.shape)) for M in matrices]
-    noise = [noise_level * np.linalg.norm(M) * N / np.linalg.norm(N) for M, N in zip(matrices, noise)]
-    matrices = [M + N for M, N in zip(matrices, noise)]
+    scale_factor = tl.norm(tl.stack(matrices)) / tl.norm(tl.stack(noise))
+    matrices = [M + noise_level * scale_factor * N for M, N in zip(matrices, noise)]
     return matrices, cmf
 
 

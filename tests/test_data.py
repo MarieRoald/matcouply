@@ -2,8 +2,44 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
+import tensorly as tl
+from tensorly.testing import assert_array_equal
 
 from matcouply import data
+from matcouply.coupled_matrices import CoupledMatrixFactorization
+from matcouply.decomposition import _cmf_reconstruction_error
+from matcouply.testing import assert_allclose
+
+
+def test_get_simple_simulated_data():
+    simulated_data, cmf = data.get_simple_simulated_data()
+    assert isinstance(simulated_data, list)
+    assert isinstance(cmf, CoupledMatrixFactorization)
+
+    # Check that same random state gets same data
+    simulated_data1, cmf1 = data.get_simple_simulated_data(random_state=1)
+    simulated_data2, cmf2 = data.get_simple_simulated_data(random_state=1)
+
+    for X1, X2 in zip(simulated_data1, simulated_data2):
+        assert_array_equal(simulated_data1, simulated_data2)
+
+    assert_array_equal(cmf1[1][0], cmf2[1][0])  # check A
+    assert_array_equal(cmf1[1][2], cmf2[1][2])  # check C
+
+    for B_i1, B_i2 in zip(cmf1[1][1], cmf2[1][1]):
+        assert_array_equal(B_i1, B_i2)
+
+    # Check that different random state gets different data
+    simulated_data3, cmf3 = data.get_simple_simulated_data(random_state=2)
+
+    assert not np.all(tl.to_numpy(cmf1[1][0]) == tl.to_numpy(cmf3[1][0]))
+    assert not np.all(tl.to_numpy(cmf1[1][2]) == tl.to_numpy(cmf3[1][2]))
+
+    # Check that noise level is correct
+    simulated_data_noise_02, cmf_noise_02 = data.get_simple_simulated_data(noise_level=0.2, random_state=2)
+    data_strength = tl.norm(cmf_noise_02.to_tensor())
+    error = _cmf_reconstruction_error(simulated_data_noise_02, cmf_noise_02) / data_strength
+    assert error == pytest.approx(0.2)
 
 
 def test_get_bike_data():
