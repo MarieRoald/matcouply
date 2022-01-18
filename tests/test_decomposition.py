@@ -947,58 +947,61 @@ def test_parse_mode_penalties(dual_init, aux_init):
     assert l1.reg_strength == 2
 
     # Unimodality
-    out, verbosity_str = decomposition._parse_mode_penalties(
-        non_negative=False,
-        lower_bound=None,
-        upper_bound=None,
-        l2_norm_bound=None,
-        unimodal=True,
-        parafac2=None,
-        l1_penalty=None,
-        tv_penalty=None,
-        generalized_l2_penalty=None,
-        svd="truncated_svd",
-        dual_init=dual_init,
-        aux_init=aux_init,
-    )
+    with patch("matcouply.decomposition.tensorly.get_backend", return_value="numpy"):
+        out, verbosity_str = decomposition._parse_mode_penalties(
+            non_negative=False,
+            lower_bound=None,
+            upper_bound=None,
+            l2_norm_bound=None,
+            unimodal=True,
+            parafac2=None,
+            l1_penalty=None,
+            tv_penalty=None,
+            generalized_l2_penalty=None,
+            svd="truncated_svd",
+            dual_init=dual_init,
+            aux_init=aux_init,
+        )
     assert len(out) == 1
     assert isinstance(out[0], penalties.Unimodality)
     assert not out[0].non_negativity
 
     # Unimodality + NN
-    out, verbosity_str = decomposition._parse_mode_penalties(
-        non_negative=True,
-        lower_bound=None,
-        upper_bound=None,
-        l2_norm_bound=None,
-        unimodal=True,
-        parafac2=None,
-        l1_penalty=None,
-        tv_penalty=None,
-        generalized_l2_penalty=None,
-        svd="truncated_svd",
-        dual_init=dual_init,
-        aux_init=aux_init,
-    )
+    with patch("matcouply.decomposition.tensorly.get_backend", return_value="numpy"):
+        out, verbosity_str = decomposition._parse_mode_penalties(
+            non_negative=True,
+            lower_bound=None,
+            upper_bound=None,
+            l2_norm_bound=None,
+            unimodal=True,
+            parafac2=None,
+            l1_penalty=None,
+            tv_penalty=None,
+            generalized_l2_penalty=None,
+            svd="truncated_svd",
+            dual_init=dual_init,
+            aux_init=aux_init,
+        )
     assert len(out) == 1
     assert isinstance(out[0], penalties.Unimodality)
     assert out[0].non_negativity
 
     # Unimodality + NN + TV
-    out, verbosity_str = decomposition._parse_mode_penalties(
-        non_negative=True,
-        lower_bound=None,
-        upper_bound=None,
-        l2_norm_bound=None,
-        unimodal=True,
-        parafac2=None,
-        l1_penalty=None,
-        tv_penalty=1,
-        generalized_l2_penalty=None,
-        svd="truncated_svd",
-        dual_init=dual_init,
-        aux_init=aux_init,
-    )
+    with patch("matcouply.decomposition.tensorly.get_backend", return_value="numpy"):
+        out, verbosity_str = decomposition._parse_mode_penalties(
+            non_negative=True,
+            lower_bound=None,
+            upper_bound=None,
+            l2_norm_bound=None,
+            unimodal=True,
+            parafac2=None,
+            l1_penalty=None,
+            tv_penalty=1,
+            generalized_l2_penalty=None,
+            svd="truncated_svd",
+            dual_init=dual_init,
+            aux_init=aux_init,
+        )
     assert len(out) == 2
     if isinstance(out[0], penalties.Unimodality):
         u, tv = out
