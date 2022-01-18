@@ -19,7 +19,7 @@ MatCoupLy
     :target: https://github.com/psf/black
 
 
-MatCoupLy is a Python library for learning coupled matrix factorizations with flexible constraints and regularization with Python.
+MatCoupLy is a Python library for learning coupled matrix factorizations with flexible constraints and regularization.
 
 
 Installation
@@ -121,7 +121,7 @@ in the `online documentation <https://matcouply.readthedocs.io/en/latest/index.h
 
 .. code:: raw
 
-    Added mode 0 penalties and constraints:    
+    Added mode 0 penalties and constraints:
     * L2 ball constraint (with non-negativity)
     Added mode 1 penalties and constraints:
     * PARAFAC2
@@ -129,7 +129,7 @@ in the `online documentation <https://matcouply.readthedocs.io/en/latest/index.h
     * L2 ball constraint (with non-negativity)
     Added mode 2 penalties and constraints:
     * L1 penalty (with non-negativity)
-    converged in 175 iterations: FEASIBILITY GAP CRITERION AND RELATIVE LOSS CRITERION SATISFIED
+    converged in 218 iterations: FEASIBILITY GAP CRITERION AND RELATIVE LOSS CRITERION SATISFIED
 
 .. image:: figures/readme_components.png
     :alt: Plot of simulated and estimated components
