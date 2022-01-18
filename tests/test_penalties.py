@@ -1005,7 +1005,7 @@ class TestUnimodality(MixinTestHardConstraint, BaseTestFactorMatrixPenalty):
 
 
 def test_unimodality_skipped():
-    with patch("matcouply.decomposition.tensorly.get_backend", return_value="pytorch") as mock:
+    with patch("matcouply.decomposition.tensorly.get_backend", return_value="pytorch"):
         with pytest.raises(RuntimeError):
             penalties.Unimodality()
 
