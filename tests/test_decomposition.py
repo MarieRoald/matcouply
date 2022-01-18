@@ -1453,7 +1453,10 @@ def test_parafac2_makes_nn_cmf_unique(rng):
             rec_errors = diagnostics.rec_errors
 
     # Check that reconstruction error is low and that the correct factors are recovered
-    assert rec_errors[-1] < 1e-04
+    if tl.get_backend() == "numpy":
+        assert rec_errors[-1] < 1e-4
+    else:
+        assert rec_errors[-1] < 1e-3  # Single precision often has slightly worse performance
 
     # Low congruence coefficient tolerance to account for single precision (pytorch) being less accurate
     assert congruence_coefficient(A, out_cmf[1][0], absolute_value=True)[0] > 0.95
