@@ -976,6 +976,8 @@ class Unimodality(HardConstraintMixin, MatrixPenalty):
     """
 
     def __init__(self, non_negativity=False, aux_init="random_uniform", dual_init="random_uniform"):
+        if tl.get_backend() != "numpy":
+            raise RuntimeError("Unimodality is only supported with the Numpy backend")
         super().__init__(aux_init, dual_init)
         self.non_negativity = non_negativity
 

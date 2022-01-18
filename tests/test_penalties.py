@@ -1004,6 +1004,15 @@ class TestUnimodality(MixinTestHardConstraint, BaseTestFactorMatrixPenalty):
             mock.assert_called_once_with(non_stationary_matrix, non_negativity=non_negativity)
 
 
+def test_unimodality_skipped():
+    with patch("matcouply.decomposition.tensorly.get_backend", return_value="pytorch") as mock:
+        with pytest.raises(RuntimeError):
+            penalties.Unimodality()
+
+        with pytest.raises(RuntimeError):
+            penalties.Unimodality(non_negativity=True)
+
+
 class TestParafac2(BaseTestFactorMatricesPenalty):
     PenaltyType = penalties.Parafac2
 
