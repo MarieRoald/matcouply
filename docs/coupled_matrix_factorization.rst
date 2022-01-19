@@ -38,8 +38,8 @@ that their components cannot be directly interpreted. To see this, consider the 
     \end{bmatrix}
 
 A coupled matrix factorization of :math:`\{\mathbf{X}^{(i)}\}_{i=1}^I` can be interpreted as a 
-factorization of :math:`\mathbf{X}`, which is not unique. To obtain interpretable components, we,
-therefore, need to impose additional constraints.
+matrix factorization of :math:`\mathbf{X}`, which is known to have several solutions. Therefore,
+we need to impose additional constraints to obtain interpretable components.
 
 PARAFAC2
 ^^^^^^^^
@@ -51,16 +51,16 @@ PARAFAC2 model (therefore also called the *PARAFAC2 constraint*).
 
     {\mathbf{B}^{(i_1)}}^\mathsf{T}{\mathbf{B}^{(i_1)}} = {\mathbf{B}^{(i_2)}}^\mathsf{T}{\mathbf{B}^{(i_2)}}.
 
-Models with this constraint are named PARAFAC2 models, and they are commonly used in data mining
-:cite:p:`chew2007cross,gujral2020spade`, chemometrics :cite:p:`amigo2008solving`, and analysis of
-electronic health records :cite:p:`afshar2018copa`. 
+Coupled matrix factorization models with this constraint are named PARAFAC2 models, and they are
+commonly used in data mining :cite:p:`chew2007cross,gujral2020spade`, chemometrics :cite:p:`amigo2008solving`,
+and analysis of electronic health records :cite:p:`afshar2018copa`. 
 
 Non-negativity
 ^^^^^^^^^^^^^^
 
 Another popular constraint is non-negativity constraints, which are commonly imposed on all parameters of
 the model. Non-negativity constraints are commonly used for non-negative data, where we want non-negative
-components. While this constraint doesn't necessarily provide a unique model, it does improve the uniqueness
+components. While this constraint doesn't necessarily result in a unique model, it does improve the uniqueness
 properties of coupled matrix factorization models. Lately, it has also been a focus on adding non-negativity 
 constraints to PARAFAC2, which often provides a unique model :cite:p:`cohen2018nonnegative,van2020getting,roald2021admm`.
 The added non-negativity constraints improves PARAFAC2 model's numerical properties and it can also make

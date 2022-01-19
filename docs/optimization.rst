@@ -9,24 +9,26 @@ Objective function
 To fit a coupled matrix factorization, we solve the following optimization problem
 
 .. math::
-    \min_{\mathbf{A}, \{\mathbf{B}_i\}_{i=1}^I, \mathbf{C}}
-    \frac{1}{2} \sum_{i=1}^I \frac{\| \mathbf{B}_i \mathbf{D}_i \mathbf{C}^\mathsf{T} - \mathbf{X}_i\|^2}{\|\mathbf{X}_i\|^2}.
+    \min_{\mathbf{A}, \{\mathbf{B}^{(i)}\}_{i=1}^I, \mathbf{C}}
+    \frac{1}{2} \sum_{i=1}^I \frac{\| \mathbf{B}^{(i)} \mathbf{D}^{(i)} \mathbf{C}^\mathsf{T} - \mathbf{X}^{(i)}\|^2}{\|\mathbf{X}^{(i)}\|^2},
 
-However, this problem does not have a unique solution, and each time we fit a coupled matrx
-factorization, we may obtain different factor matrices. As a consequence, we cannot interpret
-the factor matrices. To circumvent this problem, it is common to add regularization, forming
-the following optimisation problem
+where :math:`\mathbf{A}` is the matrix obtained by stacking the diagonal entries of all
+:math:`\mathbf{D}^{(i)}`-matrices. However, as discussed in :doc:`coupled_matrix_factorization`, this problem does not
+have a unique solution, and each time we fit a coupled matrix factorization, we may obtain
+different factor matrices. As a consequence, we cannot interpret the factor matrices.
+To circumvent this problem, it is common to add regularization, forming the following
+optimisation problem
 
 .. math::
-    \min_{\mathbf{A}, \{\mathbf{B}_i\}_{i=1}^I, \mathbf{C}}
-    \frac{1}{2} \sum_{i=1}^I \frac{\| \mathbf{B}_i \mathbf{D}_i \mathbf{C}^\mathsf{T} - \mathbf{X}_i\|^2}{\|\mathbf{X}_i\|^2}
+    \min_{\mathbf{A}, \{\mathbf{B}^{(i)}\}_{i=1}^I, \mathbf{C}}
+    \frac{1}{2} \sum_{i=1}^I \frac{\| \mathbf{B}^{(i)} \mathbf{D}^{(i)} \mathbf{C}^\mathsf{T} - \mathbf{X}^{(i)}\|^2}{\|\mathbf{X}^{(i)}\|^2}
     + \sum_{n=1}^{N_\mathbf{A}} g^{(A)}_n(\mathbf{A})
-    + \sum_{n=1}^{N_\mathbf{B}} g^{(B)}_n(\{ \mathbf{B}_i \}_{i=1}^I)
+    + \sum_{n=1}^{N_\mathbf{B}} g^{(B)}_n(\{ \mathbf{B}^{(i)} \}_{i=1}^I)
     + \sum_{n=1}^{N_\mathbf{C}} g^{(C)}_n(\mathbf{C}),
 
 where the :math:`g`-functions are regularization penalties, and :math:`N_\mathbf{A}, N_\mathbf{B}`
 and :math:`N_\mathbf{C}` are the number of regularization penalties for 
-:math:`\mathbf{A}, \{\mathbf{B}\}_{i=1}^I` and :math:`\mathbf{C}`, respectively.
+:math:`\mathbf{A}, \{\mathbf{B}^{(i)}\}_{i=1}^I` and :math:`\mathbf{C}`, respectively.
 
 The formulation above also encompasses hard constraints, such as :math:`a_{ir} \geq 0` for
 any index :math:`(i, r)`. To obtain such a constraint, we set 
@@ -53,21 +55,21 @@ the following three optimization subproblems:
 
 .. math::
     \min_{\mathbf{A}}
-    \frac{1}{2} \sum_{i=1}^I \| \mathbf{B}_i \mathbf{D}_i \mathbf{C}^\mathsf{T} - \mathbf{X}_i\|^2
+    \frac{1}{2} \sum_{i=1}^I \| \mathbf{B}^{(i)} \mathbf{D}^{(i)} \mathbf{C}^\mathsf{T} - \mathbf{X}^{(i)}\|^2
     + \sum_{n=1}^{N_\mathbf{A}} g^{(A)}_n(\mathbf{A}),
 
 .. math::
-    \min_{\{\mathbf{B}_i\}_{i=1}^I}
-    \frac{1}{2} \sum_{i=1}^I \| \mathbf{B}_i \mathbf{D}_i \mathbf{C}^\mathsf{T} - \mathbf{X}_i\|^2
-    + \sum_{n=1}^{N_\mathbf{B}} g^{(B)}_n(\{ \mathbf{B}_i \}_{i=1}^I),
+    \min_{\{\mathbf{B}^{(i)}\}_{i=1}^I}
+    \frac{1}{2} \sum_{i=1}^I \| \mathbf{B}^{(i)} \mathbf{D}^{(i)} \mathbf{C}^\mathsf{T} - \mathbf{X}^{(i)}\|^2
+    + \sum_{n=1}^{N_\mathbf{B}} g^{(B)}_n(\{ \mathbf{B}^{(i)} \}_{i=1}^I),
 
 .. math::
     \min_{\mathbf{C}}
-    \frac{1}{2} \sum_{i=1}^I \| \mathbf{B}_i \mathbf{D}_i \mathbf{C}^\mathsf{T} - \mathbf{X}_i\|^2
+    \frac{1}{2} \sum_{i=1}^I \| \mathbf{B}^{(i)} \mathbf{D}^{(i)} \mathbf{C}^\mathsf{T} - \mathbf{X}^{(i)}\|^2
     + \sum_{n=1}^{N_\mathbf{C}} g^{(C)}_n(\mathbf{C}),
 
 which we solve approximately, one at a time, using a few iterations of ADMM. We repeat this
-process, updating :math:`\mathbf{A}, \{\mathbf{B}_i\}_{i=1}^I` and :math:`\mathbf{C}` untill
+process, updating :math:`\mathbf{A}, \{\mathbf{B}^{(i)}\}_{i=1}^I` and :math:`\mathbf{C}` untill
 some convergence criteria are satisfied.
 
 The benefit of AO-ADMM is its flexibility in terms of regularization and constraints. We
@@ -145,10 +147,10 @@ We separate the penalty functions into three categories: row-wise penalties, mat
 and multi-matrix penalties:
 
 * *Multi-matrix* penalties are penalties that penalise behaviour across 
-  multiple :math:`\mathbf{B}_i`-matrices at once (e.g. the PARAFAC2 constraint: :meth:`matcouply.penalties.Parafac2`).
+  multiple :math:`\mathbf{B}^{(i)}`-matrices at once (e.g. the PARAFAC2 constraint: :meth:`matcouply.penalties.Parafac2`).
 * *Matrix-wise* penalties are penalties full matrices (or columns of full matrices) at once
   (e.g. total variation regularization: :meth:`matcouply.penalties.TotalVariationPenalty`) and can be
-  applied either to the :math:`\mathbf{B}_i`-matrices, or the :math:`\mathbf{C}`-matrix with no.
+  applied either to the :math:`\mathbf{B}^{(i)}`-matrices, or the :math:`\mathbf{C}`-matrix with no.
 * Finally, *row-wise* penalties are penalties that single rows (or elements) of a matrix at a time
   (e.g. non-negativity: :meth:`matcouply.penalties.NonNegativity`. These penalties can be applied to
   any factor matrix.
@@ -156,11 +158,11 @@ and multi-matrix penalties:
 .. note::
 
     We can also apply matrix-wise penalties on :math:`\mathbf{A}` and special multi-matrix
-    penalties that require a constant feasibility penalty for all :math:`\mathbf{B}_i`-matrices
+    penalties that require a constant feasibility penalty for all :math:`\mathbf{B}^{(i)}`-matrices
     by using the `constant_feasibility_penalty=True` argument. There are currently no
     multi-matrix penalties that require a constant feasibility penalty in MatCoupLy. An example
     of such a penalty could be a similarity-based penalty across the different
-    :math:`\mathbf{B}_i`-matrices.
+    :math:`\mathbf{B}^{(i)}`-matrices.
 
 Stopping conditions
 ^^^^^^^^^^^^^^^^^^^
@@ -182,7 +184,7 @@ be satisfied
 .. math::
     \frac{\|\mathbf{x}^{(t, q)} - \mathbf{z}^{(t, q-1)}\|}{\|\mathbf{z}^{(t, q)}\|} < \epsilon_{\text{inner}},
 
-where :math:`\mathbf{x}^{(t, q)}` is the variable whose linear system we solve (i.e. :math:`\mathbf{A}, \{\mathbf{B}\}_{i=1}^I`
+where :math:`\mathbf{x}^{(t, q)}` is the variable whose linear system we solve (i.e. :math:`\mathbf{A}, \{\mathbf{B}^{(i)}\}_{i=1}^I`
 or :math:`\mathbf{C}`) and :math:`t` and :math:`q` represent the outer and inner iteration number, respectively.
 
 **Outer loop (AO-ADMM):**
@@ -211,7 +213,7 @@ The feasibility conditions must also be satisfied for stopping the AO-ADMM algor
 .. math::
     \frac{\|\mathbf{x}^{(t)} - \mathbf{z}^{(t)}\|}{\|\mathbf{x}^{(t)}\|} \leq \epsilon_{\text{feasibility}},
 
-where :math:`\mathbf{x}^{(t)}` represents :math:`\mathbf{A}, \{\mathbf{B}\}_{i=1}^I` or :math:`\mathbf{C}` after :math:`t`
+where :math:`\mathbf{x}^{(t)}` represents :math:`\mathbf{A}, \{\mathbf{B}^{(i)}\}_{i=1}^I` or :math:`\mathbf{C}` after :math:`t`
 outer iterations and :math:`\mathbf{z}^{(t)}` represents a corresponding auxiliary variable after after :math:`t`
 outer iterations. The feasibility conditions must be satisfied for all auxiliary variables for all modes for stopping
 the outer loop.
