@@ -229,47 +229,49 @@ def test_compute_feasibility_gaps(rng, random_ragged_cmf):
 
 
 def test_parse_all_penalties():
-    # Check that regularization is added
-    regs = decomposition._parse_all_penalties(
-        non_negative=1,
-        lower_bound=2,
-        upper_bound=3,
-        l2_norm_bound=4,
-        unimodal=5,
-        parafac2=False,
-        l1_penalty=7,
-        tv_penalty=8,
-        generalized_l2_penalty=None,
-        svd="truncated_svd",
-        dual_init="random_uniform",
-        aux_init="random_uniform",
-        verbose=False,
-        regs=None,
-    )
-    num_reg = len(regs[0])
-    for reg_list in regs:
-        assert len(reg_list) == num_reg
+    # Patch get backend since unimodality raises runtime error with non-numpy backend
+    with patch("matcouply.decomposition.tensorly.get_backend", return_value="numpy"):
+        # Check that regularization is added
+        regs = decomposition._parse_all_penalties(
+            non_negative=1,
+            lower_bound=2,
+            upper_bound=3,
+            l2_norm_bound=4,
+            unimodal=5,
+            parafac2=False,
+            l1_penalty=7,
+            tv_penalty=8,
+            generalized_l2_penalty=None,
+            svd="truncated_svd",
+            dual_init="random_uniform",
+            aux_init="random_uniform",
+            verbose=False,
+            regs=None,
+        )
+        num_reg = len(regs[0])
+        for reg_list in regs:
+            assert len(reg_list) == num_reg
 
-    # Check that parafac2 is only applied on second mode
-    regs = decomposition._parse_all_penalties(
-        non_negative=1,
-        lower_bound=2,
-        upper_bound=3,
-        l2_norm_bound=4,
-        unimodal=5,
-        parafac2=True,
-        l1_penalty=7,
-        tv_penalty=8,
-        generalized_l2_penalty=None,
-        svd="truncated_svd",
-        dual_init="random_uniform",
-        aux_init="random_uniform",
-        verbose=False,
-        regs=None,
-    )
-    num_reg = len(regs[0])
-    assert len(regs[1]) == num_reg + 1
-    assert len(regs[2]) == num_reg
+        # Check that parafac2 is only applied on second mode
+        regs = decomposition._parse_all_penalties(
+            non_negative=1,
+            lower_bound=2,
+            upper_bound=3,
+            l2_norm_bound=4,
+            unimodal=5,
+            parafac2=True,
+            l1_penalty=7,
+            tv_penalty=8,
+            generalized_l2_penalty=None,
+            svd="truncated_svd",
+            dual_init="random_uniform",
+            aux_init="random_uniform",
+            verbose=False,
+            regs=None,
+        )
+        num_reg = len(regs[0])
+        assert len(regs[1]) == num_reg + 1
+        assert len(regs[2]) == num_reg
 
     # Check that we only have one reg when only non-negativity is imposed
     regs = decomposition._parse_all_penalties(
@@ -413,77 +415,79 @@ def test_parse_all_penalties():
 
 
 def test_parse_all_penalties_verbose(capfd):
-    # Check nothing is printed without verbose
-    _ = decomposition._parse_all_penalties(
-        non_negative=[None, None, None],
-        lower_bound=1,
-        upper_bound=2,
-        l2_norm_bound=3,
-        unimodal=4,
-        parafac2=True,
-        l1_penalty=5,
-        tv_penalty=6,
-        generalized_l2_penalty=[None, tl.eye(10), None],
-        svd="truncated_svd",
-        dual_init="random_uniform",
-        aux_init="random_uniform",
-        verbose=False,
-        regs=None,
-    )
-    out, err = capfd.readouterr()
-    assert len(out) == 0
+    # Patch get backend since unimodality raises runtime error with non-numpy backend
+    with patch("matcouply.decomposition.tensorly.get_backend", return_value="numpy"):
+        # Check nothing is printed without verbose
+        _ = decomposition._parse_all_penalties(
+            non_negative=[None, None, None],
+            lower_bound=1,
+            upper_bound=2,
+            l2_norm_bound=3,
+            unimodal=4,
+            parafac2=True,
+            l1_penalty=5,
+            tv_penalty=6,
+            generalized_l2_penalty=[None, tl.eye(10), None],
+            svd="truncated_svd",
+            dual_init="random_uniform",
+            aux_init="random_uniform",
+            verbose=False,
+            regs=None,
+        )
+        out, err = capfd.readouterr()
+        assert len(out) == 0
 
-    # Check that text is printed out when verbose is True
-    _ = decomposition._parse_all_penalties(
-        non_negative=[None, None, None],
-        lower_bound=1,
-        upper_bound=2,
-        l2_norm_bound=3,
-        unimodal=4,
-        parafac2=True,
-        l1_penalty=5,
-        tv_penalty=6,
-        generalized_l2_penalty=[None, tl.eye(10), None],
-        svd="truncated_svd",
-        dual_init="random_uniform",
-        aux_init="random_uniform",
-        verbose=True,
-        regs=None,
-    )
-    out, err = capfd.readouterr()
-    assert len(out) > 0
+        # Check that text is printed out when verbose is True
+        _ = decomposition._parse_all_penalties(
+            non_negative=[None, None, None],
+            lower_bound=1,
+            upper_bound=2,
+            l2_norm_bound=3,
+            unimodal=4,
+            parafac2=True,
+            l1_penalty=5,
+            tv_penalty=6,
+            generalized_l2_penalty=[None, tl.eye(10), None],
+            svd="truncated_svd",
+            dual_init="random_uniform",
+            aux_init="random_uniform",
+            verbose=True,
+            regs=None,
+        )
+        out, err = capfd.readouterr()
+        assert len(out) > 0
 
-    # Check excact output for a small testcase with one penalty
-    _ = decomposition._parse_all_penalties(
-        non_negative={2: True},
-        lower_bound=None,
-        upper_bound=None,
-        l2_norm_bound=None,
-        unimodal=None,
-        parafac2=False,
-        l1_penalty=None,
-        tv_penalty=None,
-        generalized_l2_penalty=None,
-        svd="truncated_svd",
-        dual_init="random_uniform",
-        aux_init="random_uniform",
-        verbose=True,
-        regs=None,
-    )
-    out, err = capfd.readouterr()
-    assert len(out) > 0
-    message = (
-        "Added mode 0 penalties and constraints:"
-        + "\n"
-        + " (no additional regularization added)\n"
-        + "Added mode 1 penalties and constraints:"
-        + "\n"
-        + " (no additional regularization added)\n"
-        + "Added mode 2 penalties and constraints:"
-        + "\n"
-        + " * Non negativity constraints\n"
-    )
-    assert out == message
+        # Check excact output for a small testcase with one penalty
+        _ = decomposition._parse_all_penalties(
+            non_negative={2: True},
+            lower_bound=None,
+            upper_bound=None,
+            l2_norm_bound=None,
+            unimodal=None,
+            parafac2=False,
+            l1_penalty=None,
+            tv_penalty=None,
+            generalized_l2_penalty=None,
+            svd="truncated_svd",
+            dual_init="random_uniform",
+            aux_init="random_uniform",
+            verbose=True,
+            regs=None,
+        )
+        out, err = capfd.readouterr()
+        assert len(out) > 0
+        message = (
+            "Added mode 0 penalties and constraints:"
+            + "\n"
+            + " (no additional regularization added)\n"
+            + "Added mode 1 penalties and constraints:"
+            + "\n"
+            + " (no additional regularization added)\n"
+            + "Added mode 2 penalties and constraints:"
+            + "\n"
+            + " * Non negativity constraints\n"
+        )
+        assert out == message
 
 
 @pytest.mark.parametrize(
@@ -947,6 +951,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
     assert l1.reg_strength == 2
 
     # Unimodality
+    # Patch get_backend since unimodality constraints raises runtime error on non-numpy backend
     with patch("matcouply.decomposition.tensorly.get_backend", return_value="numpy"):
         out, verbosity_str = decomposition._parse_mode_penalties(
             non_negative=False,
@@ -967,6 +972,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
     assert not out[0].non_negativity
 
     # Unimodality + NN
+    # Patch get_backend since unimodality constraints raises runtime error on non-numpy backend
     with patch("matcouply.decomposition.tensorly.get_backend", return_value="numpy"):
         out, verbosity_str = decomposition._parse_mode_penalties(
             non_negative=True,
@@ -987,6 +993,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
     assert out[0].non_negativity
 
     # Unimodality + NN + TV
+    # Patch get_backend since unimodality constraints raises runtime error on non-numpy backend
     with patch("matcouply.decomposition.tensorly.get_backend", return_value="numpy"):
         out, verbosity_str = decomposition._parse_mode_penalties(
             non_negative=True,
