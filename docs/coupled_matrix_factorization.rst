@@ -1,5 +1,5 @@
-Coupled Matrix Factorizations
-=============================
+What are coupled matrix factorizations?
+======================================= 
 
 MatCoupLy computes coupled matrix factorizations, which are useful for finding patterns in
 collections of matrices and third order tensors. A coupled matrix factorization is used to jointly
@@ -45,7 +45,7 @@ PARAFAC2
 ^^^^^^^^
 
 One popular constraint used to obtain uniqueness is the *constant cross product constraint* of the
-PARAFAC2 model (therefore also called the *PARAFAC2 constraint*). 
+PARAFAC2 model :cite:p:`harshman1972parafac2,kiers1999parafac2,harshman1996uniqueness` (therefore also called the *PARAFAC2 constraint*). 
 
 .. math::
 

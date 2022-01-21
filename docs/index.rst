@@ -10,6 +10,7 @@ Welcome to MatCoupLy's documentation!
    :maxdepth: 2
    :caption: Contents:
    
+   about_matcouply
    coupled_matrix_factorization
    optimization
    installation
