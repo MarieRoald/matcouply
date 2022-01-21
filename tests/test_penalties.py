@@ -199,10 +199,10 @@ class BaseTestADMMPenalty:
         J_is = [tl.shape(B_i)[0] for B_i in B_is]
         K = tl.shape(C)[0]
 
-        invalid_A = tl.tensor(rng.random((I + 1, rank)))
-        invalid_C = tl.tensor(rng.random((K + 1, rank)))
-        invalid_B_is = [tl.tensor(rng.random((J_i, rank))) for J_i in J_is]
-        invalid_B_is[0] = tl.tensor(rng.random((J_is[0] + 1, rank)))
+        invalid_A = tl.tensor(rng.random_sample((I + 1, rank)))
+        invalid_C = tl.tensor(rng.random_sample((K + 1, rank)))
+        invalid_B_is = [tl.tensor(rng.random_sample((J_i, rank))) for J_i in J_is]
+        invalid_B_is[0] = tl.tensor(rng.random_sample((J_is[0] + 1, rank)))
 
         penalty = self.PenaltyType(aux_init=invalid_A, dual_init=dual_init, **self.penalty_default_kwargs)
         with pytest.raises(ValueError):
@@ -346,10 +346,10 @@ class BaseTestADMMPenalty:
         J_is = [tl.shape(B_i)[0] for B_i in B_is]
         K = tl.shape(C)[0]
 
-        invalid_A = tl.tensor(rng.random((I + 1, rank)))
-        invalid_C = tl.tensor(rng.random((K + 1, rank)))
-        invalid_B_is = [tl.tensor(rng.random((J_i, rank))) for J_i in J_is]
-        invalid_B_is[0] = tl.tensor(rng.random((J_is[0] + 1, rank)))
+        invalid_A = tl.tensor(rng.random_sample((I + 1, rank)))
+        invalid_C = tl.tensor(rng.random_sample((K + 1, rank)))
+        invalid_B_is = [tl.tensor(rng.random_sample((J_i, rank))) for J_i in J_is]
+        invalid_B_is[0] = tl.tensor(rng.random_sample((J_is[0] + 1, rank)))
 
         penalty = self.PenaltyType(aux_init=aux_init, dual_init=invalid_A, **self.penalty_default_kwargs)
         with pytest.raises(ValueError):
@@ -735,11 +735,11 @@ class TestL2BallConstraint(MixinTestHardConstraint, BaseTestFactorMatrixPenalty)
     penalty_default_kwargs = {"norm_bound": 1}
 
     def get_stationary_matrix(self, rng, shape):
-        random_matrix = tl.tensor(rng.random(shape))
+        random_matrix = tl.tensor(rng.random_sample(shape))
         return random_matrix / math.sqrt(shape[0])
 
     def get_non_stationary_matrix(self, rng, shape):
-        random_matrix = tl.tensor(rng.random(shape) + 10)
+        random_matrix = tl.tensor(rng.random_sample(shape) + 10)
         return 10 + random_matrix / math.sqrt(shape[0])
 
     def test_input_is_checked(self):
@@ -754,9 +754,9 @@ class TestL2BallConstraint(MixinTestHardConstraint, BaseTestFactorMatrixPenalty)
         negative_matrix = tl.ones((30, 5)) * (-100)
         feasibility_penalty = 1
         aux = None
-        l1_penalty = self.PenaltyType(1, non_negativity=True)
+        penalty = self.PenaltyType(1, non_negativity=True)
 
-        out = l1_penalty.factor_matrix_update(negative_matrix, feasibility_penalty, aux)
+        out = penalty.factor_matrix_update(negative_matrix, feasibility_penalty, aux)
         assert_array_equal(out, 0)
 
 
@@ -804,7 +804,7 @@ class TestGeneralizedL2Penalty(BaseTestFactorMatrixPenalty):
         return tl.ones(shape)
 
     def get_non_stationary_matrix(self, rng, shape):
-        return tl.tensor(rng.random(size=shape))
+        return tl.tensor(rng.random_sample(size=shape))
 
     @pytest.fixture
     def stationary_matrix(self, rng):
@@ -844,12 +844,12 @@ class TestGeneralizedL2Penalty(BaseTestFactorMatrixPenalty):
     @pytest.fixture
     def random_matrix(self, rng):
         shape = self.n_rows, rng.randint(1, 10)
-        return tl.tensor(rng.random(size=shape))
+        return tl.tensor(rng.random_sample(size=shape))
 
     @pytest.fixture
     def random_matrices(self, rng):
         shape = self.n_rows, rng.randint(1, 10)
-        return [tl.tensor(rng.random(size=shape)) for _ in range(rng.randint(2, 10))]
+        return [tl.tensor(rng.random_sample(size=shape)) for _ in range(rng.randint(2, 10))]
 
     def test_penalty(self, random_regular_cmf):
         cmf, shapes, rank = random_regular_cmf
@@ -860,6 +860,15 @@ class TestGeneralizedL2Penalty(BaseTestFactorMatrixPenalty):
 
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
         assert penalty.penalty(B_is[0]) == pytest.approx(penalty_manual)
+
+    def test_update_is_correct_on_example(self, rng):
+        penalty = self.PenaltyType(**self.penalty_default_kwargs)
+        X = tl.tensor(rng.random_sample(size=(self.n_rows, 10)))
+        feasibility_penalty = 5
+        Y = penalty.factor_matrix_update(X, feasibility_penalty, None)
+
+        aug_norm_matrix = self.norm_matrix + 0.5 * feasibility_penalty * tl.eye(self.n_rows)
+        assert_allclose(Y, tl.solve(aug_norm_matrix, 2.5 * X))
 
 
 @pytest.mark.skipif(
@@ -939,6 +948,17 @@ class TestTotalVariationPenalty(BaseTestFactorMatrixPenalty):
         with pytest.raises(ModuleNotFoundError):
             tv_penalty = self.PenaltyType(reg_strength=1, l1_strength=0)  # pragma: noqa
         penalties.HAS_TV = HAS_TV
+
+    def test_l1_is_applied(self):
+        shape = (10, 3)
+        normally_stationary_matrix = tl.ones(shape)
+        penalty_without_l1 = self.PenaltyType(reg_strength=1, l1_strength=0)
+        assert_allclose(
+            normally_stationary_matrix, penalty_without_l1.factor_matrix_update(normally_stationary_matrix, 1, None)
+        )
+
+        penalty_with_l1 = self.PenaltyType(reg_strength=1, l1_strength=1000)
+        assert_allclose(tl.zeros(shape), penalty_with_l1.factor_matrix_update(normally_stationary_matrix, 1, None))
 
 
 class TestNonNegativity(MixinTestHardConstraint, BaseTestRowVectorPenalty):

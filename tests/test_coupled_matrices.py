@@ -126,30 +126,30 @@ def test_validate_cmf(rng, random_ragged_cmf):
     # ## Factor matrices
     # One of the matrices is a third order tensor
     with pytest.raises(ValueError):
-        coupled_matrices._validate_cmf((weights, (tl.tensor(rng.random(size=(4, rank, rank))), B_is, C)))
+        coupled_matrices._validate_cmf((weights, (tl.tensor(rng.random_sample(size=(4, rank, rank))), B_is, C)))
     with pytest.raises(ValueError):
-        coupled_matrices._validate_cmf((weights, (A, B_is, tl.tensor(rng.random(size=(4, rank, rank))))))
+        coupled_matrices._validate_cmf((weights, (A, B_is, tl.tensor(rng.random_sample(size=(4, rank, rank))))))
     with pytest.raises(ValueError):
         B_is_copy = copy(B_is)
-        B_is_copy[0] = tl.tensor(rng.random(size=(4, rank, rank)))
+        B_is_copy[0] = tl.tensor(rng.random_sample(size=(4, rank, rank)))
         coupled_matrices._validate_cmf((weights, (A, B_is_copy, C)))
 
     # One of the matrices is a vector
     with pytest.raises(ValueError):
-        coupled_matrices._validate_cmf((weights, (tl.tensor(rng.random(size=(rank,))), B_is, C)))
+        coupled_matrices._validate_cmf((weights, (tl.tensor(rng.random_sample(size=(rank,))), B_is, C)))
     with pytest.raises(ValueError):
-        coupled_matrices._validate_cmf((weights, (A, B_is, tl.tensor(rng.random(size=(rank,))))))
+        coupled_matrices._validate_cmf((weights, (A, B_is, tl.tensor(rng.random_sample(size=(rank,))))))
     with pytest.raises(ValueError):
         B_is_copy = copy(B_is)
-        B_is_copy[0] = tl.tensor(rng.random(size=(rank,)))
+        B_is_copy[0] = tl.tensor(rng.random_sample(size=(rank,)))
         coupled_matrices._validate_cmf((weights, (A, B_is_copy, C)))
 
     # ## Check wrong rank
     # Check with incorrect rank for one of the factors
-    invalid_A = tl.tensor(rng.random((len(shapes), rank + 1)))
-    invalid_C = tl.tensor(rng.random((shapes[0][1], rank + 1)))
-    invalid_B_is_2 = [tl.tensor(rng.random((j_i, rank))) for j_i, k in shapes]
-    invalid_B_is_2[0] = tl.tensor(rng.random((shapes[0][0], rank + 1)))
+    invalid_A = tl.tensor(rng.random_sample((len(shapes), rank + 1)))
+    invalid_C = tl.tensor(rng.random_sample((shapes[0][1], rank + 1)))
+    invalid_B_is_2 = [tl.tensor(rng.random_sample((j_i, rank))) for j_i, k in shapes]
+    invalid_B_is_2[0] = tl.tensor(rng.random_sample((shapes[0][0], rank + 1)))
 
     # Both A and C have the wrong rank:
     with pytest.raises(ValueError):
@@ -182,7 +182,7 @@ def test_cmf_to_matrix(rng, random_ragged_cmf):
 
     # Test that it always fails when a single B_i is invalid and validate=True
     invalid_B_is = copy(B_is)
-    invalid_B_is[0] = tl.tensor(rng.random((tl.shape(B_is[0])[0], tl.shape(B_is[0])[1] + 1)))
+    invalid_B_is[0] = tl.tensor(rng.random_sample((tl.shape(B_is[0])[0], tl.shape(B_is[0])[1] + 1)))
     invalid_cmf = (weights, (A, invalid_B_is, C))
 
     for i, _ in enumerate(invalid_B_is):
@@ -214,7 +214,7 @@ def test_cmf_to_matrices(rng, random_ragged_cmf):
         assert_allclose(matrix, manually_assembled_matrix)
 
     invalid_B_is = copy(B_is)
-    invalid_B_is[0] = tl.tensor(rng.random((tl.shape(B_is[0])[0], tl.shape(B_is[0])[1] + 1)))
+    invalid_B_is[0] = tl.tensor(rng.random_sample((tl.shape(B_is[0])[0], tl.shape(B_is[0])[1] + 1)))
     invalid_cmf = (weights, (A, invalid_B_is, C))
 
     # Test that it always fails when a single B_i is invalid and validate=True

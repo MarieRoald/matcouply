@@ -12,7 +12,7 @@ import matcouply
 from matcouply import coupled_matrices, decomposition, penalties
 from matcouply._utils import get_svd
 from matcouply.coupled_matrices import CoupledMatrixFactorization
-from matcouply.penalties import NonNegativity
+from matcouply.penalties import BoxConstraint, L2Ball, NonNegativity
 from matcouply.testing import assert_allclose
 
 from .utils import RTOL_SCALE, all_combinations
@@ -78,7 +78,7 @@ def test_initialize_cmf_invalid_init(rng):
 )
 def test_initialize_aux(rng, rank):
     shapes = ((5, 10), (10, 10), (15, 10))
-    matrices = [rng.random(shape) for shape in shapes]
+    matrices = [rng.random_sample(shape) for shape in shapes]
 
     reg = [[NonNegativity(), NonNegativity(), NonNegativity()], [NonNegativity()], []]
     A_aux_list, B_aux_list, C_aux_list = decomposition.initialize_aux(matrices, rank, reg, rng)
@@ -101,7 +101,7 @@ def test_initialize_aux(rng, rank):
 )
 def test_initialize_dual(rng, rank):
     shapes = ((5, 10), (10, 10), (15, 10))
-    matrices = [rng.random(shape) for shape in shapes]
+    matrices = [rng.random_sample(shape) for shape in shapes]
 
     reg = [[NonNegativity(), NonNegativity(), NonNegativity()], [NonNegativity()], []]
     A_dual_list, B_dual_list, C_dual_list = decomposition.initialize_dual(matrices, rank, reg, rng)
@@ -1385,18 +1385,18 @@ def test_cmf_aoadmm(rng, random_ragged_cmf):
         )
 
     # Test that we get correct amount of auxes and duals with only one constraint on B
-    regs = [[], [NonNegativity()], []]
+    regs = [[NonNegativity()], [NonNegativity(), L2Ball()], [NonNegativity(), L2Ball(), BoxConstraint(0, 1)]]
     out_cmf, (aux, dual), diagnostics = decomposition.cmf_aoadmm(
         matrices, rank, n_iter_max=10, return_errors=True, return_admm_vars=True, regs=regs
     )
     assert len(aux) == 3
     assert len(dual) == 3
-    assert len(aux[1]) == 1
-    assert len(dual[1]) == 1
-    assert len(aux[0]) == 0
-    assert len(dual[0]) == 0
-    assert len(aux[2]) == 0
-    assert len(dual[2]) == 0
+    assert len(aux[0]) == 1
+    assert len(dual[0]) == 1
+    assert len(aux[1]) == 2
+    assert len(dual[1]) == 2
+    assert len(aux[2]) == 3
+    assert len(dual[2]) == 3
 
     # Test that feasibility_tol can be None
     regs = [[], [NonNegativity()], []]
