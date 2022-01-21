@@ -20,7 +20,7 @@ MatCoupLy
 
 
 MatCoupLy is a Python library for learning coupled matrix factorizations with flexible constraints and regularization.
-
+For a quick introduction to coupled matrix factorization and PARAFAC2 see the `online documentation <https://matcouply.readthedocs.io/en/latest/index.html>`_.
 
 Installation
 ------------
