@@ -699,7 +699,7 @@ class GeneralizedL2Penalty(MatrixPenalty):
             raise ValueError("The norm matrix should be symmetric positive semidefinite")
         if validate and tl.get_backend() == "numpy":
             eigvals = np.linalg.eigvals(norm_matrix)
-            if np.any(eigvals < 0):
+            if np.any(eigvals < -1e-14):
                 raise ValueError("The norm matrix should be symmetric positive semidefinite")
 
         self.svd_fun = get_svd(svd)
@@ -800,14 +800,14 @@ class TotalVariationPenalty(MatrixPenalty):
             condat_tv.tv_denoise_matrix(tl.transpose(factor_matrix), self.reg_strength * 2 / feasibility_penalty)
         )
         if self.l1_strength:
-            return tl.sign(X) * tl.max(abs(X) - self.l1_strength * 2 / feasibility_penalty, 0)
+            return tl.sign(X) * tl.clip(tl.abs(X) - self.l1_strength / feasibility_penalty, 0, float("inf"))
         else:
             return X
 
     def _penalty(self, x):
         penalty = self.reg_strength * tl.sum(tl.abs(np.diff(x, axis=0)))
         if self.l1_strength:
-            penalty = penalty + self.l1_strength * tl.sum(tl.abs(x))  # TODO: Test this
+            penalty = penalty + self.l1_strength * tl.sum(tl.abs(x))
         return penalty
 
     @copy_ancestor_docstring
@@ -896,7 +896,7 @@ class L2Ball(HardConstraintMixin, MatrixPenalty):
     @copy_ancestor_docstring
     def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
         if self.non_negativity:
-            factor_matrix = tl.clip(factor_matrix, 0, float("inf"))  # TODO: Test this
+            factor_matrix = tl.clip(factor_matrix, 0, float("inf"))
         column_norms = tl.sqrt(tl.sum(factor_matrix ** 2, axis=0))
         column_norms = tl.clip(column_norms, self.norm_bound, float("inf"))
         return factor_matrix * self.norm_bound / column_norms
