@@ -1385,7 +1385,7 @@ def test_cmf_aoadmm(rng, random_ragged_cmf):
         )
 
     # Test that we get correct amount of auxes and duals with only one constraint on B
-    regs = [[NonNegativity()], [NonNegativity(), L2Ball()], [NonNegativity(), L2Ball(), BoxConstraint(0, 1)]]
+    regs = [[NonNegativity()], [NonNegativity(), L2Ball(1)], [NonNegativity(), L2Ball(1), BoxConstraint(0, 1)]]
     out_cmf, (aux, dual), diagnostics = decomposition.cmf_aoadmm(
         matrices, rank, n_iter_max=10, return_errors=True, return_admm_vars=True, regs=regs
     )
