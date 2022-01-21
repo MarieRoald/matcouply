@@ -868,7 +868,7 @@ class TestGeneralizedL2Penalty(BaseTestFactorMatrixPenalty):
         Y = penalty.factor_matrix_update(X, feasibility_penalty, None)
 
         aug_norm_matrix = self.norm_matrix + 0.5 * feasibility_penalty * tl.eye(self.n_rows)
-        assert_allclose(Y, tl.solve(aug_norm_matrix, 2.5 * X))
+        assert_allclose(Y, tl.solve(aug_norm_matrix, 2.5 * X), rtol=RTOL_SCALE*1e-7)
 
 
 @pytest.mark.skipif(
