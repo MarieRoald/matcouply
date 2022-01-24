@@ -5,8 +5,21 @@ from tensorly._factorized_tensor import FactorizedTensor
 class CoupledMatrixFactorization(FactorizedTensor):
     r"""Class wrapper for coupled matrix factorizations.
 
-    This class validates the decomposition and provides conversion to
-    dense formats via methods.
+    Coupled matrix factorizations decompositions represent stacks of matrices and are on the form
+    :math:`(\mathbf{A} [\mathbf{B}^{(0)}, \mathbf{B}^{(1)}, ..., \mathbf{B}^{(I-1)}] \mathbf{C})`,
+    such that the i-th matrix, :math:`\mathbf{X}^{(i)}` is given by
+
+    .. math::
+
+        \mathbf{X}^{(i)} = \mathbf{B}^{(i)} \text{diag}(\mathbf{a}_i) \mathbf{C}^T,
+
+    where :math:`\text{diag}(\mathbf{a}_i)` is the diagonal matrix whose nonzero entries are
+    equal to the :math:`i`-th row of the :math:`I \times R` factor matrix :math:`\mathbf{A}`,
+    :math:`\mathbf{B}^{(i)}` is a :math:`J_i \times R` factor matrix, and :math:`\mathbf{C}`
+    is a :math:`K \times R` factor matrix. For more information about coupled matrix decompositions,
+    see :doc:`../coupled_matrix_factorization`.
+
+    This class validates the decomposition and provides conversion to dense formats via methods.
 
     Parameters
     ----------
@@ -349,15 +362,15 @@ def _validate_cmf(cmf):
 def cmf_to_matrix(cmf, matrix_idx, validate=True):
     r"""Generate a single matrix from the coupled matrix factorisation.
 
-    The decomposition is on the form :math:`(\mathbf{A} [\mathbf{B}^{(i)}] \mathbf{C})`
-    such that the i-th matrix, :math:`X_i` is given by
+    The decomposition is on the form :math:`(\mathbf{A} [\mathbf{B}^{(0)}, \mathbf{B}^{(1)}, ..., \mathbf{B}^{(I-1)}] \mathbf{C})`
+    such that the i-th matrix, :math:`\mathbf{X}^{(i)}` is given by
 
     .. math::
 
         \mathbf{X}^{(i)} = \mathbf{B}^{(i)} \text{diag}(\mathbf{a}_i) \mathbf{C}^T,
 
-    where :math:`\text{diag}(a_i)` is the diagonal matrix whose nonzero entries are equal to
-    the :math:`i`-th row of the :math:`I \times R` factor matrix :math:`\mathbf{A}`,
+    where :math:`\text{diag}(\mathbf{a}_i)` is the diagonal matrix whose nonzero entries are
+    equal to the :math:`i`-th row of the :math:`I \times R` factor matrix :math:`\mathbf{A}`,
     :math:`\mathbf{B}^{(i)}` is a :math:`J_i \times R` factor matrix, and :math:`\mathbf{C}`
     is a :math:`K \times R` factor matrix.
 
@@ -425,15 +438,15 @@ def cmf_to_slice(cmf, slice_idx, validate=True):
 def cmf_to_matrices(cmf, validate=True):
     r"""Generate a list of all matrices represented by the coupled matrix factorisation.
 
-    The decomposition is on the form :math:`(\mathbf{A} [\mathbf{B}^{(i)}] \mathbf{C})`
-    such that the i-th matrix, :math:`X_i` is given by
+    The decomposition is on the form :math:`(\mathbf{A} [\mathbf{B}^{(0)}, \mathbf{B}^{(1)}, ..., \mathbf{B}^{(I-1)}] \mathbf{C})`
+    such that the i-th matrix, :math:`\mathbf{X}^{(i)}` is given by
 
     .. math::
 
         \mathbf{X}^{(i)} = \mathbf{B}^{(i)} \text{diag}(\mathbf{a}_i) \mathbf{C}^T,
 
-    where :math:`\text{diag}(a_i)` is the diagonal matrix whose nonzero entries are equal to
-    the :math:`i`-th row of the :math:`I \times R` factor matrix :math:`\mathbf{A}`,
+    where :math:`\text{diag}(\mathbf{a}_i)` is the diagonal matrix whose nonzero entries are 
+    equal to the :math:`i`-th row of the :math:`I \times R` factor matrix :math:`\mathbf{A}`,
     :math:`\mathbf{B}^{(i)}` is a :math:`J_i \times R` factor matrix, and :math:`\mathbf{C}`
     is a :math:`K \times R` factor matrix.
 
@@ -505,15 +518,15 @@ def cmf_to_tensor(cmf, validate=True):
     function returnes a tensorized version of ``cmf_to_matrices``. Otherwise, each
     matrix is padded by zeros to have the same number of rows before forming the tensor.
 
-    The decomposition is on the form :math:`(\mathbf{A} [\mathbf{B}^{(i)}] \mathbf{C})`
-    such that the i-th matrix, :math:`X_i` is given by
+    The decomposition is on the form :math:`(\mathbf{A} [\mathbf{B}^{(0)}, \mathbf{B}^{(1)}, ..., \mathbf{B}^{(I-1)}] \mathbf{C})`
+    such that the i-th matrix, :math:`\mathbf{X}^{(i)}` is given by
 
     .. math::
 
         \mathbf{X}^{(i)} = \mathbf{B}^{(i)} \text{diag}(\mathbf{a}_i) \mathbf{C}^T,
 
-    where :math:`\text{diag}(a_i)` is the diagonal matrix whose nonzero entries are equal to
-    the :math:`i`-th row of the :math:`I \times R`factor matrix :math:`\mathbf{A}`,
+    where :math:`\text{diag}(\mathbf{a}_i)` is the diagonal matrix whose nonzero entries are
+    equal to the :math:`i`-th row of the :math:`I \times R` factor matrix :math:`\mathbf{A}`,
     :math:`\mathbf{B}^{(i)}` is a :math:`J_i \times R` factor matrix, and :math:`\mathbf{C}`
     is a :math:`K \times R` factor matrix.
 
