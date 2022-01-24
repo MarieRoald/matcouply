@@ -46,7 +46,7 @@ def normalize(x):
 # Generate simulated data that follows the PARAFAC2 constraint
 # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 # We start by generating some components, for the :math:`\mathbf{A}` and :math:`\mathbf{C}` components, we use uniformly
-# distributed component vector elements. For the :math:`\mathbf{B}_i`-components, we create two unimodal vectors and one
+# distributed component vector elements. For the :math:`\mathbf{B}^{(i)}`-components, we create two unimodal vectors and one
 # component vector with uniformly distributed elements, and shift these vectors for each :math:`i`.
 
 # Random uniform components
@@ -100,7 +100,7 @@ fig.suptitle("Simulated components")
 plt.show()
 
 ###############################################################################
-# For the :math:`\mathbf{B}_i`-s, we see that component 0 and 1 are unimodal, while component 2 is not.
+# For the :math:`\mathbf{B}^{(i)}`-s, we see that component 0 and 1 are unimodal, while component 2 is not.
 
 ###############################################################################
 # Create the coupled matrix factorization, simulated data matrices and add noise
@@ -121,7 +121,7 @@ noisy_matrices = [M + N * noise_level * tl.norm(M) / tl.norm(N) for M, N in zip(
 # to use.
 #
 # Since the components are non-negative, it makes sense to fit a non-negative PARAFAC2 model, however,
-# we also know that two of the :math:`\mathbf{B}_i`-component vectors are unimodal, so we first try with
+# we also know that two of the :math:`\mathbf{B}^{(i)}`-component vectors are unimodal, so we first try with
 # a fully unimodal decomposition.
 
 from matcouply.penalties import NonNegativity, Unimodality
@@ -195,13 +195,13 @@ axes[1, 2].plot(normalize(out_B_is[-1]))
 axes[1, 2].set_title(f"$\\mathbf{{B}}_{{{I-1}}}$")
 fig.legend(["Component 0", "Component 1", "Component 2"], bbox_to_anchor=(0.95, 0.75), loc="center right")
 
-fig.suptitle(r"Unimodality on the $\mathbf{B}_i$-components")
+fig.suptitle(r"Unimodality on the $\mathbf{B}^{(i)}$-components")
 plt.show()
 
 ###############################################################################
 # We see that the :math:`\mathbf{C}`-component vectors all follow the same pattern and that the the
 # :math:`\mathbf{A}`-component vectors all follow a similar pattern. This is not the case with the real,
-# uncorrelated random, components. The :math:`\mathbf{B}_i`-component vectors also follow a strange pattern
+# uncorrelated random, components. The :math:`\mathbf{B}^{(i)}`-component vectors also follow a strange pattern
 # with peaks jumping forwards and backwards, which we know are not the case with the real components either.
 #
 # However, this strange behaviour is not too surprising, considering that there are only two uniomdal component
@@ -306,10 +306,10 @@ axes[1, 1].set_title(f"$\\mathbf{{B}}_{{{I//2}}}$")
 axes[1, 2].plot(normalize(out_B_is[-1]))
 axes[1, 2].set_title(f"$\\mathbf{{B}}_{{{I-1}}}$")
 fig.legend(["Component 0", "Component 1", "Component 2"], bbox_to_anchor=(0.95, 0.75), loc="center right")
-fig.suptitle(r"Custom uniomdality on the $\mathbf{B}_i$-components")
+fig.suptitle(r"Custom uniomdality on the $\mathbf{B}^{(i)}$-components")
 plt.show()
 
 ###############################################################################
 # We see that the model finds much more sensible component vectors. The :math:`\mathbf{A}`- and
-# :math:`\mathbf{C}`-component vectors no longer seem correlated, and the peaks of the :math:`\mathbf{B}_i`-component
+# :math:`\mathbf{C}`-component vectors no longer seem correlated, and the peaks of the :math:`\mathbf{B}^{(i)}`-component
 # vectors no longer jump around.

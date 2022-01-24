@@ -5,16 +5,16 @@
 
 Computation times
 =================
-**07:30.362** total execution time for **auto_examples** files:
+**00:02.544** total execution time for **auto_examples** files:
 
 +---------------------------------------------------------------------------------------------------------------------------------------+-----------+--------+
-| :ref:`sphx_glr_auto_examples_plot_custom_penalty.py` (``plot_custom_penalty.py``)                                                     | 02:17.045 | 0.0 MB |
+| :ref:`sphx_glr_auto_examples_plot_custom_penalty.py` (``plot_custom_penalty.py``)                                                     | 00:02.544 | 0.0 MB |
 +---------------------------------------------------------------------------------------------------------------------------------------+-----------+--------+
-| :ref:`sphx_glr_auto_examples_plot_examining_different_number_of_components.py` (``plot_examining_different_number_of_components.py``) | 01:33.503 | 0.0 MB |
+| :ref:`sphx_glr_auto_examples_plot_bikesharing.py` (``plot_bikesharing.py``)                                                           | 00:00.000 | 0.0 MB |
 +---------------------------------------------------------------------------------------------------------------------------------------+-----------+--------+
-| :ref:`sphx_glr_auto_examples_plot_semiconductor_etch_analysis.py` (``plot_semiconductor_etch_analysis.py``)                           | 01:26.573 | 0.0 MB |
+| :ref:`sphx_glr_auto_examples_plot_examining_different_number_of_components.py` (``plot_examining_different_number_of_components.py``) | 00:00.000 | 0.0 MB |
 +---------------------------------------------------------------------------------------------------------------------------------------+-----------+--------+
-| :ref:`sphx_glr_auto_examples_plot_bikesharing.py` (``plot_bikesharing.py``)                                                           | 01:25.954 | 0.0 MB |
+| :ref:`sphx_glr_auto_examples_plot_semiconductor_etch_analysis.py` (``plot_semiconductor_etch_analysis.py``)                           | 00:00.000 | 0.0 MB |
 +---------------------------------------------------------------------------------------------------------------------------------------+-----------+--------+
-| :ref:`sphx_glr_auto_examples_plot_simulated_nonnegative.py` (``plot_simulated_nonnegative.py``)                                       | 00:47.288 | 0.0 MB |
+| :ref:`sphx_glr_auto_examples_plot_simulated_nonnegative.py` (``plot_simulated_nonnegative.py``)                                       | 00:00.000 | 0.0 MB |
 +---------------------------------------------------------------------------------------------------------------------------------------+-----------+--------+
