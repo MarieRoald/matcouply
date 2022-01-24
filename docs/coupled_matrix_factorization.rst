@@ -22,6 +22,32 @@ a single factor matrix, :math:`\mathbf{A}`. Below is an illustration of this mod
 
    Illustration of a coupled matrix factorization where colours represent different components.
 
+Factor weights and the scale indeterminacy of CMF models
+--------------------------------------------------------
+There are two important scaling indeterminacies with coupled matrix factorization. First, any column in one of the factor
+matrices (e.g. :math:`\mathbf{A}`) may be scaled arbitrarilly by a constant factor :math:`s` as long as the corresponding column
+of :math:`\mathbf{C}` or *all* :math:`\mathbf{B}^{(i)}` matrices are scaled by :math:`1/s`, without affecting the data represented
+by the model. It is therefore, sometimes, customary to normalize the factor matrices and store their norms in a separate
+*weight*-vector, :math:`\mathbf{w}`. Then, the data matrices are represented by
+
+.. math::
+    \mathbf{X}^{(i)} \approx \mathbf{B}^{(i)} \mathbf{D}^{(i)} \text{diag}(\mathbf{w}) \mathbf{C}^\mathsf{T},
+
+where :math:`\text{diag}(\mathbf{w})` is the diagonal matrix with diagonal entries given by the weights. :func:`matcouply.decomposition.cmf_aoadmm`
+and :func:`matcouply.decomposition.parafac2` will not scale the factor matrices this way, since that may affect the penalty
+from norm-dependent regularization (e.g. the :class:`matcouply.penalties.GeneralizedL2Penalty`). However, :class:`matcouply.coupled_matrices.CoupledMatrixFactorization`
+supports the use of a ``weights`` vector to be consistent with TensorLy.
+
+There are, however, another scale indeterminacy which can affect the extracted components in a more severe way. Any column
+in any :math:`\mathbf{B}^{(i)}`-matrix may also be scaled arbitrarilly by a constant :math:`s` if the corresponding entry
+in :math:`\mathbf{D}^{(i)}` is scaled by :math:`1/s`. To resolve this indeterminacy, we need to either impose constraints or
+fix the values in the :math:`\mathbf{D}^{(i)}`-matrices (e.g. keeping them equal to 1) by passing ``update_A=False`` to
+:func:`matcouply.decomposition.cmf_aoadmm`. PARAFAC2, for example, takes care of the scaling indeterminacy, however, the sign of
+any column, :math:`\mathbf{b}^{(i)}_r` of :math:`\mathbf{B}^{(i)}` and any entry of :math:`\mathbf{D}^{(i)}` can be flipped if the same flip is imposed on all
+columns in :math:`\mathbf{B}^{(i)}` (and entries of :math:`\mathbf{D}^{(i)}`) that are not orthogonal to :math:`\mathbf{b}^{(i)}_r`.
+To avoid this sign indeterminacy, you can apply additional constraints to the PARAFAC2 model, e.g. enforcing non-negative :math:`\mathbf{D}^{(i)}` matrices. 
+:cite:p:`harshman1972parafac2`
+
 Constraints and uniqueness
 --------------------------
 
