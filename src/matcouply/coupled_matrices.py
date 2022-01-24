@@ -16,8 +16,9 @@ class CoupledMatrixFactorization(FactorizedTensor):
         * weights : 1D array of shape (rank, )
             weights of the factors
         * factors : List of factors of the coupled matrix decomposition
-            Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}^{(i)}` and
-            :math:`\mathbf{C}` described above
+            List on the form ``[A, [B_0, B_1, ..., B_i], C]``, where ``A`` represents :math:`\mathbf{A}`,
+            ``[B_0, B_1, ..., B_i]`` represents a list of all :math:`\mathbf{B}^{(i)}`-matrices and ``C``
+            represents :math:`\mathbf{C}`, as described in :doc:`../coupled_matrix_factorization`.
 
     Examples
     --------
@@ -232,8 +233,9 @@ def _validate_cmf(cmf):
         * weights : 1D array of shape (rank, )
             weights of the factors
         * factors : List of factors of the coupled matrix decomposition
-            Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}^{(i)}` and
-            :math:`\mathbf{C}` described above
+            List on the form ``[A, [B_0, B_1, ..., B_i], C]``, where ``A`` represents :math:`\mathbf{A}`,
+            ``[B_0, B_1, ..., B_i]`` represents a list of all :math:`\mathbf{B}^{(i)}`-matrices and ``C``
+            represents :math:`\mathbf{C}`, as described in :doc:`../coupled_matrix_factorization`.
 
     Returns
     -------
@@ -365,8 +367,9 @@ def cmf_to_matrix(cmf, matrix_idx, validate=True):
         * weights : 1D array of shape (rank, )
             weights of the factors
         * factors : List of factors of the coupled matrix decomposition
-            Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}^{(i)}` and
-            :math:`\mathbf{C}` described above
+            List on the form ``[A, [B_0, B_1, ..., B_i], C]``, where ``A`` represents :math:`\mathbf{A}`,
+            ``[B_0, B_1, ..., B_i]`` represents a list of all :math:`\mathbf{B}^{(i)}`-matrices and ``C``
+            represents :math:`\mathbf{C}`, as described in :doc:`../coupled_matrix_factorization`.
 
     matrix_idx : int
         Index of the matrix we want to construct, :math:`i` in the equations above.
@@ -438,8 +441,9 @@ def cmf_to_matrices(cmf, validate=True):
         * weights : 1D array of shape (rank, )
             weights of the factors
         * factors : List of factors of the coupled matrix decomposition
-            Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}^{(i)}` and
-            :math:`\mathbf{C}` described above
+            List on the form ``[A, [B_0, B_1, ..., B_i], C]``, where ``A`` represents :math:`\mathbf{A}`,
+            ``[B_0, B_1, ..., B_i]`` represents a list of all :math:`\mathbf{B}^{(i)}`-matrices and ``C``
+            represents :math:`\mathbf{C}`, as described in :doc:`../coupled_matrix_factorization`.
 
     validate : bool
         If true, then the decomposition is validated before the matrix is constructed
@@ -516,8 +520,9 @@ def cmf_to_tensor(cmf, validate=True):
         * weights : 1D array of shape (rank, )
             weights of the factors
         * factors : List of factors of the coupled matrix decomposition
-            Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}^{(i)}` and
-            :math:`\mathbf{C}` described above
+            List on the form ``[A, [B_0, B_1, ..., B_i], C]``, where ``A`` represents :math:`\mathbf{A}`,
+            ``[B_0, B_1, ..., B_i]`` represents a list of all :math:`\mathbf{B}^{(i)}`-matrices and ``C``
+            represents :math:`\mathbf{C}`, as described in :doc:`../coupled_matrix_factorization`.
 
     validate : bool
         If true, then the decomposition is validated before the matrix is constructed
@@ -590,8 +595,9 @@ def cmf_to_unfolded(cmf, mode, pad=True, validate=True):
         * weights : 1D array of shape (rank, )
             weights of the factors
         * factors : List of factors of the coupled matrix decomposition
-            Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}^{(i)}` and
-            :math:`\mathbf{C}` described above
+            List on the form ``[A, [B_0, B_1, ..., B_i], C]``, where ``A`` represents :math:`\mathbf{A}`,
+            ``[B_0, B_1, ..., B_i]`` represents a list of all :math:`\mathbf{B}^{(i)}`-matrices and ``C``
+            represents :math:`\mathbf{C}`, as described in :doc:`../coupled_matrix_factorization`.
 
     pad : bool (default=True)
         If true, then the coupled matrix factorization will be converted into a dense tensor,
@@ -700,8 +706,9 @@ def cmf_to_vec(cmf, pad=True, validate=True):
         * weights : 1D array of shape (rank, )
             weights of the factors
         * factors : List of factors of the coupled matrix decomposition
-            Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}^{(i)}` and
-            :math:`\mathbf{C}` described above
+            List on the form ``[A, [B_0, B_1, ..., B_i], C]``, where ``A`` represents :math:`\mathbf{A}`,
+            ``[B_0, B_1, ..., B_i]`` represents a list of all :math:`\mathbf{B}^{(i)}`-matrices and ``C``
+            represents :math:`\mathbf{C}`, as described in :doc:`../coupled_matrix_factorization`.
     pad: bool (default=True)
         If true then if the matrices described by the decomposition have a different number of rows, 
         then they will be padded by zeros to construct a tensor which are vectorized, and there will
