@@ -343,13 +343,15 @@ def compute_feasibility_gaps(cmf, regs, A_aux_list, B_aux_list, C_aux_list):
 
     Parameters
     ----------
-    cmf: CoupledMatrixFactorization - (weight, factors)
+    cmf: CoupledMatrixFactorization - (weights, factors)
+        Coupled matrix factorization represented by weights and factors as described in :doc:`../coupled_matrix_factorization`.
 
-        * weights : 1D array of shape (rank, )
+        * weights : 1D array of shape (rank,) or None
             weights of the factors
         * factors : List of factors of the coupled matrix decomposition
-            Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}^{(i)}` and
-            :math:`\mathbf{C}` described above
+            List on the form ``[A, [B_0, B_1, ..., B_i], C]``, where ``A`` represents :math:`\mathbf{A}`,
+            ``[B_0, B_1, ..., B_i]`` represents a list of all :math:`\mathbf{B}^{(i)}`-matrices and ``C``
+            represents :math:`\mathbf{C}`
 
     regs : list of list of matcouply.penalties.ADMMPenalty
         The regs list should have three elements, the first being a list of penalties imposed
