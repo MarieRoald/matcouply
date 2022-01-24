@@ -19,12 +19,12 @@ DOWNLOADED_PARENT = DATASET_PARENT / "downloads"
 
 
 def get_simple_simulated_data(noise_level=0.2, random_state=1):
-    r"""Generate a simple simulated dataset with shifting unimodal :math:`\mathbf{B}_i` matrices.
+    r"""Generate a simple simulated dataset with shifting unimodal :math:`\mathbf{B}^{(i)}` matrices.
 
-    The entries in :math:`\mathbf{A}` (or :math:`\mathbf{D}_i`-matrices) are uniformly distributed
+    The entries in :math:`\mathbf{A}` (or :math:`\mathbf{D}^{(i)}`-matrices) are uniformly distributed
     between 0.1 and 1.1. This is done to ensure that there is signal from all components in all matrices.
 
-    The component vectors in the :math:`\mathbf{B}_i` matrices are Gaussian probability density
+    The component vectors in the :math:`\mathbf{B}^{(i)}` matrices are Gaussian probability density
     functions that shift one entry for each matrix. This means that they are non-negative, unimodal
     and satisfy the PARAFAC2 constraint.
 

@@ -582,7 +582,7 @@ class GeneralizedL2Penalty(MatrixPenalty):
     
     where :math:`\mathbf{M}` is a symmetric positive semidefinite matrix and :math:`\mathbf{x}`
     is a vector. This penalty is imposed for all columns of the factor matrix (or matrices for
-    the :math:`\mathbf{B}_i`-s). Note that the regular L2-penalty (or Ridge penalty) is a special
+    the :math:`\mathbf{B}^{(i)}`-s). Note that the regular L2-penalty (or Ridge penalty) is a special
     case of the generalised L2 penalty, which we obtain by setting :math:`\mathbf{M}=\mathbf{I}`.
     Also, this penalty is a squared seminorm penalty since
 
@@ -989,7 +989,7 @@ class Unimodality(HardConstraintMixin, MatrixPenalty):
 class Parafac2(MatricesPenalty):
     r"""Impose the PARAFAC2 constraint on the uncoupled factor matrices.
 
-    The PARAFAC2 constraint can only be imposed on the uncoupled :math:`\mathbf{B}_i`-matrices, and
+    The PARAFAC2 constraint can only be imposed on the uncoupled :math:`\mathbf{B}^{(i)}`-matrices, and
     states that
 
     .. math::
@@ -1006,14 +1006,14 @@ class Parafac2(MatricesPenalty):
     **Parametrization of matrix-collections that satisfy the PARAFAC2 constraint**
 
     The standard way of parametrizing collections of matrices that satisfy the PARAFAC2 constraint
-    is due to Kiers et al. :cite:p:`kiers1999parafac2`. If :math:`\{\mathbf{B}_i\}_{i=1}^I` satsify
+    is due to Kiers et al. :cite:p:`kiers1999parafac2`. If :math:`\{\mathbf{B}^{(i)}\}_{i=1}^I` satsify
     the PARAFAC2 constraint, then there exists a matrix :math:`\mathbf{\Delta} \in \mathbb{R}^{R \times R}`
-    (the coordinate matrix) and a collection of orthonormal matrices :math:`\{\mathbf{P}_i\}_{i=1}^I`
+    (the coordinate matrix) and a collection of orthonormal matrices :math:`\{\mathbf{P}^{(i)}\}_{i=1}^I`
     (the orthogonal basis matrices) such that
 
     .. math::
 
-        \mathbf{B}_i = \mathbf{P}_i \mathbf{\Delta}.
+        \mathbf{B}^{(i)} = \mathbf{P}^{(i)} \mathbf{\Delta}.
 
     For this implementation, we use the above parametrization of the auxiliary variables, which
     is a tuple whose first element is a list of orthogonal basis matrices and second element
@@ -1027,22 +1027,22 @@ class Parafac2(MatricesPenalty):
     has been observed that only one iteration of this coordinate descent scheme is sufficient
     for fitting PARAFAC2 models with AO-ADMM :cite:p:`roald2021admm,roald2021parafac2`.
 
-    To project :math:`\{\mathbf{X}_i\}_{i=1}^I` onto the set of collections of matrices that
+    To project :math:`\{\mathbf{X}^{(i)}\}_{i=1}^I` onto the set of collections of matrices that
     satisfy the PARAFAC2 constraint, we first update the orthogonal basis matrices by
 
     .. math::
 
-        \mathbf{P}_i = \mathbf{U}_i \mathbf{V}_i^\mathsf{T}
+        \mathbf{P}^{(i)} = \mathbf{U}^{(i)} \mathbf{V}^{(i)}^\mathsf{T}
 
-    where :math:`\mathbf{U}_i` and :math:`\mathbf{V}_i` contain the left and right singular vectors
-    of :math:`\mathbf{X}_i \mathbf{Delta}^\Tra`.
+    where :math:`\mathbf{U}^{(i)}` and :math:`\mathbf{V}^{(i)}` contain the left and right singular vectors
+    of :math:`\mathbf{X}^{(i)} \mathbf{Delta}^\Tra`.
 
     Then we update the coordinate matrix by
 
     .. math::
 
         \mathbf{\Delta}
-        = \frac{1}{\sum_{i=1}^I \rho_i}\sum_{i=1}^I \rho_i \mathbf{P}_i^\mathsf{T}\mathbf{X}_i,
+        = \frac{1}{\sum_{i=1}^I \rho_i}\sum_{i=1}^I \rho_i \mathbf{P}^{(i)}^\mathsf{T}\mathbf{X}^{(i)},
 
     where :math:`\rho_i` is the feasibility penalty (which parameterizes the norm of the projection)
     for the :math:`i`-th factor matrix.

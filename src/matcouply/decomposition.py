@@ -337,9 +337,9 @@ def compute_feasibility_gaps(cmf, regs, A_aux_list, B_aux_list, C_aux_list):
 
     To compute the feasibility gap for the :math:`\mathbf{A}` and :math:`\mathbf{C}`
     matrices, we use the frobenius norm, and to compute the feasibility gap for the
-    :math:`\mathbf{B}_{i}`-matrices, we compute :math:`\sqrt{\sum_i \|\mathbf{B}_i - \mathbf{Z}^{(\mathbf{B}_i)}\|^2}`,
-    where :math:`\mathbf{Z}^{(\mathbf{B}_i)}\|^2` is the auxiliary variable for
-    :math:`\mathbf{B}_i`.
+    :math:`\mathbf{B}^{(i)}`-matrices, we compute :math:`\sqrt{\sum_i \|\mathbf{B}^{(i)} - \mathbf{Z}^{(\mathbf{B}^{(i)})}\|^2}`,
+    where :math:`\mathbf{Z}^{(\mathbf{B}^{(i)})}\|^2` is the auxiliary variable for
+    :math:`\mathbf{B}^{(i)}`.
 
     Parameters
     ----------
@@ -348,7 +348,7 @@ def compute_feasibility_gaps(cmf, regs, A_aux_list, B_aux_list, C_aux_list):
         * weights : 1D array of shape (rank, )
             weights of the factors
         * factors : List of factors of the coupled matrix decomposition
-            Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}_i` and
+            Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}^{(i)}` and
             :math:`\mathbf{C}` described above
 
     regs : list of list of matcouply.penalties.ADMMPenalty
@@ -647,7 +647,7 @@ def cmf_aoadmm(
      * A dictionary with mode-index (0, 1 or 2) as keys and regularization parameter as values
        (regularization only in specific modes)
 
-    :math:`\mathbf{A}` is represented by mode-index 0, :math:`\{\mathbf{B}_i\}_{i=1}^I` is
+    :math:`\mathbf{A}` is represented by mode-index 0, :math:`\{\mathbf{B}^{(i)}\}_{i=1}^I` is
     represented by mode-index 1 and :math:`\mathbf{C}` is represented by mode-index 2.
 
     Parameters
@@ -685,23 +685,23 @@ def cmf_aoadmm(
     upper_bound : Regularization parameter (default=None)
         Upper value of the columns
     parafac2 : bool (default=False)
-        If ``True``, then the :math:`\mathbf{B}_i`-matrices follow the PARAFAC2 constraint
+        If ``True``, then the :math:`\mathbf{B}^{(i)}`-matrices follow the PARAFAC2 constraint
     regs : List of lists of matcouply.penalties.ADMMPenalty (optional, default=None)
         The first element of this list contains a list of ``matcouply.penalties.ADMMPenalty``-instances
-        for :math:`\mathbf{A}`, the second for :math:`\{\mathbf{B}_i\}_{i=1}^I` and the third for
+        for :math:`\mathbf{A}`, the second for :math:`\{\mathbf{B}^{(i)}\}_{i=1}^I` and the third for
         :math:`\mathbf{C}`.
     feasibility_penalty_scale : float (default=1)
         What function to multiply the automatically computed feasibility penalty parameter by
         (see :cite:p:`roald2021admm` for details)
     constant_feasibility_penalty : bool (default=False)
         If True, then all rows of :math:`\mathbf{A}` will have the same feasibility penalty parameter
-        and all :math:`\mathbf{B}_i`-matrices will have the same feasibility penalty parameter.
+        and all :math:`\mathbf{B}^{(i)}`-matrices will have the same feasibility penalty parameter.
         This makes it possible to use matrix-penalties for :math:`\mathbf{A}` and multi-matrix penalties
-        that require the same penalty parameter for all :math:`\mathbf{B}_i`-matrices.
+        that require the same penalty parameter for all :math:`\mathbf{B}^{(i)}`-matrices.
 
         The maximum penalty parameter for all rows of :math:`\mathbf{A}` are used as the penalty
-        parameter for :math:`\mathbf{A}` and the maximum penalty parameter among all :math:`\mathbf{B}_i`-matrices
-        are used as the penalty parameter for :math:`\{\mathbf{B}_i\}_{i=1}^I`.
+        parameter for :math:`\mathbf{A}` and the maximum penalty parameter among all :math:`\mathbf{B}^{(i)}`-matrices
+        are used as the penalty parameter for :math:`\{\mathbf{B}^{(i)}\}_{i=1}^I`.
     aux_init : str (default="random_uniform")
         Initialization scheme for the auxiliary variables. See :meth:`matcouply.penalties.ADMMPenalty.init_aux`
         for possible options.
@@ -733,7 +733,7 @@ def cmf_aoadmm(
     update_A : bool (default=True)
         If ``False``, then :math:`\mathbf{A}` will not be updated.
     update_B_is : bool (default=True)
-        If ``False``, then the :math:`\mathbf{B}_i`-matrices will not be updated.
+        If ``False``, then the :math:`\mathbf{B}^{(i)}`-matrices will not be updated.
     update_C : bool (default=True)
         If ``False``, then :math:`\mathbf{C}` will not be updated.
     return_admm_vars : bool (default=False)

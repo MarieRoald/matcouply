@@ -16,7 +16,7 @@ class CoupledMatrixFactorization(FactorizedTensor):
         * weights : 1D array of shape (rank, )
             weights of the factors
         * factors : List of factors of the coupled matrix decomposition
-            Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}_i` and
+            Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}^{(i)}` and
             :math:`\mathbf{C}` described above
 
     Examples
@@ -232,7 +232,7 @@ def _validate_cmf(cmf):
         * weights : 1D array of shape (rank, )
             weights of the factors
         * factors : List of factors of the coupled matrix decomposition
-            Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}_i` and
+            Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}^{(i)}` and
             :math:`\mathbf{C}` described above
 
     Returns
@@ -345,16 +345,16 @@ def _validate_cmf(cmf):
 def cmf_to_matrix(cmf, matrix_idx, validate=True):
     r"""Generate a single matrix from the coupled matrix factorisation.
 
-    The decomposition is on the form :math:`(\mathbf{A} [\mathbf{B}_i] \mathbf{C})`
+    The decomposition is on the form :math:`(\mathbf{A} [\mathbf{B}^{(i)}] \mathbf{C})`
     such that the i-th matrix, :math:`X_i` is given by
 
     .. math::
 
-        X_i = \mathbf{B}_i \text{diag}(\mathbf{a}_i) \mathbf{C}^T,
+        \mathbf{X}^{(i)} = \mathbf{B}^{(i)} \text{diag}(\mathbf{a}_i) \mathbf{C}^T,
 
     where :math:`\text{diag}(a_i)` is the diagonal matrix whose nonzero entries are equal to
     the :math:`i`-th row of the :math:`I \times R` factor matrix :math:`\mathbf{A}`,
-    :math:`\mathbf{B}_i` is a :math:`J_i \times R` factor matrix, and :math:`\mathbf{C}`
+    :math:`\mathbf{B}^{(i)}` is a :math:`J_i \times R` factor matrix, and :math:`\mathbf{C}`
     is a :math:`K \times R` factor matrix.
 
     Parameters
@@ -365,7 +365,7 @@ def cmf_to_matrix(cmf, matrix_idx, validate=True):
         * weights : 1D array of shape (rank, )
             weights of the factors
         * factors : List of factors of the coupled matrix decomposition
-            Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}_i` and
+            Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}^{(i)}` and
             :math:`\mathbf{C}` described above
 
     matrix_idx : int
@@ -379,7 +379,7 @@ def cmf_to_matrix(cmf, matrix_idx, validate=True):
     -------
     ndarray
         Dense tensor of shape ``[B_is[matrix_idx].shape[0], C.shape[0]]``, where
-        ``B`` is a list containing all the :math:`\mathbf{B}_i`-factor matrices.
+        ``B`` is a list containing all the :math:`\mathbf{B}^{(i)}`-factor matrices.
     
     Examples
     --------
@@ -419,16 +419,16 @@ def cmf_to_slice(cmf, slice_idx, validate=True):
 def cmf_to_matrices(cmf, validate=True):
     r"""Generate a list of all matrices represented by the coupled matrix factorisation.
 
-    The decomposition is on the form :math:`(\mathbf{A} [\mathbf{B}_i] \mathbf{C})`
+    The decomposition is on the form :math:`(\mathbf{A} [\mathbf{B}^{(i)}] \mathbf{C})`
     such that the i-th matrix, :math:`X_i` is given by
 
     .. math::
 
-        X_i = \mathbf{B}_i \text{diag}(\mathbf{a}_i) \mathbf{C}^T,
+        \mathbf{X}^{(i)} = \mathbf{B}^{(i)} \text{diag}(\mathbf{a}_i) \mathbf{C}^T,
 
     where :math:`\text{diag}(a_i)` is the diagonal matrix whose nonzero entries are equal to
     the :math:`i`-th row of the :math:`I \times R` factor matrix :math:`\mathbf{A}`,
-    :math:`\mathbf{B}_i` is a :math:`J_i \times R` factor matrix, and :math:`\mathbf{C}`
+    :math:`\mathbf{B}^{(i)}` is a :math:`J_i \times R` factor matrix, and :math:`\mathbf{C}`
     is a :math:`K \times R` factor matrix.
 
     Parameters
@@ -438,7 +438,7 @@ def cmf_to_matrices(cmf, validate=True):
         * weights : 1D array of shape (rank, )
             weights of the factors
         * factors : List of factors of the coupled matrix decomposition
-            Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}_i` and
+            Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}^{(i)}` and
             :math:`\mathbf{C}` described above
 
     validate : bool
@@ -448,9 +448,9 @@ def cmf_to_matrices(cmf, validate=True):
     Returns
     -------
     List of ndarray
-        List of all :math:`\mathbf{X}_i`-matrices, where the ``i``-th element of the list
+        List of all :math:`\mathbf{X}^{(i)}`-matrices, where the ``i``-th element of the list
         has shape ``[B_is[i].shape[0], C.shape[0]]``, where ``B_is`` is a list containing all
-        the :math:`\mathbf{B}_i`-factor matrices.
+        the :math:`\mathbf{B}^{(i)}`-factor matrices.
     
     Examples
     --------
@@ -493,20 +493,20 @@ def cmf_to_slices(cmf, validate=True):
 def cmf_to_tensor(cmf, validate=True):
     r"""Generate the tensor represented by the coupled matrix factorization.
 
-    If all :math:`\mathbf{B}_i`-factor matrices have the same number of rows, then this
+    If all :math:`\mathbf{B}^{(i)}`-factor matrices have the same number of rows, then this
     function returnes a tensorized version of ``cmf_to_matrices``. Otherwise, each
     matrix is padded by zeros to have the same number of rows before forming the tensor.
 
-    The decomposition is on the form :math:`(\mathbf{A} [\mathbf{B}_i] \mathbf{C})`
+    The decomposition is on the form :math:`(\mathbf{A} [\mathbf{B}^{(i)}] \mathbf{C})`
     such that the i-th matrix, :math:`X_i` is given by
 
     .. math::
 
-        X_i = \mathbf{B}_i \text{diag}(\mathbf{a}_i) \mathbf{C}^T,
+        \mathbf{X}^{(i)} = \mathbf{B}^{(i)} \text{diag}(\mathbf{a}_i) \mathbf{C}^T,
 
     where :math:`\text{diag}(a_i)` is the diagonal matrix whose nonzero entries are equal to
     the :math:`i`-th row of the :math:`I \times R`factor matrix :math:`\mathbf{A}`,
-    :math:`\mathbf{B}_i` is a :math:`J_i \times R` factor matrix, and :math:`\mathbf{C}`
+    :math:`\mathbf{B}^{(i)}` is a :math:`J_i \times R` factor matrix, and :math:`\mathbf{C}`
     is a :math:`K \times R` factor matrix.
 
     Parameters
@@ -516,7 +516,7 @@ def cmf_to_tensor(cmf, validate=True):
         * weights : 1D array of shape (rank, )
             weights of the factors
         * factors : List of factors of the coupled matrix decomposition
-            Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}_i` and
+            Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}^{(i)}` and
             :math:`\mathbf{C}` described above
 
     validate : bool
@@ -527,7 +527,7 @@ def cmf_to_tensor(cmf, validate=True):
     -------
     ndarray
         Full tensor of shape ``[A.shape[0], J, C.shape[0]]``, where ``J`` is the maximum
-        number of rows in all the :math:`\mathbf{B}_i`-factor matrices.
+        number of rows in all the :math:`\mathbf{B}^{(i)}`-factor matrices.
 
     Examples
     --------
@@ -590,7 +590,7 @@ def cmf_to_unfolded(cmf, mode, pad=True, validate=True):
         * weights : 1D array of shape (rank, )
             weights of the factors
         * factors : List of factors of the coupled matrix decomposition
-            Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}_i` and
+            Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}^{(i)}` and
             :math:`\mathbf{C}` described above
 
     pad : bool (default=True)
@@ -700,7 +700,7 @@ def cmf_to_vec(cmf, pad=True, validate=True):
         * weights : 1D array of shape (rank, )
             weights of the factors
         * factors : List of factors of the coupled matrix decomposition
-            Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}_i` and
+            Containts the matrices :math:`\mathbf{A}`, :math:`\mathbf{B}^{(i)}` and
             :math:`\mathbf{C}` described above
     pad: bool (default=True)
         If true then if the matrices described by the decomposition have a different number of rows, 
@@ -714,7 +714,7 @@ def cmf_to_vec(cmf, pad=True, validate=True):
     -------
     ndarray
         Vector of length ``A.shape[0] * J * C.shape[0]``, where ``J`` is the maximum
-        number of rows in all the :math:`\mathbf{B}_i`-factor matrices.
+        number of rows in all the :math:`\mathbf{B}^{(i)}`-factor matrices.
 
     Examples
     --------
