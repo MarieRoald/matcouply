@@ -14,7 +14,7 @@ python:
   install:
     - path: .
       method: pip
-      extra_requirements: [devel, examples, all]
+      extra_requirements: [devel, examples, all, numba]
     - requirements: requirements.txt
 
 
