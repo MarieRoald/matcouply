@@ -843,8 +843,8 @@ class L2Ball(HardConstraintMixin, MatrixPenalty):
     dual_init : {"random_uniform", "random_standard_normal", "zeros", tl.tensor(ndim=2), list of tl.tensor(ndim=2)}
         Initialisation method for the auxiliary variables
 
-    Notes
-    -----
+    Note
+    ----
     **Proof of compatibility with non-negativity constraints**
 
     The compatibility with non-negativity constraints can be obtained with the
