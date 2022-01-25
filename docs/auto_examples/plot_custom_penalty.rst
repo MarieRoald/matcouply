@@ -27,31 +27,10 @@ but one of the component vectors.
 
 .. GENERATED FROM PYTHON SOURCE LINES 11-13
 
-Disable JIT for documentation building
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. GENERATED FROM PYTHON SOURCE LINES 13-18
-
-.. code-block:: default
-
-
-    import os
-
-    os.environ["NUMBA_DISABLE_JIT"] = "1"
-
-
-
-
-
-
-
-
-.. GENERATED FROM PYTHON SOURCE LINES 19-21
-
 Imports
 ^^^^^^^
 
-.. GENERATED FROM PYTHON SOURCE LINES 21-31
+.. GENERATED FROM PYTHON SOURCE LINES 13-23
 
 .. code-block:: default
 
@@ -72,12 +51,12 @@ Imports
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 32-34
+.. GENERATED FROM PYTHON SOURCE LINES 24-26
 
 Setup
 ^^^^^
 
-.. GENERATED FROM PYTHON SOURCE LINES 34-45
+.. GENERATED FROM PYTHON SOURCE LINES 26-37
 
 .. code-block:: default
 
@@ -99,7 +78,7 @@ Setup
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 46-51
+.. GENERATED FROM PYTHON SOURCE LINES 38-43
 
 Generate simulated data that follows the PARAFAC2 constraint
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -107,7 +86,7 @@ We start by generating some components, for the :math:`\mathbf{A}` and :math:`\m
 distributed component vector elements. For the :math:`\mathbf{B}^{(i)}`-components, we create two unimodal vectors and one
 component vector with uniformly distributed elements, and shift these vectors for each :math:`i`.
 
-.. GENERATED FROM PYTHON SOURCE LINES 51-75
+.. GENERATED FROM PYTHON SOURCE LINES 43-67
 
 .. code-block:: default
 
@@ -142,12 +121,12 @@ component vector with uniformly distributed elements, and shift these vectors fo
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 76-78
+.. GENERATED FROM PYTHON SOURCE LINES 68-70
 
 Plot the simulated components
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. GENERATED FROM PYTHON SOURCE LINES 78-102
+.. GENERATED FROM PYTHON SOURCE LINES 70-94
 
 .. code-block:: default
 
@@ -187,16 +166,16 @@ Plot the simulated components
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 103-104
+.. GENERATED FROM PYTHON SOURCE LINES 95-96
 
 For the :math:`\mathbf{B}^{(i)}`-s, we see that component 0 and 1 are unimodal, while component 2 is not.
 
-.. GENERATED FROM PYTHON SOURCE LINES 106-108
+.. GENERATED FROM PYTHON SOURCE LINES 98-100
 
 Create the coupled matrix factorization, simulated data matrices and add noise
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. GENERATED FROM PYTHON SOURCE LINES 108-115
+.. GENERATED FROM PYTHON SOURCE LINES 100-107
 
 .. code-block:: default
 
@@ -214,7 +193,7 @@ Create the coupled matrix factorization, simulated data matrices and add noise
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 116-126
+.. GENERATED FROM PYTHON SOURCE LINES 108-118
 
 Use the ``regs`` parameter to input regularization classes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -227,7 +206,7 @@ Since the components are non-negative, it makes sense to fit a non-negative PARA
 we also know that two of the :math:`\mathbf{B}^{(i)}`-component vectors are unimodal, so we first try with
 a fully unimodal decomposition.
 
-.. GENERATED FROM PYTHON SOURCE LINES 126-151
+.. GENERATED FROM PYTHON SOURCE LINES 118-143
 
 .. code-block:: default
 
@@ -12687,12 +12666,12 @@ a fully unimodal decomposition.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 152-154
+.. GENERATED FROM PYTHON SOURCE LINES 144-146
 
 Compute factor match score to measure the accuracy of the recovered components
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. GENERATED FROM PYTHON SOURCE LINES 154-169
+.. GENERATED FROM PYTHON SOURCE LINES 146-161
 
 .. code-block:: default
 
@@ -12726,12 +12705,12 @@ Compute factor match score to measure the accuracy of the recovered components
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 170-172
+.. GENERATED FROM PYTHON SOURCE LINES 162-164
 
 Plot the recovered components
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. GENERATED FROM PYTHON SOURCE LINES 172-201
+.. GENERATED FROM PYTHON SOURCE LINES 164-193
 
 .. code-block:: default
 
@@ -12776,7 +12755,7 @@ Plot the recovered components
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 202-209
+.. GENERATED FROM PYTHON SOURCE LINES 194-201
 
 We see that the :math:`\mathbf{C}`-component vectors all follow the same pattern and that the the
 :math:`\mathbf{A}`-component vectors all follow a similar pattern. This is not the case with the real,
@@ -12786,7 +12765,7 @@ with peaks jumping forwards and backwards, which we know are not the case with t
 However, this strange behaviour is not too surprising, considering that there are only two uniomdal component
 vectors in the data. So this model that assumes all unimodal components might be too restrictive.
 
-.. GENERATED FROM PYTHON SOURCE LINES 212-220
+.. GENERATED FROM PYTHON SOURCE LINES 204-212
 
 Create a custom penalty class for unimodality in all but one class
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -12797,7 +12776,7 @@ from ``matcouply.penalties``. We also know that unimodality is a hard constraint
 the ``HardConstraintMixin``-class, which provides a ``penalty``-method that always returns 0 and has an informative
 docstring.
 
-.. GENERATED FROM PYTHON SOURCE LINES 220-242
+.. GENERATED FROM PYTHON SOURCE LINES 212-234
 
 .. code-block:: default
 
@@ -12830,13 +12809,13 @@ docstring.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 243-246
+.. GENERATED FROM PYTHON SOURCE LINES 235-238
 
 Fit a non-negative PARAFAC2 model using the custom penalty class on the B mode
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Now, we can fit a new model with the custom unimodality class
 
-.. GENERATED FROM PYTHON SOURCE LINES 246-269
+.. GENERATED FROM PYTHON SOURCE LINES 238-261
 
 .. code-block:: default
 
@@ -26134,12 +26113,12 @@ Now, we can fit a new model with the custom unimodality class
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 270-272
+.. GENERATED FROM PYTHON SOURCE LINES 262-264
 
 Compute factor match score to measure the accuracy of the recovered components
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. GENERATED FROM PYTHON SOURCE LINES 272-278
+.. GENERATED FROM PYTHON SOURCE LINES 264-270
 
 .. code-block:: default
 
@@ -26164,16 +26143,16 @@ Compute factor match score to measure the accuracy of the recovered components
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 279-280
+.. GENERATED FROM PYTHON SOURCE LINES 271-272
 
 We see that the factor match score is much better now compared to before!
 
-.. GENERATED FROM PYTHON SOURCE LINES 282-284
+.. GENERATED FROM PYTHON SOURCE LINES 274-276
 
 Plot the recovered components
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. GENERATED FROM PYTHON SOURCE LINES 284-312
+.. GENERATED FROM PYTHON SOURCE LINES 276-304
 
 .. code-block:: default
 
@@ -26217,7 +26196,7 @@ Plot the recovered components
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 313-316
+.. GENERATED FROM PYTHON SOURCE LINES 305-308
 
 We see that the model finds much more sensible component vectors. The :math:`\mathbf{A}`- and
 :math:`\mathbf{C}`-component vectors no longer seem correlated, and the peaks of the :math:`\mathbf{B}^{(i)}`-component
@@ -26226,7 +26205,7 @@ vectors no longer jump around.
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 11 minutes  36.328 seconds)
+   **Total running time of the script:** ( 1 minutes  47.957 seconds)
 
 
 .. _sphx_glr_download_auto_examples_plot_custom_penalty.py:

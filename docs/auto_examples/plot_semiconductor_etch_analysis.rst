@@ -81,7 +81,7 @@ Data loading and preprocessing
 
     Loading semiconductor etch data from Wise et al. (1999) - J. Chemom. 13(3‐4), pp.379-396.
     The data is available at: http://eigenvector.com/data/Etch/
-      0%|                                                                           | 0/3 [00:00<?, ?it/s]    100%|###################################################################| 3/3 [00:00<00:00, 65.78it/s]
+      0%|                                       | 0/3 [00:00<?, ?it/s]    100%|###############################| 3/3 [00:00<00:00, 73.71it/s]
 
 
 
@@ -23798,7 +23798,7 @@ Since this example uses the `condat_tv`-library, it is lisenced under a GPL-3 li
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 1 minutes  26.573 seconds)
+   **Total running time of the script:** ( 1 minutes  4.559 seconds)
 
 
 .. _sphx_glr_download_auto_examples_plot_semiconductor_etch_analysis.py:

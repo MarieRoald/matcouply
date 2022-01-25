@@ -238,7 +238,7 @@ models, which means that the approximation is very good for all of them.
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 1 minutes  33.503 seconds)
+   **Total running time of the script:** ( 1 minutes  8.853 seconds)
 
 
 .. _sphx_glr_download_auto_examples_plot_examining_different_number_of_components.py:
