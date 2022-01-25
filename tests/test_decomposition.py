@@ -1452,21 +1452,18 @@ def test_parafac2_makes_nn_cmf_unique(rng):
     cmf = CoupledMatrixFactorization((weights, (A, B_is, C)))
     matrices = cmf.to_matrices()
 
-    rec_errors = [float("inf")]
+    regularized_loss = [float("inf")]
     for init in range(5):
         out, diagnostics = decomposition.cmf_aoadmm(
             matrices, rank, n_iter_max=1_000, return_errors=True, non_negative=[True, True, True], parafac2=True,
         )
 
-        if diagnostics.rec_errors[-1] < rec_errors[-1] and diagnostics.satisfied_feasibility_condition:
+        if diagnostics.regularized_loss[-1] < regularized_loss[-1] and diagnostics.satisfied_feasibility_condition:
             out_cmf = out
-            rec_errors = diagnostics.rec_errors
+            regularized_loss = diagnostics.regularized_loss
 
     # Check that reconstruction error is low and that the correct factors are recovered
-    if tl.get_backend() == "numpy":
-        assert rec_errors[-1] < 1e-4
-    else:
-        assert rec_errors[-1] < 1e-3  # Single precision often has slightly worse performance
+    assert regularized_loss[-1] < 1e-5
 
     # Low congruence coefficient tolerance to account for single precision (pytorch) being less accurate
     assert congruence_coefficient(A, out_cmf[1][0], absolute_value=True)[0] > 0.95
