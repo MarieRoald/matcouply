@@ -690,6 +690,9 @@ class GeneralizedL2Penalty(MatrixPenalty):
     ):
         super().__init__(aux_init, dual_init)
         self.norm_matrix = norm_matrix
+        self.svd = svd  # Useful for the __repr__
+        self.validate = validate  # Useful for the __repr__
+
         sign_matrix = -tl.ones(tl.shape(norm_matrix))
         sign_matrix = sign_matrix + 2 * tl.eye(tl.shape(norm_matrix)[0])
         if validate and (
@@ -702,15 +705,18 @@ class GeneralizedL2Penalty(MatrixPenalty):
             if np.any(eigvals < -1e-14):
                 raise ValueError("The norm matrix should be symmetric positive semidefinite")
 
-        self.svd_fun = get_svd(svd)
-        self.U, self.s, _ = self.svd_fun(norm_matrix)  # Ignore Vh since norm matrix is symmetric
+        self._U, self._s, _ = self.svd_fun(norm_matrix)  # Ignore Vh since norm matrix is symmetric
+
+    @property
+    def svd_fun(self):
+        return get_svd(self.svd)
 
     @copy_ancestor_docstring
     def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
-        s_aug = self.s + 0.5 * feasibility_penalty
+        s_aug = self._s + 0.5 * feasibility_penalty
         tmp = 0.5 * feasibility_penalty * factor_matrix
-        tmp = tl.dot(tl.transpose(self.U), tmp)
-        tmp = tl.dot((self.U * (1 / s_aug)), tmp)
+        tmp = tl.dot(tl.transpose(self._U), tmp)
+        tmp = tl.dot((self._U * (1 / s_aug)), tmp)
         return tmp
 
     def _penalty(self, x):
@@ -1068,12 +1074,16 @@ class Parafac2(MatricesPenalty):
         aux_init="random_uniform",
         dual_init="random_uniform",
     ):
-        self.svd_fun = get_svd(svd)
+        self.svd = svd
         self.aux_init = aux_init
         self.dual_init = dual_init
         self.update_basis_matrices = update_basis_matrices
         self.update_coordinate_matrix = update_coordinate_matrix
         self.n_iter = n_iter
+
+    @property
+    def svd_fun(self):
+        return get_svd(self.svd)
 
     def init_aux(self, matrices, rank, mode, random_state=None):
         r"""Initialize the auxiliary variables
