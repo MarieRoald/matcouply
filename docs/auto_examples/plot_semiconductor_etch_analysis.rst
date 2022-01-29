@@ -81,7 +81,7 @@ Data loading and preprocessing
 
     Loading semiconductor etch data from Wise et al. (1999) - J. Chemom. 13(3‐4), pp.379-396.
     The data is available at: http://eigenvector.com/data/Etch/
-      0%|                                       | 0/3 [00:00<?, ?it/s]    100%|###############################| 3/3 [00:00<00:00, 73.71it/s]
+      0%|                                                                                            | 0/3 [00:00<?, ?it/s]    100%|###################################################################################| 3/3 [00:00<00:00, 130.44it/s]
 
 
 
@@ -23599,13 +23599,14 @@ Similar as before, we add non-negativity on :math:`\mathbf{A}` to resolve the si
 
  .. code-block:: none
 
-    Added mode 0 penalties and constraints:
-     * L2 ball constraint (with non-negativity)
-    Added mode 1 penalties and constraints:
-     * PARAFAC2
-     * Total Variation penalty
-    Added mode 2 penalties and constraints:
-     * L2 ball constraint
+    All regularization penalties (including regs list):
+    * Mode 0:
+       - <'matcouply.penalties.L2Ball' with aux_init='random_uniform', dual_init='random_uniform', norm_bound=1, non_negativity=True)>
+    * Mode 1:
+       - <'matcouply.penalties.Parafac2' with svd='truncated_svd', aux_init='random_uniform', dual_init='random_uniform', update_basis_matrices=True, update_coordinate_matrix=True, n_iter=1)>
+       - <'matcouply.penalties.TotalVariationPenalty' with aux_init='random_uniform', dual_init='random_uniform', reg_strength=0.1, l1_strength=0)>
+    * Mode 2:
+       - <'matcouply.penalties.L2Ball' with aux_init='random_uniform', dual_init='random_uniform', norm_bound=1, non_negativity=None)>
     Duality gaps for A: [0.7400643923079112]
     Duality gaps for the Bi-matrices: [0.996063095944572, 0.7079440010796405]
     Duality gaps for C: [0.8911128744366852]
@@ -23798,7 +23799,7 @@ Since this example uses the `condat_tv`-library, it is lisenced under a GPL-3 li
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 1 minutes  4.559 seconds)
+   **Total running time of the script:** ( 1 minutes  0.946 seconds)
 
 
 .. _sphx_glr_download_auto_examples_plot_semiconductor_etch_analysis.py:

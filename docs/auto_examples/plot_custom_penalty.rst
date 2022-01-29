@@ -246,12 +246,14 @@ a fully unimodal decomposition.
  .. code-block:: none
 
     Init: 0
-    Added mode 0 penalties and constraints:
-     (no additional regularization added)
-    Added mode 1 penalties and constraints:
-     * PARAFAC2
-    Added mode 2 penalties and constraints:
-     (no additional regularization added)
+    All regularization penalties (including regs list):
+    * Mode 0:
+       - <'matcouply.penalties.NonNegativity' with aux_init='random_uniform', dual_init='random_uniform')>
+    * Mode 1:
+       - <'matcouply.penalties.Parafac2' with svd='truncated_svd', aux_init='random_uniform', dual_init='random_uniform', update_basis_matrices=True, update_coordinate_matrix=True, n_iter=1)>
+       - <'matcouply.penalties.Unimodality' with aux_init='random_uniform', dual_init='random_uniform', non_negativity=True)>
+    * Mode 2:
+       - <'matcouply.penalties.NonNegativity' with aux_init='random_uniform', dual_init='random_uniform')>
     Duality gaps for A: [0.6536201371726535]
     Duality gaps for the Bi-matrices: [0.991541154718251, 0.7209249811534285]
     Duality gaps for C: [0.698917129490007]
@@ -625,12 +627,14 @@ a fully unimodal decomposition.
     Duality gaps for C: [0.0]
     converged in 91 iterations: FEASIBILITY GAP CRITERION AND RELATIVE LOSS CRITERION SATISFIED
     Init: 1
-    Added mode 0 penalties and constraints:
-     (no additional regularization added)
-    Added mode 1 penalties and constraints:
-     * PARAFAC2
-    Added mode 2 penalties and constraints:
-     (no additional regularization added)
+    All regularization penalties (including regs list):
+    * Mode 0:
+       - <'matcouply.penalties.NonNegativity' with aux_init='random_uniform', dual_init='random_uniform')>
+    * Mode 1:
+       - <'matcouply.penalties.Parafac2' with svd='truncated_svd', aux_init='random_uniform', dual_init='random_uniform', update_basis_matrices=True, update_coordinate_matrix=True, n_iter=1)>
+       - <'matcouply.penalties.Unimodality' with aux_init='random_uniform', dual_init='random_uniform', non_negativity=True)>
+    * Mode 2:
+       - <'matcouply.penalties.NonNegativity' with aux_init='random_uniform', dual_init='random_uniform')>
     Duality gaps for A: [0.8420701798435941]
     Duality gaps for the Bi-matrices: [0.9737546725688532, 0.691901967686556]
     Duality gaps for C: [0.7433855015485626]
@@ -4636,12 +4640,14 @@ a fully unimodal decomposition.
     Duality gaps for C: [0.0]
     REACHED MAXIMUM NUMBER OF ITERATIONS
     Init: 2
-    Added mode 0 penalties and constraints:
-     (no additional regularization added)
-    Added mode 1 penalties and constraints:
-     * PARAFAC2
-    Added mode 2 penalties and constraints:
-     (no additional regularization added)
+    All regularization penalties (including regs list):
+    * Mode 0:
+       - <'matcouply.penalties.NonNegativity' with aux_init='random_uniform', dual_init='random_uniform')>
+    * Mode 1:
+       - <'matcouply.penalties.Parafac2' with svd='truncated_svd', aux_init='random_uniform', dual_init='random_uniform', update_basis_matrices=True, update_coordinate_matrix=True, n_iter=1)>
+       - <'matcouply.penalties.Unimodality' with aux_init='random_uniform', dual_init='random_uniform', non_negativity=True)>
+    * Mode 2:
+       - <'matcouply.penalties.NonNegativity' with aux_init='random_uniform', dual_init='random_uniform')>
     Duality gaps for A: [0.914047539381028]
     Duality gaps for the Bi-matrices: [0.9819293155819506, 0.6953992142081842]
     Duality gaps for C: [0.7549569841061697]
@@ -8647,12 +8653,14 @@ a fully unimodal decomposition.
     Duality gaps for C: [0.0]
     REACHED MAXIMUM NUMBER OF ITERATIONS
     Init: 3
-    Added mode 0 penalties and constraints:
-     (no additional regularization added)
-    Added mode 1 penalties and constraints:
-     * PARAFAC2
-    Added mode 2 penalties and constraints:
-     (no additional regularization added)
+    All regularization penalties (including regs list):
+    * Mode 0:
+       - <'matcouply.penalties.NonNegativity' with aux_init='random_uniform', dual_init='random_uniform')>
+    * Mode 1:
+       - <'matcouply.penalties.Parafac2' with svd='truncated_svd', aux_init='random_uniform', dual_init='random_uniform', update_basis_matrices=True, update_coordinate_matrix=True, n_iter=1)>
+       - <'matcouply.penalties.Unimodality' with aux_init='random_uniform', dual_init='random_uniform', non_negativity=True)>
+    * Mode 2:
+       - <'matcouply.penalties.NonNegativity' with aux_init='random_uniform', dual_init='random_uniform')>
     Duality gaps for A: [0.7493890212748296]
     Duality gaps for the Bi-matrices: [0.9877127703723269, 0.6911383487531076]
     Duality gaps for C: [0.6406461294636325]
@@ -12853,12 +12861,14 @@ Now, we can fit a new model with the custom unimodality class
  .. code-block:: none
 
     Init: 0
-    Added mode 0 penalties and constraints:
-     (no additional regularization added)
-    Added mode 1 penalties and constraints:
-     * PARAFAC2
-    Added mode 2 penalties and constraints:
-     (no additional regularization added)
+    All regularization penalties (including regs list):
+    * Mode 0:
+       - <'matcouply.penalties.NonNegativity' with aux_init='random_uniform', dual_init='random_uniform')>
+    * Mode 1:
+       - <'matcouply.penalties.Parafac2' with svd='truncated_svd', aux_init='random_uniform', dual_init='random_uniform', update_basis_matrices=True, update_coordinate_matrix=True, n_iter=1)>
+       - <'__main__.CustomUnimodality' with aux_init='random_uniform', dual_init='random_uniform', non_negativity=True)>
+    * Mode 2:
+       - <'matcouply.penalties.NonNegativity' with aux_init='random_uniform', dual_init='random_uniform')>
     Duality gaps for A: [0.6536201371726535]
     Duality gaps for the Bi-matrices: [0.991541154718251, 0.7209249811534285]
     Duality gaps for C: [0.698917129490007]
@@ -15948,12 +15958,14 @@ Now, we can fit a new model with the custom unimodality class
     Duality gaps for C: [5.874705242175801e-11]
     converged in 770 iterations: FEASIBILITY GAP CRITERION AND RELATIVE LOSS CRITERION SATISFIED
     Init: 1
-    Added mode 0 penalties and constraints:
-     (no additional regularization added)
-    Added mode 1 penalties and constraints:
-     * PARAFAC2
-    Added mode 2 penalties and constraints:
-     (no additional regularization added)
+    All regularization penalties (including regs list):
+    * Mode 0:
+       - <'matcouply.penalties.NonNegativity' with aux_init='random_uniform', dual_init='random_uniform')>
+    * Mode 1:
+       - <'matcouply.penalties.Parafac2' with svd='truncated_svd', aux_init='random_uniform', dual_init='random_uniform', update_basis_matrices=True, update_coordinate_matrix=True, n_iter=1)>
+       - <'__main__.CustomUnimodality' with aux_init='random_uniform', dual_init='random_uniform', non_negativity=True)>
+    * Mode 2:
+       - <'matcouply.penalties.NonNegativity' with aux_init='random_uniform', dual_init='random_uniform')>
     Duality gaps for A: [0.8420701798435941]
     Duality gaps for the Bi-matrices: [0.9737546725688532, 0.691901967686556]
     Duality gaps for C: [0.7433855015485626]
@@ -19959,12 +19971,14 @@ Now, we can fit a new model with the custom unimodality class
     Duality gaps for C: [3.020199748032735e-09]
     REACHED MAXIMUM NUMBER OF ITERATIONS
     Init: 2
-    Added mode 0 penalties and constraints:
-     (no additional regularization added)
-    Added mode 1 penalties and constraints:
-     * PARAFAC2
-    Added mode 2 penalties and constraints:
-     (no additional regularization added)
+    All regularization penalties (including regs list):
+    * Mode 0:
+       - <'matcouply.penalties.NonNegativity' with aux_init='random_uniform', dual_init='random_uniform')>
+    * Mode 1:
+       - <'matcouply.penalties.Parafac2' with svd='truncated_svd', aux_init='random_uniform', dual_init='random_uniform', update_basis_matrices=True, update_coordinate_matrix=True, n_iter=1)>
+       - <'__main__.CustomUnimodality' with aux_init='random_uniform', dual_init='random_uniform', non_negativity=True)>
+    * Mode 2:
+       - <'matcouply.penalties.NonNegativity' with aux_init='random_uniform', dual_init='random_uniform')>
     Duality gaps for A: [0.914047539381028]
     Duality gaps for the Bi-matrices: [0.9819293155819506, 0.6953992142081842]
     Duality gaps for C: [0.7549569841061697]
@@ -23970,12 +23984,14 @@ Now, we can fit a new model with the custom unimodality class
     Duality gaps for C: [5.564099201605307e-09]
     REACHED MAXIMUM NUMBER OF ITERATIONS
     Init: 3
-    Added mode 0 penalties and constraints:
-     (no additional regularization added)
-    Added mode 1 penalties and constraints:
-     * PARAFAC2
-    Added mode 2 penalties and constraints:
-     (no additional regularization added)
+    All regularization penalties (including regs list):
+    * Mode 0:
+       - <'matcouply.penalties.NonNegativity' with aux_init='random_uniform', dual_init='random_uniform')>
+    * Mode 1:
+       - <'matcouply.penalties.Parafac2' with svd='truncated_svd', aux_init='random_uniform', dual_init='random_uniform', update_basis_matrices=True, update_coordinate_matrix=True, n_iter=1)>
+       - <'__main__.CustomUnimodality' with aux_init='random_uniform', dual_init='random_uniform', non_negativity=True)>
+    * Mode 2:
+       - <'matcouply.penalties.NonNegativity' with aux_init='random_uniform', dual_init='random_uniform')>
     Duality gaps for A: [0.7493890212748296]
     Duality gaps for the Bi-matrices: [0.9877127703723269, 0.6911383487531076]
     Duality gaps for C: [0.6406461294636325]
@@ -26205,7 +26221,7 @@ vectors no longer jump around.
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** ( 1 minutes  47.957 seconds)
+   **Total running time of the script:** ( 1 minutes  43.834 seconds)
 
 
 .. _sphx_glr_download_auto_examples_plot_custom_penalty.py:
