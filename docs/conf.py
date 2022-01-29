@@ -20,7 +20,7 @@ pio.renderers.default = "sphinx_gallery"
 # -- Project information -----------------------------------------------------
 
 project = "MatCoupLy"
-copyright = "2021, Marie Roald"
+copyright = "2022, Marie Roald"
 author = "Marie Roald"
 
 # The full version, including alpha/beta/rc tags
