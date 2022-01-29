@@ -340,6 +340,10 @@ class ADMMPenalty(ABC, metaclass=InheritableDocstrings):
         """
         return [self.aux_as_matrix(aux) for aux in auxes]
 
+    def __repr__(self):
+        params = ", ".join(f"{key}={repr(value)}" for key, value in self.__dict__.items() if not key.startswith("_"))
+        return f"<'{self.__module__}.{type(self).__name__}' with {params})>"
+
 
 class MatricesPenalty(ADMMPenalty):
     """Base class for penalties that are applied to a list of factor matrices simultaneously.
@@ -643,25 +647,21 @@ class GeneralizedL2Penalty(MatrixPenalty):
     .. math::
 
         \text{prox}_{\mathbf{x}^\mathsf{T} \mathbf{Mx}}(\mathbf{x})
-        = \rho\mathbf{U}\tilde{\mathbf{S}}^{-1}\mathbf{U}^\mathsf{T} \mathbf{x},
-
-    where :math:`\tilde{\mathbf{S}}^{-1}` is a diagonal matrix whose :math:`i`-th diagonal entry,
-    :math:`\tilde{s}^{-1}_{ii} = \frac{1}{s_{ii}\rho}`.
+        = (\mathbf{U}(\mathbf{S} + 0.5\rho\mathbf{I})^{-1}\mathbf{U}^\mathsf{T}) 0.5 \rho \mathbf{x}.
+    
+    This operation is fast once :math:`\mathbf{U}` and :math:`\mathbf{S}` are known, since solving the diagonal
+    system :math:`(\mathbf{S} + 0.5\rho\mathbf{I})` is fast.
 
     Parameters
     ----------
     norm_matrix : tl.tensor(ndim=2)
         The :math:`\mathbf{M}`-matrix above
-    method : {"svd"}
-        Which method to use when evaluating the proximal operator
     svd : str
         String that specifies which SVD algorithm to use. Valid strings are the keys of ``tensorly.SVD_FUNS``.
     aux_init : {"random_uniform", "random_standard_normal", "zeros", tl.tensor(ndim=2), list of tl.tensor(ndim=2)}
         Initialisation method for the auxiliary variables
     dual_init : {"random_uniform", "random_standard_normal", "zeros", tl.tensor(ndim=2), list of tl.tensor(ndim=2)}
         Initialisation method for the auxiliary variables
-    preconditioner : {sparse matrix, dense matrix, LinearOperator}
-        Which preconditioner to use (for iterative methods)
     validate : bool (default=True)
         Enable naive validation of the norm matrix.
 
@@ -994,7 +994,7 @@ class Parafac2(MatricesPenalty):
 
     .. math::
 
-        \mathbf{B}_{i_1}^\mathsf{T}\mathbf{B}_{i_1} = \mathbf{B}_{i_2}^\mathsf{T}\mathbf{B}_{i_2},
+        {\mathbf{B}^{(i_1)}}^{\mathsf{T}}\mathbf{B}^{(i_1)} = {\mathbf{B}^{(i_2)}}^{\mathsf{T}}\mathbf{B}^{(i_2)},
 
     for any :math:`i_1` and :math:`i_2`. This constraint ensures uniqueness on the components so
     long as the number of coupled matrices are sufficiently large. A sufficent condition is that
@@ -1006,7 +1006,7 @@ class Parafac2(MatricesPenalty):
     **Parametrization of matrix-collections that satisfy the PARAFAC2 constraint**
 
     The standard way of parametrizing collections of matrices that satisfy the PARAFAC2 constraint
-    is due to Kiers et al. :cite:p:`kiers1999parafac2`. If :math:`\{\mathbf{B}^{(i)}\}_{i=1}^I` satsify
+    is due to Kiers et al. :cite:p:`kiers1999parafac2`. If :math:`\{\mathbf{B}^{(i)}\}_{i=1}^I` satsifies
     the PARAFAC2 constraint, then there exists a matrix :math:`\mathbf{\Delta} \in \mathbb{R}^{R \times R}`
     (the coordinate matrix) and a collection of orthonormal matrices :math:`\{\mathbf{P}^{(i)}\}_{i=1}^I`
     (the orthogonal basis matrices) such that
@@ -1032,17 +1032,17 @@ class Parafac2(MatricesPenalty):
 
     .. math::
 
-        \mathbf{P}^{(i)} = \mathbf{U}^{(i)} \mathbf{V}^{(i)}^\mathsf{T}
+        \mathbf{P}^{(i)} = \mathbf{U}^{(i)} {\mathbf{V}^{(i)}}^\mathsf{T}
 
     where :math:`\mathbf{U}^{(i)}` and :math:`\mathbf{V}^{(i)}` contain the left and right singular vectors
-    of :math:`\mathbf{X}^{(i)} \mathbf{Delta}^\Tra`.
+    of :math:`\mathbf{X}^{(i)} \mathbf{\Delta}^\mathsf{T}`.
 
     Then we update the coordinate matrix by
 
     .. math::
 
         \mathbf{\Delta}
-        = \frac{1}{\sum_{i=1}^I \rho_i}\sum_{i=1}^I \rho_i \mathbf{P}^{(i)}^\mathsf{T}\mathbf{X}^{(i)},
+        = \frac{1}{\sum_{i=1}^I \rho_i}\sum_{i=1}^I \rho_i {\mathbf{P}^{(i)}}^\mathsf{T}\mathbf{X}^{(i)},
 
     where :math:`\rho_i` is the feasibility penalty (which parameterizes the norm of the projection)
     for the :math:`i`-th factor matrix.
