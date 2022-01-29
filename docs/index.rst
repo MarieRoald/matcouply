@@ -11,9 +11,9 @@ Welcome to MatCoupLy's documentation!
    :caption: Contents:
    
    about_matcouply
+   installation
    coupled_matrix_factorization
    optimization
-   installation
    auto_examples/index
    api
    contributing
