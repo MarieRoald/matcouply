@@ -18,7 +18,9 @@ jobs:
           python -m pip install --upgrade pip wheel
           python -m pip install git+https://github.com/tensorly/tensorly.git
           python -m pip install torch
-          python -m pip install -e .[all,devel]
+          python -m pip install numba==0.53.1
+          python -m pip install numpy==1.22.1
+          python -m pip install -e .[gpl,devel]
       - name: run tests
         run: python3 -m pytest --cov=matcouply --cov-report=xml
         env:
