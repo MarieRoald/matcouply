@@ -477,15 +477,16 @@ def test_parse_all_penalties_verbose(capfd):
         out, err = capfd.readouterr()
         assert len(out) > 0
         message = (
-            "Added mode 0 penalties and constraints:"
+            "All regularization penalties (including regs list):\n"
+            + "* Mode 0:"
             + "\n"
-            + " (no additional regularization added)\n"
-            + "Added mode 1 penalties and constraints:"
+            + "   - (no regularization added)\n"
+            + "* Mode 1:"
             + "\n"
-            + " (no additional regularization added)\n"
-            + "Added mode 2 penalties and constraints:"
+            + "   - (no regularization added)\n"
+            + "* Mode 2:"
             + "\n"
-            + " * Non negativity constraints\n"
+            + "   - <'matcouply.penalties.NonNegativity' with aux_init='random_uniform', dual_init='random_uniform')>\n"
         )
         assert out == message
 
@@ -496,7 +497,7 @@ def test_parse_all_penalties_verbose(capfd):
 )
 def test_parse_mode_penalties(dual_init, aux_init):
     # Check that dual and aux init is set correctly
-    out, verbosity_str = decomposition._parse_mode_penalties(
+    out = decomposition._parse_mode_penalties(
         non_negative=True,
         lower_bound=0,
         upper_bound=1,
@@ -515,7 +516,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
         assert reg.aux_init == aux_init
 
     for svd in ["truncated_svd", "numpy_svd"]:
-        out, verbosity_str = decomposition._parse_mode_penalties(
+        out = decomposition._parse_mode_penalties(
             non_negative=None,
             lower_bound=None,
             upper_bound=None,
@@ -533,7 +534,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
             assert reg.svd_fun == get_svd(svd)
 
     # Check that no penalty gives length 0
-    out, verbosity_str = decomposition._parse_mode_penalties(
+    out = decomposition._parse_mode_penalties(
         non_negative=None,
         lower_bound=None,
         upper_bound=None,
@@ -548,10 +549,9 @@ def test_parse_mode_penalties(dual_init, aux_init):
         aux_init=aux_init,
     )
     assert len(out) == 0
-    assert verbosity_str == "\n (no additional regularization added)"
 
     # Check that non-negativity gives length one
-    out, verbosity_str = decomposition._parse_mode_penalties(
+    out = decomposition._parse_mode_penalties(
         non_negative=True,
         lower_bound=None,
         upper_bound=None,
@@ -571,7 +571,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
     # Test parsing of NN
     # ------------------
     # NN + lower bound
-    out, verbosity_str = decomposition._parse_mode_penalties(
+    out = decomposition._parse_mode_penalties(
         non_negative=True,
         lower_bound=5,
         upper_bound=None,
@@ -589,7 +589,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
     assert isinstance(out[0], penalties.BoxConstraint)
     assert out[0].min_val == 5
 
-    out, verbosity_str = decomposition._parse_mode_penalties(
+    out = decomposition._parse_mode_penalties(
         non_negative=True,
         lower_bound=-1,
         upper_bound=None,
@@ -608,7 +608,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
     assert out[0].min_val == 0
 
     # NN + upper bound
-    out, verbosity_str = decomposition._parse_mode_penalties(
+    out = decomposition._parse_mode_penalties(
         non_negative=True,
         lower_bound=None,
         upper_bound=5,
@@ -628,7 +628,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
     assert out[0].min_val == 0
 
     # NN + lower and upper bound
-    out, verbosity_str = decomposition._parse_mode_penalties(
+    out = decomposition._parse_mode_penalties(
         non_negative=True,
         lower_bound=-1,
         upper_bound=5,
@@ -648,7 +648,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
     assert out[0].min_val == 0
 
     # NN + L1
-    out, verbosity_str = decomposition._parse_mode_penalties(
+    out = decomposition._parse_mode_penalties(
         non_negative=True,
         lower_bound=None,
         upper_bound=None,
@@ -668,7 +668,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
     assert out[0].reg_strength == 42
 
     # NN + L1 + lower bound
-    out, verbosity_str = decomposition._parse_mode_penalties(
+    out = decomposition._parse_mode_penalties(
         non_negative=True,
         lower_bound=-1,
         upper_bound=None,
@@ -697,7 +697,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
     # NN + ball
 
     # NN + L1 + lower bound
-    out, verbosity_str = decomposition._parse_mode_penalties(
+    out = decomposition._parse_mode_penalties(
         non_negative=True,
         lower_bound=None,
         upper_bound=None,
@@ -717,7 +717,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
 
     # Test parsing of Parafac2
     # Parafac2
-    out, verbosity_str = decomposition._parse_mode_penalties(
+    out = decomposition._parse_mode_penalties(
         non_negative=None,
         lower_bound=None,
         upper_bound=None,
@@ -734,7 +734,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
     assert len(out) == 1
     assert isinstance(out[0], penalties.Parafac2)
     # NN + Parafac2 (len=2, contains both a NN and a Parafac2)
-    out, verbosity_str = decomposition._parse_mode_penalties(
+    out = decomposition._parse_mode_penalties(
         non_negative=True,
         lower_bound=None,
         upper_bound=None,
@@ -758,7 +758,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
 
     # Test parsing of L1
     # L1
-    out, verbosity_str = decomposition._parse_mode_penalties(
+    out = decomposition._parse_mode_penalties(
         non_negative=None,
         lower_bound=None,
         upper_bound=None,
@@ -775,7 +775,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
     assert len(out) == 1
     assert isinstance(out[0], penalties.L1Penalty)
     # L1 + TV
-    out, verbosity_str = decomposition._parse_mode_penalties(
+    out = decomposition._parse_mode_penalties(
         non_negative=None,
         lower_bound=None,
         upper_bound=None,
@@ -793,9 +793,8 @@ def test_parse_mode_penalties(dual_init, aux_init):
     assert isinstance(out[0], penalties.TotalVariationPenalty)
     assert out[0].reg_strength == 2
     assert out[0].l1_strength == 1
-    assert verbosity_str == "\n * Total Variation penalty (with L1)"
     # L1 + upper bound
-    out, verbosity_str = decomposition._parse_mode_penalties(
+    out = decomposition._parse_mode_penalties(
         non_negative=None,
         lower_bound=None,
         upper_bound=10,
@@ -820,7 +819,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
 
     # Test parsing of TV
     # TV
-    out, verbosity_str = decomposition._parse_mode_penalties(
+    out = decomposition._parse_mode_penalties(
         non_negative=None,
         lower_bound=None,
         upper_bound=None,
@@ -837,9 +836,8 @@ def test_parse_mode_penalties(dual_init, aux_init):
     assert len(out) == 1
     assert isinstance(out[0], penalties.TotalVariationPenalty)
     assert out[0].reg_strength == 1
-    assert verbosity_str == "\n * Total Variation penalty"
     # TV + Parafac2
-    out, verbosity_str = decomposition._parse_mode_penalties(
+    out = decomposition._parse_mode_penalties(
         non_negative=None,
         lower_bound=None,
         upper_bound=None,
@@ -864,7 +862,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
 
     # Test parsing of ball constraints
     # Ball
-    out, verbosity_str = decomposition._parse_mode_penalties(
+    out = decomposition._parse_mode_penalties(
         non_negative=None,
         lower_bound=None,
         upper_bound=None,
@@ -882,7 +880,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
     assert isinstance(out[0], penalties.L2Ball)
     assert out[0].norm_bound == 1
     # Ball + TV
-    out, verbosity_str = decomposition._parse_mode_penalties(
+    out = decomposition._parse_mode_penalties(
         non_negative=None,
         lower_bound=None,
         upper_bound=None,
@@ -908,7 +906,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
 
     # Test parsing of generalized L2
     # Generalized L2
-    out, verbosity_str = decomposition._parse_mode_penalties(
+    out = decomposition._parse_mode_penalties(
         non_negative=None,
         lower_bound=None,
         upper_bound=None,
@@ -926,7 +924,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
     assert isinstance(out[0], penalties.GeneralizedL2Penalty)
     assert_array_equal(out[0].norm_matrix, tl.eye(10))
     # Generalized L2 + L1
-    out, verbosity_str = decomposition._parse_mode_penalties(
+    out = decomposition._parse_mode_penalties(
         non_negative=None,
         lower_bound=None,
         upper_bound=None,
@@ -953,7 +951,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
     # Unimodality
     # Patch get_backend since unimodality constraints raises runtime error on non-numpy backend
     with patch("matcouply.decomposition.tensorly.get_backend", return_value="numpy"):
-        out, verbosity_str = decomposition._parse_mode_penalties(
+        out = decomposition._parse_mode_penalties(
             non_negative=False,
             lower_bound=None,
             upper_bound=None,
@@ -974,7 +972,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
     # Unimodality + NN
     # Patch get_backend since unimodality constraints raises runtime error on non-numpy backend
     with patch("matcouply.decomposition.tensorly.get_backend", return_value="numpy"):
-        out, verbosity_str = decomposition._parse_mode_penalties(
+        out = decomposition._parse_mode_penalties(
             non_negative=True,
             lower_bound=None,
             upper_bound=None,
@@ -995,7 +993,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
     # Unimodality + NN + TV
     # Patch get_backend since unimodality constraints raises runtime error on non-numpy backend
     with patch("matcouply.decomposition.tensorly.get_backend", return_value="numpy"):
-        out, verbosity_str = decomposition._parse_mode_penalties(
+        out = decomposition._parse_mode_penalties(
             non_negative=True,
             lower_bound=None,
             upper_bound=None,

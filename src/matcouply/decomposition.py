@@ -459,7 +459,7 @@ def _parse_all_penalties(
     tv_penalty = _listify(tv_penalty, "tv_penalty")
 
     for mode in range(3):
-        parsed_regs, message = _parse_mode_penalties(
+        parsed_regs = _parse_mode_penalties(
             non_negative=non_negative[mode],
             lower_bound=lower_bound[mode],
             upper_bound=upper_bound[mode],
@@ -475,9 +475,15 @@ def _parse_all_penalties(
         )
 
         regs[mode] = parsed_regs + regs[mode]
-
-        if verbose:
-            print(f"Added mode {mode} penalties and constraints:{message}")
+    
+    if verbose:
+        print(f"All regularization penalties (including regs list):")
+        for mode, reg in enumerate(regs):
+            print(f"* Mode {mode}:")
+            if len(reg) == 0:
+                print( "   - (no regularization added)")
+            for single_reg in reg:
+                print(f"   - {single_reg}")
     return regs
 
 
@@ -499,21 +505,15 @@ def _parse_mode_penalties(
     if not l1_penalty:
         l1_penalty = 0
 
-    description_str = ""
     regs = []
 
     skip_non_negative = False
 
     if parafac2:
         regs.append(penalties.Parafac2(svd=svd, aux_init=aux_init, dual_init=dual_init))
-        description_str += "\n * PARAFAC2"
 
     if unimodal:
         regs.append(penalties.Unimodality(non_negativity=non_negative, aux_init=aux_init, dual_init=dual_init))
-        if non_negative:
-            description_str += "\n * Unimodality constraint (with non-negativity)"
-        else:
-            description_str += "\n * Unimodality constraint "
         skip_non_negative = True
 
     if (
@@ -522,36 +522,23 @@ def _parse_mode_penalties(
         regs.append(
             penalties.GeneralizedL2Penalty(generalized_l2_penalty, aux_init=aux_init, dual_init=dual_init, svd=svd)
         )
-        description_str += "\n * Generalized L2 penalty"
 
     if l2_norm_bound:
         regs.append(
             penalties.L2Ball(l2_norm_bound, non_negativity=non_negative, aux_init=aux_init, dual_init=dual_init)
         )
-        if non_negative:
-            description_str += "\n * L2 ball constraint (with non-negativity)"
-        else:
-            description_str += "\n * L2 ball constraint"
         skip_non_negative = True
 
     if tv_penalty:
         regs.append(
             penalties.TotalVariationPenalty(tv_penalty, l1_strength=l1_penalty, aux_init=aux_init, dual_init=dual_init)
         )
-        if l1_penalty:
-            description_str += "\n * Total Variation penalty (with L1)"
-        else:
-            description_str += "\n * Total Variation penalty"
         l1_penalty = 0  # Already included in the total variation penalty
 
     if l1_penalty:
         regs.append(
             penalties.L1Penalty(l1_penalty, non_negativity=non_negative, aux_init=aux_init, dual_init=dual_init)
         )
-        if non_negative:
-            description_str += "\n * L1 penalty (with non-negativity)"
-        else:
-            description_str += "\n * L1 penalty"
         skip_non_negative = True
 
     if lower_bound is not None or upper_bound is not None:
@@ -560,16 +547,12 @@ def _parse_mode_penalties(
         if non_negative:
             lower_bound = max(lower_bound, 0)
         regs.append(penalties.BoxConstraint(lower_bound, upper_bound, aux_init=aux_init, dual_init=dual_init))
-        description_str += f"\n * Box constraints ({lower_bound} < x < {upper_bound})"
         skip_non_negative = True
 
     if non_negative and not skip_non_negative:
         regs.append(penalties.NonNegativity(aux_init=aux_init, dual_init=dual_init))
-        description_str += "\n * Non negativity constraints"
 
-    if len(description_str) == 0:
-        description_str += "\n (no additional regularization added)"
-    return regs, description_str
+    return regs
 
 
 def _compute_l2_penalty(cmf, l2_parameters):
@@ -711,7 +694,7 @@ def cmf_aoadmm(
         Initialization scheme for the dual variables. See :meth:`matcouply.penalties.ADMMPenalty.init_dual`
         for possible options.
     svd : str (default="truncated_svd")
-        Which svd function to use. See the TensorLy documentation for more info.
+        String that specifies which SVD algorithm to use. Valid strings are the keys of ``tensorly.SVD_FUNS``.
     init_params : dict
         Keyword arguments to use for the initialization.
     random_state : None, int or valid tensorly random state
