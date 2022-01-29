@@ -620,7 +620,8 @@ def cmf_to_unfolded(cmf, mode, pad=True, validate=True):
 
     pad : bool (default=True)
         If true, then the coupled matrix factorization will be converted into a dense tensor,
-        padding the matrices with zeros so all have the same size, and then unfolded.
+        padding the matrices with zeros so all have the same size, and then unfolded. Can only
+        be ``False`` if ``mode=2``.
 
     validate : bool (default=True)
         If true, then the decomposition is validated before the matrix is constructed
@@ -631,6 +632,11 @@ def cmf_to_unfolded(cmf, mode, pad=True, validate=True):
     ndarray
         Matrix of an appropriate shape (see ``cmf_to_tensor`` and ``tensorly.unfold``).
     
+    Raises
+    ------
+    ValueError
+        If ``pad=False`` and ``mode!=2``.
+
     Examples
     --------
     Here, we show how to unfold a coupled matrix factorization along a given mode.
