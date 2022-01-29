@@ -37,7 +37,7 @@ Then, you can download the MatCoupLy source code and install it together with al
 
     git clone https://github.com/marieroald/matcouply.git
     cd matcouply
-    pip install -e .[all,devel,examples]
+    pip install -e .[gpl,devel,examples]
 
 This will install MatCoupLy in editable mode, so any change to the source code will be applied to the installed
 version too.
