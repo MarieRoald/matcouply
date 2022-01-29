@@ -5,7 +5,7 @@ import tensorly as tl
 if tl.get_backend() == "numpy":
     RTOL_SCALE = 1
 else:
-    RTOL_SCALE = 100  # Single precision backends need less strict tests
+    RTOL_SCALE = 500  # Single precision backends need less strict tests
 
 
 def all_combinations(*args):
