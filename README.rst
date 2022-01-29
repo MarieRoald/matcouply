@@ -35,7 +35,7 @@ If you also want to enable total variation regularization, you need to install a
 
 .. code::
 
-        pip install matcouply[all]
+        pip install matcouply[gpl]
 
 About
 -----
