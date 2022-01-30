@@ -121,14 +121,15 @@ in the `online documentation <https://matcouply.readthedocs.io/en/latest/index.h
 
 .. code:: raw
 
-    Added mode 0 penalties and constraints:
-    * L2 ball constraint (with non-negativity)
-    Added mode 1 penalties and constraints:
-    * PARAFAC2
-    * Unimodality constraint (with non-negativity)
-    * L2 ball constraint (with non-negativity)
-    Added mode 2 penalties and constraints:
-    * L1 penalty (with non-negativity)
+    All regularization penalties (including regs list):
+    * Mode 0:
+       - <'matcouply.penalties.L2Ball' with aux_init='random_uniform', dual_init='random_uniform', norm_bound=1, non_negativity=True)>  
+    * Mode 1:
+       - <'matcouply.penalties.Parafac2' with svd='truncated_svd', aux_init='random_uniform', dual_init='random_uniform', update_basis_matrices=True, update_coordinate_matrix=True, n_iter=1)>
+       - <'matcouply.penalties.Unimodality' with aux_init='random_uniform', dual_init='random_uniform', non_negativity=True)>
+       - <'matcouply.penalties.L2Ball' with aux_init='random_uniform', dual_init='random_uniform', norm_bound=1, non_negativity=True)>  
+    * Mode 2:
+       - <'matcouply.penalties.L1Penalty' with aux_init='random_uniform', dual_init='random_uniform', reg_strength=0.1, non_negativity=True)>
     converged in 218 iterations: FEASIBILITY GAP CRITERION AND RELATIVE LOSS CRITERION SATISFIED
 
 .. image:: figures/readme_components.png
