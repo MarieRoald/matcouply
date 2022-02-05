@@ -45,7 +45,7 @@ jobs:
             python -m pip install --upgrade pip
     
       - name: Build wheel
-        run: python -m pip wheel -w dist/
+        run: python setup.py bdist_wheel
 
       - uses: actions/upload-artifact@v2
         with:
