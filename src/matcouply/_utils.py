@@ -1,3 +1,4 @@
+import scipy.linalg as sla
 import tensorly as tl
 
 
@@ -10,7 +11,13 @@ def is_iterable(x):
         return True
 
 
+def _scipy_svd(arr, *args, **kwargs):
+    return sla.svd(arr, full_matrices=False, *args, **kwargs)
+
+
 def get_svd(svd):
+    if svd == "scipy":
+        return _scipy_svd
     if svd in tl.SVD_FUNS:
         return tl.SVD_FUNS[svd]
     else:
