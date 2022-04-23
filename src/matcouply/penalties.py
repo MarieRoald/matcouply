@@ -43,7 +43,7 @@ class ADMMPenalty(ABC, metaclass=InheritableDocstrings):
             initialized as zero.
          * tl.tensor(ndim=2) : Pre-computed auxiliary variables (mode=0 or mode=2)
          * list of tl.tensor(ndim=2): Pre-computed auxiliary variables (mode=1)
-        
+
         Parameters
         ----------
         matrices : list of tensor(ndim=2) or tensor(ndim=3)
@@ -56,7 +56,7 @@ class ADMMPenalty(ABC, metaclass=InheritableDocstrings):
             auxiliary variables correspond to.
         random_state : RandomState
             TensorLy random state.
-        
+
         Returns
         -------
         tl.tensor(ndim=2) or list of tl.tensor(ndim=2)
@@ -325,7 +325,7 @@ class ADMMPenalty(ABC, metaclass=InheritableDocstrings):
 
     def auxes_as_matrices(self, auxes):
         """Convert a list of auxiliary variables to a list of matrices (mode=1).
-        
+
         This is an identity function that just returns its input. However,
         it is required for AO-ADMM to seamlessly work when the auxiliary variable
         is a parametrization of a matrix.
@@ -340,8 +340,27 @@ class ADMMPenalty(ABC, metaclass=InheritableDocstrings):
         """
         return [self.aux_as_matrix(aux) for aux in auxes]
 
+    def _auto_add_param_to_repr(self, param):
+        if param.startswith("_"):
+            return False
+        elif param in {"aux_init", "dual_init"}:
+            return False
+        return True
+
     def __repr__(self):
-        params = ", ".join(f"{key}={repr(value)}" for key, value in self.__dict__.items() if not key.startswith("_"))
+        param_strings = [
+            f"{key}={repr(value)}" for key, value in self.__dict__.items() if self._auto_add_param_to_repr(key)
+        ]
+        if isinstance(self.aux_init, str):
+            param_strings.append(f"aux_init='{self.aux_init}'")
+        else:
+            param_strings.append("aux_init=given_init")
+        if isinstance(self.dual_init, str):
+            param_strings.append(f"dual_init='{self.dual_init}'")
+        else:
+            param_strings.append("dual_init=given_init")
+
+        params = ", ".join(param_strings)
         return f"<'{self.__module__}.{type(self).__name__}' with {params})>"
 
 
@@ -583,7 +602,7 @@ class GeneralizedL2Penalty(MatrixPenalty):
     .. math::
 
         g(\mathbf{x}) = \mathbf{x}^\mathsf{T} \mathbf{Mx}
-    
+
     where :math:`\mathbf{M}` is a symmetric positive semidefinite matrix and :math:`\mathbf{x}`
     is a vector. This penalty is imposed for all columns of the factor matrix (or matrices for
     the :math:`\mathbf{B}^{(i)}`-s). Note that the regular L2-penalty (or Ridge penalty) is a special
@@ -596,12 +615,12 @@ class GeneralizedL2Penalty(MatrixPenalty):
 
     where :math:`\mathbf{L}` is a Cholesky factorization of :math:`\mathbf{M}`. However, the
     formulation with :math:`\mathbf{M}` is more practical than the formulation with :math:`\mathbf{L}`,
-    since 
+    since
 
     .. math::
 
         \mathbf{M} = \mathbf{L}^\mathsf{T}\mathbf{L}
-    
+
     is easy to compute with :math:`\mathbf{L}` known, but not wise-versa (e.g. if
     :math:`\mathbf{M}` is indefinite).
 
@@ -615,8 +634,8 @@ class GeneralizedL2Penalty(MatrixPenalty):
         g(\mathbf{x}) = \sum_{m=1}^M \sum_{n=1}^N w_{mn} (x_m - x_n)^2.
 
     That is, squared differences between the different component vector elements are penalised.
-    Graph laplacian penalties are useful, for example, in image processing, where :math:`w_{mn}` 
-    is a high number for vector elements that represent pixels that are close to each other and 
+    Graph laplacian penalties are useful, for example, in image processing, where :math:`w_{mn}`
+    is a high number for vector elements that represent pixels that are close to each other and
     a low number for vector elements that represent pixels that are far apart.
 
     To transform the graph Laplacian penalty into a generalised L2 penalty, we consider the
@@ -637,9 +656,9 @@ class GeneralizedL2Penalty(MatrixPenalty):
 
     .. math::
 
-        \text{prox}_{\mathbf{x}^\mathsf{T} \mathbf{Mx}}(\mathbf{x}) 
+        \text{prox}_{\mathbf{x}^\mathsf{T} \mathbf{Mx}}(\mathbf{x})
         = \left(\mathbf{M} + 0.5\rho\mathbf{I}\right)^{-1}0.5\rho\mathbf{x},
- 
+
     where :math:`\rho` is the scale parameter. There are several ways to solve this equation.
     One of which is via the SVD. Let :math:`\mathbf{M} = \mathbf{USU}^\mathsf{T}`, then, the
     proximal operator is given by
@@ -648,7 +667,7 @@ class GeneralizedL2Penalty(MatrixPenalty):
 
         \text{prox}_{\mathbf{x}^\mathsf{T} \mathbf{Mx}}(\mathbf{x})
         = (\mathbf{U}(\mathbf{S} + 0.5\rho\mathbf{I})^{-1}\mathbf{U}^\mathsf{T}) 0.5 \rho \mathbf{x}.
-    
+
     This operation is fast once :math:`\mathbf{U}` and :math:`\mathbf{S}` are known, since solving the diagonal
     system :math:`(\mathbf{S} + 0.5\rho\mathbf{I})` is fast.
 
@@ -1101,7 +1120,7 @@ class Parafac2(MatricesPenalty):
             initialized as zero.
          * tl.tensor(ndim=2) : Pre-computed coordinate matrix (mode=0 or mode=2)
          * list of tl.tensor(ndim=2): Pre-computed coordinate matrix (mode=1)
-        
+
         Parameters
         ----------
         matrices : list of tensor(ndim=2) or tensor(ndim=3)
@@ -1114,7 +1133,7 @@ class Parafac2(MatricesPenalty):
             auxiliary variables correspond to.
         random_state : RandomState
             TensorLy random state.
-        
+
         Returns
         -------
         tuple
@@ -1240,7 +1259,7 @@ class Parafac2(MatricesPenalty):
         orthogonal basis matrices, so this difference cannot be computed by simply subtracting
         one from the other. First auxiliary matrices must be computed by multiplying
         the basis matrices with the coordinate matrix and then the difference can
-        be computed. 
+        be computed.
 
         Parameters
         ----------
