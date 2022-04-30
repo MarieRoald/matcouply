@@ -11,7 +11,25 @@ def is_iterable(x):
         return True
 
 
+def scipy_svd(X, n_eigenvecs=None, **kwargs):
+    if n_eigenvecs is None:
+        n_eigenvecs = max(tl.shape(X))
+
+    if n_eigenvecs > min(tl.shape(X)):
+        full_matrices = True
+    else:
+        full_matrices = False
+
+    U, s, Vh = sla.svd(tl.to_numpy(X), full_matrices=full_matrices, **kwargs)
+    U = U[:, :n_eigenvecs]
+    s = s[:n_eigenvecs]
+    Vh = Vh[:n_eigenvecs]
+    return tl.tensor(U), tl.tensor(s), tl.tensor(Vh)
+
+
 def get_svd(svd):
+    if svd == "scipy":
+        return scipy_svd
     if svd in tl.SVD_FUNS:
         return tl.SVD_FUNS[svd]
     else:
