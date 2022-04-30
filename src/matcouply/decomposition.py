@@ -1,3 +1,4 @@
+from copy import copy
 from typing import NamedTuple, Optional
 
 import numpy as np
@@ -328,7 +329,7 @@ def compute_feasibility_gaps(cmf, regs, A_aux_list, B_aux_list, C_aux_list):
     .. math::
 
         \frac{\|\mathbf{x} - \mathbf{z}\|_2}{\|\mathbf{z}\|_2},
-    
+
     where :math:`\mathbf{x}` is a component vector and :math:`\mathbf{z}` is an auxiliary
     variable that represents a component vector. If a decomposition obtained with AO-ADMM
     is valid, then all feasibility gaps should be small compared to the components. If any
@@ -363,7 +364,7 @@ def compute_feasibility_gaps(cmf, regs, A_aux_list, B_aux_list, C_aux_list):
         A list of all auxiliary variables for the B_is-matrices
     C_aux_list : list
         A list of all auxiliary variables for the C-matrix
-    
+
     Returns
     -------
     list
@@ -425,7 +426,6 @@ def _parse_all_penalties(
     aux_init,
     verbose,
 ):
-
     if regs is None:
         regs = [[], [], []]
     elif is_iterable(regs):
@@ -444,6 +444,8 @@ def _parse_all_penalties(
                             "matcouply.penalties.ADMMMPenalty instances at least one of the"
                             f"elements in regs contained something other than an ADMMPenalty (regs={regs})"
                         )
+
+    regs = [copy(reg_list) for reg_list in regs]  # To avoid side effects where the input lists are modified
 
     non_negative = _listify(non_negative, "non_negative")
     upper_bound = _listify(upper_bound, "upper_bound")
@@ -475,7 +477,7 @@ def _parse_all_penalties(
         )
 
         regs[mode] = parsed_regs + regs[mode]
-    
+
     if verbose:
         print(f"All regularization penalties (including regs list):")
         for mode, reg in enumerate(regs):
@@ -744,7 +746,7 @@ def cmf_aoadmm(
         length equal to the number of iterations plus one (the initial values), a stopping
         message and two boolean values, one signifying whether the stopping conditions (including
         feasibility gap) were satisfied and one signifying whether the feasibility gaps were
-        sufficiently low (according to ``feasibility_tol``).  
+        sufficiently low (according to ``feasibility_tol``).
 
     Note
     ----
@@ -790,7 +792,7 @@ def cmf_aoadmm(
     3
 
     The feasibility gaps list contain tuples (one for each mode) of tuples (one for each penalty for the given mode).
-    
+
     >>> len(diagnostics.feasibility_gaps[0][0])
     1
     """
@@ -1055,7 +1057,7 @@ def parafac2_aoadmm(
     return_admm_vars=False,
     verbose=False,
 ):
-    """Alias for cmf_aoadmm with PARAFAC2 constraint (constant cross-product) on mode 1 (B mode)  
+    """Alias for cmf_aoadmm with PARAFAC2 constraint (constant cross-product) on mode 1 (B mode)
 
     See also
     --------

@@ -1684,3 +1684,25 @@ def test_cmf_aoadmm_stopping_information(random_ragged_cmf):
     assert len(diagnostics.regularized_loss) == 2
     assert len(diagnostics.rec_errors) == 2
     assert len(diagnostics.feasibility_gaps) == 2
+
+
+@pytest.mark.parametrize('regs', [[[], [], []], [[penalties.NonNegativity()], [], []]])
+def test_regs_list_is_not_modified(random_ragged_cmf, regs):
+    cmf, shapes, rank = random_ragged_cmf
+    matrices = cmf.to_matrices()
+    n_iter_max = 10
+    regs_unmodified = [copy(reg_list) for reg_list in regs]
+
+    # Check that we get correct output when none of the conditions are met
+    decomposition.cmf_aoadmm(
+        matrices,
+        rank,
+        n_iter_max=n_iter_max,
+        return_errors=True,
+        verbose=False,
+        non_negative=True,
+        parafac2=True,
+        regs=regs,
+    )
+
+    assert regs == regs_unmodified
