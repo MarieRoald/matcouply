@@ -86,6 +86,33 @@ def initialize_dual(matrices, rank, reg, random_state):
     return A_dual_list, B_dual_list, C_dual_list
 
 
+def _check_inner_convergence(factor_matrix, old_factor_matrix, cmf, reg_list, aux_list, mode, inner_tol):
+    if not inner_tol or inner_tol < 0:
+        return False
+
+    if mode == 1:
+        norm = _root_sum_squared_list(factor_matrix)
+        change = _root_sum_squared_list([B_i - prev_B_i for B_i, prev_B_i in zip(factor_matrix, old_factor_matrix)])
+    else:
+        norm = tl.norm(factor_matrix)
+        change = tl.norm(factor_matrix - old_factor_matrix)
+
+    if change > inner_tol * norm:
+        return False
+
+    if len(reg_list) == 0:
+        return True
+
+    # Create regs-list and auxes-list so only feasibility gaps for current mode is computed
+    regs = [[], [], []]
+    regs[mode] = reg_list
+    auxes = [[], [], []]
+    auxes[mode] = aux_list
+    gaps = compute_feasibility_gaps(cmf, regs, *auxes)[mode]
+
+    return max(gaps) < inner_tol
+
+
 # TODO (Improvement): Add option to scale the l2_penalty based on size (mostly relevant for B)
 def admm_update_A(
     matrices,
@@ -164,16 +191,9 @@ def admm_update_A(
             shifted_A_auxes[reg_num] = single_reg.subtract_from_aux(A_aux_list[reg_num], A_dual)
             A_dual_list[reg_num] = A - shifted_A_auxes[reg_num]  # A - (A_aux - A_dual) = A - A_aux + A_dual
 
-        if inner_tol:
-            A_norm = tl.norm(A)
-            A_change = tl.norm(A - old_A)
-            A_gaps, _, _ = compute_feasibility_gaps(cmf, [reg, [], []], A_aux_list, [], [])
-
-            dual_residual_criterion = len(A_gaps) == 0 or max(A_gaps) < inner_tol
-            primal_residual_criterion = A_change < inner_tol * A_norm
-
-            if primal_residual_criterion and dual_residual_criterion:
-                break
+        cmf = weights, (A, B_is, C)
+        if _check_inner_convergence(A, old_A, cmf, reg, A_aux_list, mode=0, inner_tol=inner_tol):
+            break
 
     return (None, [A, B_is, C]), A_aux_list, A_dual_list
 
@@ -244,16 +264,9 @@ def admm_update_B(
                 B_i - shifted_aux_B_i for B_i, shifted_aux_B_i in zip(B_is, shifted_auxes_B_is[reg_num])
             ]
 
-        if inner_tol:
-            B_is_norm = _root_sum_squared_list(B_is)
-            B_is_change = _root_sum_squared_list([B_i - prev_B_i for B_i, prev_B_i in zip(B_is, old_B_is)])
-            _, B_gaps, _ = compute_feasibility_gaps(cmf, [[], reg, []], [], B_is_aux_list, [])
-
-            dual_residual_criterion = len(B_gaps) == 0 or max(B_gaps) < inner_tol
-            primal_residual_criterion = B_is_change < inner_tol * B_is_norm
-
-            if primal_residual_criterion and dual_residual_criterion:
-                break
+        cmf = weights, (A, B_is, C)
+        if _check_inner_convergence(B_is, old_B_is, cmf, reg, B_is_aux_list, mode=1, inner_tol=inner_tol):
+            break
 
     return (None, [A, B_is, C]), B_is_aux_list, B_is_dual_list
 
@@ -303,16 +316,9 @@ def admm_update_C(
             C_aux_list[reg_num] = single_reg.factor_matrix_update(C + C_dual, feasibility_penalty, C_aux)
             C_dual_list[reg_num] = C - single_reg.subtract_from_aux(C_aux_list[reg_num], C_dual)
 
-        if inner_tol:
-            C_norm = tl.norm(C)
-            C_change = tl.norm(C - old_C)
-            _, _, C_gaps = compute_feasibility_gaps(cmf, [[], [], reg], [], [], C_aux_list)
-
-            dual_residual_criterion = len(C_gaps) == 0 or max(C_gaps) < inner_tol
-            primal_residual_criterion = C_change < inner_tol * C_norm
-
-            if primal_residual_criterion and dual_residual_criterion:
-                break
+        cmf = weights, (A, B_is, C)
+        if _check_inner_convergence(C, old_C, cmf, reg, C_aux_list, mode=2, inner_tol=inner_tol):
+            break
 
     return (None, [A, B_is, C]), C_aux_list, C_dual_list
 
@@ -483,7 +489,7 @@ def _parse_all_penalties(
         for mode, reg in enumerate(regs):
             print(f"* Mode {mode}:")
             if len(reg) == 0:
-                print( "   - (no regularization added)")
+                print("   - (no regularization added)")
             for single_reg in reg:
                 print(f"   - {single_reg}")
     return regs
