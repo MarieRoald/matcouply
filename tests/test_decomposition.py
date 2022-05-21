@@ -1097,7 +1097,7 @@ def test_admm_update_A(rng, random_ragged_cmf, feasibility_penalty_scale, consta
         assert_allclose(a_i, tl.solve(lhs, rhs), rtol=1e-6 * RTOL_SCALE)
 
 
-@pytest.mark.parametrize('mode', [0, 1, 2])
+@pytest.mark.parametrize("mode", [0, 1, 2])
 def test_check_inner_convergence_return_correct_with_no_regs(random_ragged_cmf, mode):
     cmf, shapes, rank = random_ragged_cmf  # Random ragged cmf is non-negative
     factor = cmf[1][mode]
@@ -1113,7 +1113,7 @@ def test_check_inner_convergence_return_correct_with_no_regs(random_ragged_cmf, 
     assert not decomposition._check_inner_convergence(factor, modified, cmf, [], [], mode, 1e-5)
 
 
-@pytest.mark.parametrize('mode', [0, 1, 2])
+@pytest.mark.parametrize("mode", [0, 1, 2])
 def test_check_inner_convergence_returns_false_with_no_tolerance(random_ragged_cmf, mode):
     cmf, shapes, rank = random_ragged_cmf  # Random ragged cmf is non-negative
     factor = cmf[1][mode]
@@ -1124,7 +1124,7 @@ def test_check_inner_convergence_returns_false_with_no_tolerance(random_ragged_c
     assert not decomposition._check_inner_convergence(factor, factor, cmf, [], [], mode, -1)
 
 
-@pytest.mark.parametrize('mode', [0, 1, 2])
+@pytest.mark.parametrize("mode", [0, 1, 2])
 def test_check_inner_convergence_returns_false_with_one_different_aux(random_ragged_cmf, mode):
     cmf, shapes, rank = random_ragged_cmf  # Random ragged cmf is non-negative
     factor = cmf[1][mode]
@@ -1139,7 +1139,7 @@ def test_check_inner_convergence_returns_false_with_one_different_aux(random_rag
     assert not decomposition._check_inner_convergence(factor, factor, cmf, regs, aux_list, mode, 1e-5)
 
 
-@pytest.mark.parametrize('mode', [0, 1, 2])
+@pytest.mark.parametrize("mode", [0, 1, 2])
 def test_check_inner_convergence_returns_true_with_all_same_aux(random_ragged_cmf, mode):
     cmf, shapes, rank = random_ragged_cmf  # Random ragged cmf is non-negative
     factor = cmf[1][mode]
@@ -1170,7 +1170,7 @@ def test_admm_update_A_checks_convergence(rng, random_ragged_cmf):
             num_iters += 1
             yield i
 
-    with patch('matcouply.decomposition.range', return_value=mocked_range(5)):
+    with patch("matcouply.decomposition.range", return_value=mocked_range(5)):
         decomposition.admm_update_A(
             matrices=X,
             reg=regs,
