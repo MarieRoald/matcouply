@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import plotly.express as px
-from component_vis.factor_tools import factor_match_score
+from tlviz.factor_tools import factor_match_score
 from wordcloud import WordCloud
 
 import matcouply.decomposition as decomposition
