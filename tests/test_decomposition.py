@@ -1684,3 +1684,61 @@ def test_cmf_aoadmm_stopping_information(random_ragged_cmf):
     assert len(diagnostics.regularized_loss) == 2
     assert len(diagnostics.rec_errors) == 2
     assert len(diagnostics.feasibility_gaps) == 2
+
+
+def test_first_loss_value_is_correct(random_ragged_cmf):
+    cmf, shapes, rank = random_ragged_cmf
+    matrices = cmf.to_matrices()
+    n_iter_max = 0
+
+    weights, (A, B_is, C) = cmf
+    l1_A = tl.sum(tl.abs(weights * A))
+    l1_B = sum(tl.sum(tl.abs(B_i)) for B_i in B_is)
+    l1_C = tl.sum(tl.abs(C))
+    l1_reg_penalty = l1_A + l1_B + l1_C
+    l2_A = tl.sum((weights * A) ** 2)
+    l2_B = sum(tl.sum(B_i ** 2) for B_i in B_is)
+    l2_C = tl.sum(C ** 2)
+    l2_reg_penalty = l2_A + l2_B + l2_C
+    rec_error = 0
+    initial_loss = 0.5 * rec_error ** 2 + 0.5 * 0.1 * l2_reg_penalty + 0.2 * l1_reg_penalty
+
+    # Check that we get correct output when none of the conditions are met
+    out_cmf, diagnostics = decomposition.cmf_aoadmm(
+        matrices,
+        rank,
+        init=cmf,
+        n_iter_max=n_iter_max,
+        return_errors=True,
+        verbose=False,
+        l1_penalty=0.2,
+        l2_penalty=0.1,
+    )
+    loss = diagnostics.regularized_loss
+    assert len(loss) == 1
+    assert loss[0] == pytest.approx(initial_loss)
+
+
+@pytest.mark.parametrize(
+    "n_iter_max", [-1, 0],
+)
+def test_cmf_aoadmm_works_with_zero_iteration(random_ragged_cmf, n_iter_max):
+    cmf, shapes, rank = random_ragged_cmf
+    matrices = cmf.to_matrices()
+    out_cmf, admm_vars, diagnostics = decomposition.cmf_aoadmm(
+        matrices, rank, init=cmf, n_iter_max=n_iter_max, return_errors=True, return_admm_vars=True
+    )
+    assert len(diagnostics.regularized_loss) == 1
+    assert len(diagnostics.rec_errors) == 1
+    assert len(diagnostics.feasibility_gaps) == 1
+    assert diagnostics.n_iter == 0
+
+
+def test_returns_feasibility_info_with_no_tol(random_ragged_cmf):
+    cmf, shapes, rank = random_ragged_cmf
+    matrices = cmf.to_matrices()
+    out_cmf, diagnostics = decomposition.cmf_aoadmm(
+        matrices, rank, n_iter_max=10, return_errors=True, tol=None, absolute_tol=None, non_negative=True
+    )
+    assert diagnostics.satisfied_feasibility_condition is not None
+    assert len(diagnostics.feasibility_gaps) == 11
