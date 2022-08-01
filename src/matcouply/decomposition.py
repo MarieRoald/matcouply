@@ -1,3 +1,4 @@
+from copy import copy
 from typing import NamedTuple, Optional
 
 import numpy as np
@@ -85,6 +86,33 @@ def initialize_dual(matrices, rank, reg, random_state):
     return A_dual_list, B_dual_list, C_dual_list
 
 
+def _check_inner_convergence(factor_matrix, old_factor_matrix, cmf, reg_list, aux_list, mode, inner_tol):
+    if not inner_tol or inner_tol < 0:
+        return False
+
+    if mode == 1:
+        norm = _root_sum_squared_list(factor_matrix)
+        change = _root_sum_squared_list([B_i - prev_B_i for B_i, prev_B_i in zip(factor_matrix, old_factor_matrix)])
+    else:
+        norm = tl.norm(factor_matrix)
+        change = tl.norm(factor_matrix - old_factor_matrix)
+
+    if change > inner_tol * norm:
+        return False
+
+    if len(reg_list) == 0:
+        return True
+
+    # Create regs-list and auxes-list so only feasibility gaps for current mode is computed
+    regs = [[], [], []]
+    regs[mode] = reg_list
+    auxes = [[], [], []]
+    auxes[mode] = aux_list
+    gaps = compute_feasibility_gaps(cmf, regs, *auxes)[mode]
+
+    return max(gaps) < inner_tol
+
+
 # TODO (Improvement): Add option to scale the l2_penalty based on size (mostly relevant for B)
 def admm_update_A(
     matrices,
@@ -163,16 +191,9 @@ def admm_update_A(
             shifted_A_auxes[reg_num] = single_reg.subtract_from_aux(A_aux_list[reg_num], A_dual)
             A_dual_list[reg_num] = A - shifted_A_auxes[reg_num]  # A - (A_aux - A_dual) = A - A_aux + A_dual
 
-        if inner_tol:
-            A_norm = tl.norm(A)
-            A_change = tl.norm(A - old_A)
-            A_gaps, _, _ = compute_feasibility_gaps(cmf, [reg, [], []], A_aux_list, [], [])
-
-            dual_residual_criterion = len(A_gaps) == 0 or max(A_gaps) < inner_tol
-            primal_residual_criterion = A_change < inner_tol * A_norm
-
-            if primal_residual_criterion and dual_residual_criterion:
-                break
+        cmf = weights, (A, B_is, C)
+        if _check_inner_convergence(A, old_A, cmf, reg, A_aux_list, mode=0, inner_tol=inner_tol):
+            break
 
     return (None, [A, B_is, C]), A_aux_list, A_dual_list
 
@@ -243,16 +264,9 @@ def admm_update_B(
                 B_i - shifted_aux_B_i for B_i, shifted_aux_B_i in zip(B_is, shifted_auxes_B_is[reg_num])
             ]
 
-        if inner_tol:
-            B_is_norm = _root_sum_squared_list(B_is)
-            B_is_change = _root_sum_squared_list([B_i - prev_B_i for B_i, prev_B_i in zip(B_is, old_B_is)])
-            _, B_gaps, _ = compute_feasibility_gaps(cmf, [[], reg, []], [], B_is_aux_list, [])
-
-            dual_residual_criterion = len(B_gaps) == 0 or max(B_gaps) < inner_tol
-            primal_residual_criterion = B_is_change < inner_tol * B_is_norm
-
-            if primal_residual_criterion and dual_residual_criterion:
-                break
+        cmf = weights, (A, B_is, C)
+        if _check_inner_convergence(B_is, old_B_is, cmf, reg, B_is_aux_list, mode=1, inner_tol=inner_tol):
+            break
 
     return (None, [A, B_is, C]), B_is_aux_list, B_is_dual_list
 
@@ -302,16 +316,9 @@ def admm_update_C(
             C_aux_list[reg_num] = single_reg.factor_matrix_update(C + C_dual, feasibility_penalty, C_aux)
             C_dual_list[reg_num] = C - single_reg.subtract_from_aux(C_aux_list[reg_num], C_dual)
 
-        if inner_tol:
-            C_norm = tl.norm(C)
-            C_change = tl.norm(C - old_C)
-            _, _, C_gaps = compute_feasibility_gaps(cmf, [[], [], reg], [], [], C_aux_list)
-
-            dual_residual_criterion = len(C_gaps) == 0 or max(C_gaps) < inner_tol
-            primal_residual_criterion = C_change < inner_tol * C_norm
-
-            if primal_residual_criterion and dual_residual_criterion:
-                break
+        cmf = weights, (A, B_is, C)
+        if _check_inner_convergence(C, old_C, cmf, reg, C_aux_list, mode=2, inner_tol=inner_tol):
+            break
 
     return (None, [A, B_is, C]), C_aux_list, C_dual_list
 
@@ -328,7 +335,7 @@ def compute_feasibility_gaps(cmf, regs, A_aux_list, B_aux_list, C_aux_list):
     .. math::
 
         \frac{\|\mathbf{x} - \mathbf{z}\|_2}{\|\mathbf{z}\|_2},
-    
+
     where :math:`\mathbf{x}` is a component vector and :math:`\mathbf{z}` is an auxiliary
     variable that represents a component vector. If a decomposition obtained with AO-ADMM
     is valid, then all feasibility gaps should be small compared to the components. If any
@@ -363,7 +370,7 @@ def compute_feasibility_gaps(cmf, regs, A_aux_list, B_aux_list, C_aux_list):
         A list of all auxiliary variables for the B_is-matrices
     C_aux_list : list
         A list of all auxiliary variables for the C-matrix
-    
+
     Returns
     -------
     list
@@ -425,7 +432,6 @@ def _parse_all_penalties(
     aux_init,
     verbose,
 ):
-
     if regs is None:
         regs = [[], [], []]
     elif is_iterable(regs):
@@ -444,6 +450,8 @@ def _parse_all_penalties(
                             "matcouply.penalties.ADMMMPenalty instances at least one of the"
                             f"elements in regs contained something other than an ADMMPenalty (regs={regs})"
                         )
+
+    regs = [copy(reg_list) for reg_list in regs]  # To avoid side effects where the input lists are modified
 
     non_negative = _listify(non_negative, "non_negative")
     upper_bound = _listify(upper_bound, "upper_bound")
@@ -757,7 +765,7 @@ def cmf_aoadmm(
         length equal to the number of iterations plus one (the initial values), a stopping
         message and two boolean values, one signifying whether the stopping conditions (including
         feasibility gap) were satisfied and one signifying whether the feasibility gaps were
-        sufficiently low (according to ``feasibility_tol``).  
+        sufficiently low (according to ``feasibility_tol``).
 
     Note
     ----
@@ -803,7 +811,7 @@ def cmf_aoadmm(
     3
 
     The feasibility gaps list contain tuples (one for each mode) of tuples (one for each penalty for the given mode).
-    
+
     >>> len(diagnostics.feasibility_gaps[0][0])
     1
     """
@@ -1057,7 +1065,7 @@ def parafac2_aoadmm(
     return_admm_vars=False,
     verbose=False,
 ):
-    """Alias for cmf_aoadmm with PARAFAC2 constraint (constant cross-product) on mode 1 (B mode)  
+    """Alias for cmf_aoadmm with PARAFAC2 constraint (constant cross-product) on mode 1 (B mode)
 
     See also
     --------

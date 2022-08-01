@@ -14,7 +14,7 @@ from matcouply._utils import get_svd
 from matcouply.random import random_coupled_matrices
 from matcouply.testing import assert_allclose
 
-from .utils import RTOL_SCALE, all_combinations
+from .utils import RTOL_SCALE
 
 
 @fixture
@@ -165,12 +165,8 @@ class BaseTestADMMPenalty:
         for B_i, dual_B_i in zip(B_is, dual_B_is):
             assert_array_equal(B_i, dual_B_i)
 
-    @pytest.mark.parametrize(
-        "dual_init,aux_init",
-        all_combinations(
-            ["random_uniform", "random_standard_normal", "zeros"], ["random_uniform", "random_standard_normal", "zeros"]
-        ),
-    )
+    @pytest.mark.parametrize("dual_init", ["random_uniform", "random_standard_normal", "zeros"])
+    @pytest.mark.parametrize("aux_init", ["random_uniform", "random_standard_normal", "zeros"])
     def test_rank_and_mode_validation_for_init_aux(self, rng, random_ragged_cmf, dual_init, aux_init):
         cmf, shapes, rank = random_ragged_cmf
         matrices = cmf.to_matrices()
@@ -377,11 +373,9 @@ class BaseTestADMMPenalty:
             penalty.init_dual(matrices, rank, 1, random_state=rng)
 
     @pytest.mark.parametrize(
-        "dual_init,aux_init",
-        all_combinations(
-            ["random_uniform", "random_standard_normal", "zeros"], ["random_uniform", "random_standard_normal", "zeros"]
-        ),
+        "dual_init,", ["random_uniform", "random_standard_normal", "zeros"],
     )
+    @pytest.mark.parametrize("aux_init", ["random_uniform", "random_standard_normal", "zeros"])
     def test_rank_and_mode_validation_for_init_dual(self, rng, random_ragged_cmf, dual_init, aux_init):
         cmf, shapes, rank = random_ragged_cmf
         matrices = cmf.to_matrices()
@@ -868,7 +862,7 @@ class TestGeneralizedL2Penalty(BaseTestFactorMatrixPenalty):
         Y = penalty.factor_matrix_update(X, feasibility_penalty, None)
 
         aug_norm_matrix = self.norm_matrix + 0.5 * feasibility_penalty * tl.eye(self.n_rows)
-        assert_allclose(Y, tl.solve(aug_norm_matrix, 2.5 * X), rtol=RTOL_SCALE*1e-7)
+        assert_allclose(Y, tl.solve(aug_norm_matrix, 2.5 * X), rtol=RTOL_SCALE * 1e-7)
 
 
 @pytest.mark.skipif(
@@ -1146,11 +1140,9 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
             assert not np.allclose(random_matrix, out_matrix)
 
     @pytest.mark.parametrize(
-        "dual_init,aux_init",
-        all_combinations(
-            ["random_uniform", "random_standard_normal", "zeros"], ["random_uniform", "random_standard_normal", "zeros"]
-        ),
+        "dual_init", ["random_uniform", "random_standard_normal", "zeros"],
     )
+    @pytest.mark.parametrize("aux_init", ["random_uniform", "random_standard_normal", "zeros"])
     def test_rank_and_mode_validation_for_init_aux(self, rng, random_ragged_cmf, dual_init, aux_init):
         cmf, shapes, rank = random_ragged_cmf
         weights, (A, B_is, C) = cmf

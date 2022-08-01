@@ -15,7 +15,7 @@ from matcouply.coupled_matrices import CoupledMatrixFactorization
 from matcouply.penalties import BoxConstraint, L2Ball, NonNegativity
 from matcouply.testing import assert_allclose
 
-from .utils import RTOL_SCALE, all_combinations
+from .utils import RTOL_SCALE
 
 
 def normalize(X):
@@ -24,12 +24,9 @@ def normalize(X):
     return X / tl.sqrt(ssX)
 
 
+@pytest.mark.parametrize("rank", [1, 2, 5])
 @pytest.mark.parametrize(
-    "rank,init",
-    all_combinations(
-        [1, 2, 5],
-        ["random", "svd", "threshold_svd", "parafac2_als", "parafac_als", "cp_als", "parafac_hals", "cp_hals"],
-    ),
+    "init", ["random", "svd", "threshold_svd", "parafac2_als", "parafac_als", "cp_als", "parafac_hals", "cp_hals"]
 )
 def test_initialize_cmf(rng, rank, init):
     shapes = ((5, 10), (10, 10), (15, 10))
@@ -491,10 +488,8 @@ def test_parse_all_penalties_verbose(capfd):
         assert out == message
 
 
-@pytest.mark.parametrize(
-    "dual_init, aux_init",
-    all_combinations(["random_uniform", "random_standard_normal"], ["random_uniform", "random_standard_normal"]),
-)
+@pytest.mark.parametrize("dual_init", ["random_uniform", "random_standard_normal"])
+@pytest.mark.parametrize("aux_init", ["random_uniform", "random_standard_normal"])
 def test_parse_mode_penalties(dual_init, aux_init):
     # Check that dual and aux init is set correctly
     out = decomposition._parse_mode_penalties(
@@ -1017,9 +1012,8 @@ def test_parse_mode_penalties(dual_init, aux_init):
     assert out[0].non_negativity
 
 
-@pytest.mark.parametrize(
-    "feasibility_penalty_scale,constant_feasibility_penalty", all_combinations([0.5, 1, 2], [True, False])
-)
+@pytest.mark.parametrize("feasibility_penalty_scale", [0.5, 1, 2])
+@pytest.mark.parametrize("constant_feasibility_penalty", [True, False])
 def test_admm_update_A(rng, random_ragged_cmf, feasibility_penalty_scale, constant_feasibility_penalty):
     cmf, shapes, rank = random_ragged_cmf
     weights, (A, B_is, C) = cmf
@@ -1103,9 +1097,98 @@ def test_admm_update_A(rng, random_ragged_cmf, feasibility_penalty_scale, consta
         assert_allclose(a_i, tl.solve(lhs, rhs), rtol=1e-6 * RTOL_SCALE)
 
 
-@pytest.mark.parametrize(
-    "feasibility_penalty_scale,constant_feasibility_penalty", all_combinations([0.5, 1, 2], [True, False])
-)
+@pytest.mark.parametrize("mode", [0, 1, 2])
+def test_check_inner_convergence_return_correct_with_no_regs(random_ragged_cmf, mode):
+    cmf, shapes, rank = random_ragged_cmf  # Random ragged cmf is non-negative
+    factor = cmf[1][mode]
+
+    # Check that it has converged if the factor didn't change
+    assert decomposition._check_inner_convergence(factor, factor, cmf, [], [], mode, 1e-5)
+
+    # Check that it hasn't converged if the factor did change
+    if mode == 1:
+        modified = [(B_i + 1) * 10 for B_i in factor]
+    else:
+        modified = (factor + 1) * 10
+    assert not decomposition._check_inner_convergence(factor, modified, cmf, [], [], mode, 1e-5)
+
+
+@pytest.mark.parametrize("mode", [0, 1, 2])
+def test_check_inner_convergence_returns_false_with_no_tolerance(random_ragged_cmf, mode):
+    cmf, shapes, rank = random_ragged_cmf  # Random ragged cmf is non-negative
+    factor = cmf[1][mode]
+
+    # Check that it hasn't converged if there is no tolerance, even when the factor doesn't change
+    assert not decomposition._check_inner_convergence(factor, factor, cmf, [], [], mode, 0)
+    assert not decomposition._check_inner_convergence(factor, factor, cmf, [], [], mode, None)
+    assert not decomposition._check_inner_convergence(factor, factor, cmf, [], [], mode, -1)
+
+
+@pytest.mark.parametrize("mode", [0, 1, 2])
+def test_check_inner_convergence_returns_false_with_one_different_aux(random_ragged_cmf, mode):
+    cmf, shapes, rank = random_ragged_cmf  # Random ragged cmf is non-negative
+    factor = cmf[1][mode]
+
+    regs = [penalties.NonNegativity(), penalties.L1Penalty(1)]
+    if mode == 1:
+        aux_list = [factor, [(B_i + 1) * 10 for B_i in factor]]
+    else:
+        aux_list = [factor, (factor + 1) * 10]
+
+    # Check that it has not converged if the factor didn't change but one aux did
+    assert not decomposition._check_inner_convergence(factor, factor, cmf, regs, aux_list, mode, 1e-5)
+
+
+@pytest.mark.parametrize("mode", [0, 1, 2])
+def test_check_inner_convergence_returns_true_with_all_same_aux(random_ragged_cmf, mode):
+    cmf, shapes, rank = random_ragged_cmf  # Random ragged cmf is non-negative
+    factor = cmf[1][mode]
+
+    regs = [penalties.NonNegativity(), penalties.L1Penalty(1)]
+    aux_list = [factor, factor]
+
+    # Check that it has converged if the factor didn't change and the auxes are equal
+    assert decomposition._check_inner_convergence(factor, factor, cmf, regs, aux_list, mode, 1e-5)
+
+
+# TODO: A test like the one below for B and C
+# TODO: A test like the one below where it won't converge
+def test_admm_update_A_checks_convergence(rng, random_ragged_cmf):
+    cmf, shapes, rank = random_ragged_cmf  # Random ragged cmf is non-negative
+    weights, (A, B_is, C) = cmf
+
+    auxes = [tl.copy(A)]
+    duals = [tl.zeros_like(A)]
+    regs = [penalties.NonNegativity()]
+    X = cmf.to_matrices()
+
+    num_iters = 0
+
+    def mocked_range(*args, **kwargs):
+        nonlocal num_iters
+        for i in range(*args, **kwargs):
+            num_iters += 1
+            yield i
+
+    with patch("matcouply.decomposition.range", return_value=mocked_range(5)):
+        decomposition.admm_update_A(
+            matrices=X,
+            reg=regs,
+            cmf=cmf,
+            A_aux_list=auxes,
+            A_dual_list=duals,
+            l2_penalty=1,
+            inner_n_iter_max=1000,
+            inner_tol=1,
+            feasibility_penalty_scale=1,
+            constant_feasibility_penalty=False,
+            svd_fun=get_svd("truncated_svd"),
+        )
+    assert num_iters == 1
+
+
+@pytest.mark.parametrize("feasibility_penalty_scale", [0.5, 1, 2])
+@pytest.mark.parametrize("constant_feasibility_penalty", [True, False])
 def test_admm_update_B(rng, random_ragged_cmf, feasibility_penalty_scale, constant_feasibility_penalty):
     cmf, shapes, rank = random_ragged_cmf
     weights, (A, B_is, C) = cmf
@@ -1742,3 +1825,25 @@ def test_returns_feasibility_info_with_no_tol(random_ragged_cmf):
     )
     assert diagnostics.satisfied_feasibility_condition is not None
     assert len(diagnostics.feasibility_gaps) == 11
+
+
+@pytest.mark.parametrize("regs", [[[], [], []], [[penalties.NonNegativity()], [], []]])
+def test_regs_list_is_not_modified(random_ragged_cmf, regs):
+    cmf, shapes, rank = random_ragged_cmf
+    matrices = cmf.to_matrices()
+    n_iter_max = 10
+    regs_unmodified = [copy(reg_list) for reg_list in regs]
+
+    # Check that we get correct output when none of the conditions are met
+    decomposition.cmf_aoadmm(
+        matrices,
+        rank,
+        n_iter_max=n_iter_max,
+        return_errors=True,
+        verbose=False,
+        non_negative=True,
+        parafac2=True,
+        regs=regs,
+    )
+
+    assert regs == regs_unmodified
