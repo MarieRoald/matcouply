@@ -35,9 +35,9 @@ def get_simple_simulated_data(noise_level=0.2, random_state=1):
 
     .. math::
 
-        \mathbf{M}_\text{noisy}^{(i)} = 
+        \mathbf{M}_\text{noisy}^{(i)} =
         \mathbf{M}^{(i)} + \eta \frac{\|\mathbf{\mathcal{M}}\|}{\|\mathbf{\mathcal{N}}\|} \mathbf{N}^{(i)},
-    
+
 
     where :math:`\eta` is the noise level, :math:`\mathbf{M}^{(i)}` is the :math:`i`-th matrix represented
     by the simulated factorization, :math:`\mathbf{\mathcal{M}}` is the tensor obtained by stacking all the
@@ -98,7 +98,7 @@ def get_bike_data():
     that ended in station :math:`j` in Oslo during hour :math:`k`.
 
     The data was obtained using the open API of
-    
+
      * Oslo Bysykkel: https://oslobysykkel.no/en/open-data
      * Bergen Bysykkel: https://bergenbysykkel.no/en/open-data
      * Trondheim Bysykkel: https://trondheimbysykkel.no/en/open-data
@@ -114,10 +114,10 @@ def get_bike_data():
         Dictionary mapping the city name with a data frame that contain bike sharing data from that city.
         There is also an additional ``"station_metadata"``-key, which maps to a data frame with additional
         station metadata. This metadata is useful for interpreting the extracted components.
-    
-    Note
-    ----
-    The original bike sharing data is released under a NLOD lisence (https://data.norge.no/nlod/en/2.0/).
+
+    .. note::
+
+        The original bike sharing data is released under a NLOD lisence (https://data.norge.no/nlod/en/2.0/).
     """
     with ZipFile(DATASET_PARENT / "bike.zip") as data_zip:
         with data_zip.open("bike.json", "r") as f:
@@ -125,6 +125,7 @@ def get_bike_data():
 
     datasets = {key: pd.DataFrame(value) for key, value in bike_data["dataset"].items()}
     time = [datetime(2021, 1, 1) + timedelta(hours=int(h)) for h in datasets["oslo"].columns]
+    time = pd.to_datetime(time).tz_localize("UTC").tz_convert("CET")
 
     out = {}
     for city in ["oslo", "trondheim", "bergen"]:
