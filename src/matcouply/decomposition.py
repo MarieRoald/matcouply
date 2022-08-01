@@ -576,6 +576,19 @@ def _compute_l2_penalty(cmf, l2_parameters):
     return l2reg
 
 
+def _check_feasibility(feasibility_gaps, feasibility_tol):
+    A_gaps, B_gaps, C_gaps = feasibility_gaps
+    max_feasibility_gap = -float("inf")
+    if len(A_gaps):
+        max_feasibility_gap = max((max(A_gaps), max_feasibility_gap))
+    if len(B_gaps):
+        max_feasibility_gap = max((max(B_gaps), max_feasibility_gap))
+    if len(C_gaps):
+        max_feasibility_gap = max((max(C_gaps), max_feasibility_gap))
+
+    return max_feasibility_gap < feasibility_tol
+
+
 class AdmmVars(NamedTuple):
     auxes: tuple  #: Length three tuple containing a list of auxiliary factor matrices for each mode
     duals: tuple  #: Length three tuple containing a list of dual variables for each mode
@@ -850,7 +863,8 @@ def cmf_aoadmm(
         + sum(B_reg.penalty(cmf[1][1]) for B_reg in regs[1])
         + sum(C_reg.penalty(cmf[1][2]) for C_reg in regs[2])
     )
-    losses.append(0.5 * rec_error + reg_penalty)
+    l2_reg = _compute_l2_penalty(cmf, l2_penalty)
+    losses.append(0.5 * rec_error ** 2 + l2_reg + reg_penalty)
 
     A_gaps, B_gaps, C_gaps = compute_feasibility_gaps(cmf, regs, A_aux_list, B_is_aux_list, C_aux_list)
     feasibility_gaps.append((A_gaps, B_gaps, C_gaps))
@@ -862,6 +876,7 @@ def cmf_aoadmm(
     # Default values for diagnostics
     satisfied_stopping_condition = False
     message = "MAXIMUM NUMBER OF ITERATIONS REACHED"
+    it = -1  # Needed if n_iter_max <= 0
     for it in range(n_iter_max):
         if update_B_is:
             cmf, B_is_aux_list, B_is_dual_list = admm_update_B(
@@ -906,20 +921,12 @@ def cmf_aoadmm(
             )
 
         if tol or absolute_tol or return_errors:
-            A_gaps, B_gaps, C_gaps = compute_feasibility_gaps(cmf, regs, A_aux_list, B_is_aux_list, C_aux_list)
-            feasibility_gaps.append((A_gaps, B_gaps, C_gaps))
+            curr_feasibility_gaps = compute_feasibility_gaps(cmf, regs, A_aux_list, B_is_aux_list, C_aux_list)
+            feasibility_gaps.append(curr_feasibility_gaps)
 
             if tol or absolute_tol:
-                max_feasibility_gap = -float("inf")
-                if len(A_gaps):
-                    max_feasibility_gap = max((max(A_gaps), max_feasibility_gap))
-                if len(B_gaps):
-                    max_feasibility_gap = max((max(B_gaps), max_feasibility_gap))
-                if len(C_gaps):
-                    max_feasibility_gap = max((max(C_gaps), max_feasibility_gap))
-
                 # Compute stopping criterions
-                feasibility_criterion = feasibility_tol and max_feasibility_gap < feasibility_tol
+                feasibility_criterion = feasibility_tol and _check_feasibility(curr_feasibility_gaps, feasibility_tol)
 
                 if not feasibility_criterion and not return_errors:
                     if verbose and it % verbose == 0 and verbose > 0:
@@ -983,19 +990,14 @@ def cmf_aoadmm(
             print("REACHED MAXIMUM NUMBER OF ITERATIONS")
 
     # Compute feasibility gaps to return with diagnostics
-    if feasibility_tol and not (tol or absolute_tol):
-        A_gaps, B_gaps, C_gaps = compute_feasibility_gaps(cmf, regs, A_aux_list, B_is_aux_list, C_aux_list)
-        feasibility_gaps.append((A_gaps, B_gaps, C_gaps))
+    # If the feasibility tolerance is set, but no loss tolerance then the feasibility criterion is not
+    # computed in the AO-ADMM loop. Likewise, if n_iter_max <= 0, the feasibility tolerance
+    # is not computed. This is only relevant if we should return errors, but it is a fast operation
+    # so we do it anyways.
+    if feasibility_tol and return_errors:
+        curr_feasibility_gaps = compute_feasibility_gaps(cmf, regs, A_aux_list, B_is_aux_list, C_aux_list)
 
-        max_feasibility_gap = -float("inf")
-        if len(A_gaps):
-            max_feasibility_gap = max((max(A_gaps), max_feasibility_gap))
-        if len(B_gaps):
-            max_feasibility_gap = max((max(B_gaps), max_feasibility_gap))
-        if len(C_gaps):
-            max_feasibility_gap = max((max(C_gaps), max_feasibility_gap))
-
-        feasibility_criterion = max_feasibility_gap < feasibility_tol
+        feasibility_criterion = _check_feasibility(curr_feasibility_gaps, feasibility_tol)
     elif not feasibility_tol:
         feasibility_criterion = None
 

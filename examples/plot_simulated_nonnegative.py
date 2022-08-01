@@ -6,7 +6,7 @@ Simple example with simulated non-negative components.
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorly as tl
-from component_vis.factor_tools import factor_match_score
+from tlviz.factor_tools import factor_match_score
 
 import matcouply.decomposition as decomposition
 from matcouply.coupled_matrices import CoupledMatrixFactorization

@@ -20,5 +20,5 @@ plotly
 pandas
 wordcloud
 tqdm
-https://github.com/MarieRoald/component-vis/archive/refs/heads/master.zip
+tlviz
 condat_tv
