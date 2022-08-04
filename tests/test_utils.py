@@ -40,7 +40,7 @@ def test_is_iterable():
         assert not utils.is_iterable(test_not_iterable)
 
 
-@pytest.mark.parametrize("svd", ["numpy_svd", "truncated_svd"])
+@pytest.mark.parametrize("svd", ["truncated_svd"])
 def test_get_svd(rng, svd):
     X = rng.standard_normal(size=(10, 20))
     U1, s1, Vh1 = scipy.linalg.svd(X)
@@ -112,23 +112,3 @@ def test_create_padded_tensor(rng, random_ragged_cmf):
     for i, (matrix, shape) in enumerate(zip(matrices, shapes)):
         assert_array_equal(padded_tensor[i, : shape[0], :], matrix)
         assert_array_equal(padded_tensor[i, shape[0] :, :], 0)
-
-
-@pytest.mark.parametrize("shape", [(10, 3), (10, 10)])
-def test_scipy_svd(rng, shape):
-    svd = utils.get_svd("scipy")
-    X = rng.standard_normal(shape)
-    U, s, Vh = svd(X)
-    assert U.shape == (shape[0], shape[0])
-    assert s.shape == (min(shape),)
-    assert Vh.shape == (shape[1], shape[1])
-
-    U, s, Vh = svd(X, n_eigenvecs=3)
-    assert U.shape == (shape[0], 3)
-    assert s.shape == (3,)
-    assert Vh.shape == (3, shape[1])
-
-    U, s, Vh = svd(X, n_eigenvecs=2)
-    assert U.shape == (shape[0], 2)
-    assert s.shape == (2,)
-    assert Vh.shape == (2, shape[1])
