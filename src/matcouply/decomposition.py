@@ -324,7 +324,7 @@ def admm_update_C(
 
 
 def _root_sum_squared_list(x_list):
-    return tl.sqrt(sum(tl.sum(x ** 2) for x in x_list))
+    return tl.sqrt(sum(tl.sum(x**2) for x in x_list))
 
 
 def compute_feasibility_gaps(cmf, regs, A_aux_list, B_aux_list, C_aux_list):
@@ -567,11 +567,11 @@ def _compute_l2_penalty(cmf, l2_parameters):
     weights, (A, B_is, C) = cmf
     l2reg = 0
     if l2_parameters[0]:
-        l2reg += 0.5 * l2_parameters[0] * tl.sum(A ** 2)
+        l2reg += 0.5 * l2_parameters[0] * tl.sum(A**2)
     if l2_parameters[1]:
-        l2reg += 0.5 * l2_parameters[1] * sum(tl.sum(B_i ** 2) for B_i in B_is)
+        l2reg += 0.5 * l2_parameters[1] * sum(tl.sum(B_i**2) for B_i in B_is)
     if l2_parameters[2]:
-        l2reg += 0.5 * l2_parameters[2] * tl.sum(C ** 2)
+        l2reg += 0.5 * l2_parameters[2] * tl.sum(C**2)
 
     return l2reg
 
@@ -699,7 +699,7 @@ def cmf_aoadmm(
     feasibility_penalty_scale : float (default=1)
         What function to multiply the automatically computed feasibility penalty parameter by
         (see :cite:p:`roald2021admm` for details)
-    constant_feasibility_penalty : bool (default=False)
+    constant_feasibility_penalty : bool, "A" or "B" (default=False)
         If True, then all rows of :math:`\mathbf{A}` will have the same feasibility penalty parameter
         and all :math:`\mathbf{B}^{(i)}`-matrices will have the same feasibility penalty parameter.
         This makes it possible to use matrix-penalties for :math:`\mathbf{A}` and multi-matrix penalties
@@ -708,6 +708,8 @@ def cmf_aoadmm(
         The maximum penalty parameter for all rows of :math:`\mathbf{A}` are used as the penalty
         parameter for :math:`\mathbf{A}` and the maximum penalty parameter among all :math:`\mathbf{B}^{(i)}`-matrices
         are used as the penalty parameter for :math:`\{\mathbf{B}^{(i)}\}_{i=1}^I`.
+
+        If ``"A"`` or ``"B"``, then this option is only enabled for the specified parameters.
     aux_init : str (default="random_uniform")
         Initialization scheme for the auxiliary variables. See :meth:`matcouply.penalties.ADMMPenalty.init_aux`
         for possible options.
@@ -848,8 +850,16 @@ def cmf_aoadmm(
         regs[2] = []
 
     # TODO  (Improvement): Include cmf to initialize functions in case other init schemes require that?
-    A_aux_list, B_is_aux_list, C_aux_list, = initialize_aux(matrices, rank, regs, random_state=random_state)
-    A_dual_list, B_is_dual_list, C_dual_list, = initialize_dual(matrices, rank, regs, random_state=random_state)
+    (
+        A_aux_list,
+        B_is_aux_list,
+        C_aux_list,
+    ) = initialize_aux(matrices, rank, regs, random_state=random_state)
+    (
+        A_dual_list,
+        B_is_dual_list,
+        C_dual_list,
+    ) = initialize_dual(matrices, rank, regs, random_state=random_state)
     norm_matrices = _root_sum_squared_list(matrices)
     rec_errors = []
     feasibility_gaps = []
@@ -864,7 +874,7 @@ def cmf_aoadmm(
         + sum(C_reg.penalty(cmf[1][2]) for C_reg in regs[2])
     )
     l2_reg = _compute_l2_penalty(cmf, l2_penalty)
-    losses.append(0.5 * rec_error ** 2 + l2_reg + reg_penalty)
+    losses.append(0.5 * rec_error**2 + l2_reg + reg_penalty)
 
     A_gaps, B_gaps, C_gaps = compute_feasibility_gaps(cmf, regs, A_aux_list, B_is_aux_list, C_aux_list)
     feasibility_gaps.append((A_gaps, B_gaps, C_gaps))
@@ -876,6 +886,17 @@ def cmf_aoadmm(
     # Default values for diagnostics
     satisfied_stopping_condition = False
     message = "MAXIMUM NUMBER OF ITERATIONS REACHED"
+    if isinstance(constant_feasibility_penalty, str) and constant_feasibility_penalty not in {"A", "B"}:
+        raise ValueError(
+            f"If `constant_feasibility_penalty` is a string, it must be 'A' or 'B', not {constant_feasibility_penalty}"
+        )
+    constant_A_feasibility = (
+        constant_feasibility_penalty and not isinstance(constant_feasibility_penalty, str)
+    ) or constant_feasibility_penalty == "A"
+    constant_B_feasibility = (
+        constant_feasibility_penalty and not isinstance(constant_feasibility_penalty, str)
+    ) or constant_feasibility_penalty == "B"
+
     it = -1  # Needed if n_iter_max <= 0
     for it in range(n_iter_max):
         if update_B_is:
@@ -889,7 +910,7 @@ def cmf_aoadmm(
                 inner_n_iter_max=inner_n_iter_max,
                 inner_tol=inner_tol,
                 feasibility_penalty_scale=feasibility_penalty_scale,
-                constant_feasibility_penalty=constant_feasibility_penalty,
+                constant_feasibility_penalty=constant_B_feasibility,
                 svd_fun=svd_fun,
             )
         if update_A:
@@ -903,7 +924,7 @@ def cmf_aoadmm(
                 inner_n_iter_max=inner_n_iter_max,
                 inner_tol=inner_tol,
                 feasibility_penalty_scale=feasibility_penalty_scale,
-                constant_feasibility_penalty=constant_feasibility_penalty,
+                constant_feasibility_penalty=constant_A_feasibility,
                 svd_fun=svd_fun,
             )
         if update_C:
@@ -952,7 +973,7 @@ def cmf_aoadmm(
             )
 
             l2_reg = _compute_l2_penalty(cmf, l2_penalty)
-            losses.append(0.5 * rec_error ** 2 + l2_reg + reg_penalty)
+            losses.append(0.5 * rec_error**2 + l2_reg + reg_penalty)
 
             if verbose and it % verbose == 0 and verbose > 0:
                 print(
