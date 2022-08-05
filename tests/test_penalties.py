@@ -22,21 +22,6 @@ from matcouply.testing import (
 from .utils import RTOL_SCALE  # TODO: Consider if this should be changed
 
 
-@fixture
-def random_row(rng):
-    return tl.tensor(rng.standard_normal(3))
-
-
-@fixture
-def random_matrix(rng):
-    return tl.tensor(rng.standard_normal((10, 3)))
-
-
-@fixture
-def random_matrices(rng):
-    return [tl.tensor(rng.standard_normal((10, 3))) for i in range(5)]
-
-
 def test_row_vector_penalty_forwards_updates_correctly(rng, random_matrix, random_matrices):
     class BetweenZeroAndOneConstraint(penalties.RowVectorPenalty):
         def factor_matrix_row_update(self, factor_matrix_row, feasibility_penalty, aux_row):
@@ -270,6 +255,8 @@ class TestUnitSimplex(MixinTestHardConstraint, BaseTestFactorMatrixPenalty):
 class TestGeneralizedL2Penalty(BaseTestFactorMatrixPenalty):
     PenaltyType = penalties.GeneralizedL2Penalty
     n_rows = 50
+    min_rows = n_rows
+    max_rows = n_rows
 
     norm_matrix1 = 2 * np.eye(n_rows // 2) - np.eye(n_rows // 2, k=-1) - np.eye(n_rows // 2, k=1)
     norm_matrix1[0, 0] = 1
@@ -296,32 +283,6 @@ class TestGeneralizedL2Penalty(BaseTestFactorMatrixPenalty):
 
     def get_non_stationary_matrix(self, rng, shape):
         return tl.tensor(rng.random_sample(size=shape))
-
-    @pytest.fixture
-    def stationary_matrix(self, rng):
-        n_columns = rng.randint(1, 10)
-        shape = (self.n_rows, n_columns)
-        return self.get_stationary_matrix(rng, shape)
-
-    @pytest.fixture
-    def non_stationary_matrix(self, rng):
-        n_columns = rng.randint(1, 10)
-        shape = (self.n_rows, n_columns)
-        return self.get_non_stationary_matrix(rng, shape)
-
-    @pytest.fixture
-    def stationary_matrices(self, rng):
-        n_columns = rng.randint(1, 10)
-        n_matrices = rng.randint(1, 10)
-        shapes = tuple((self.n_rows, n_columns) for k in range(n_matrices))
-        return self.get_stationary_matrices(rng, shapes)
-
-    @pytest.fixture
-    def non_stationary_matrices(self, rng):
-        n_columns = rng.randint(1, 10)
-        n_matrices = rng.randint(1, 10)
-        shapes = tuple((self.n_rows, n_columns) for k in range(n_matrices))
-        return self.get_non_stationary_matrices(rng, shapes)
 
     @pytest.fixture
     def random_regular_cmf(self, rng):
@@ -364,31 +325,18 @@ class TestGeneralizedL2Penalty(BaseTestFactorMatrixPenalty):
 
 @pytest.mark.skipif(
     tl.get_backend() != "numpy",
-    reason="The generalized TV penalty is only supported with the Numpy backend due to C dependencies",
+    reason="The TV penalty is only supported with the Numpy backend due to C dependencies",
 )
 class TestTotalVariationPenalty(BaseTestFactorMatrixPenalty):
     PenaltyType = penalties.TotalVariationPenalty
     penalty_default_kwargs = {"reg_strength": 1, "l1_strength": 0}
+    min_rows = 3
 
     def get_stationary_matrix(self, rng, shape):
         return tl.zeros(shape)
 
     def get_non_stationary_matrix(self, rng, shape):
         return tl.tensor(rng.uniform(size=shape))
-
-    @pytest.fixture
-    def non_stationary_matrix(self, rng):
-        n_columns = rng.randint(1, 10)
-        n_rows = rng.randint(3, 20)
-        shape = (n_rows, n_columns)
-        return self.get_non_stationary_matrix(rng, shape)
-
-    @pytest.fixture
-    def non_stationary_matrices(self, rng):
-        n_rows = rng.randint(3, 20)
-        n_matrices = rng.randint(1, 10)
-        shapes = tuple((n_rows, rng.randint(1, 10)) for k in range(n_matrices))
-        return self.get_non_stationary_matrices(rng, shapes)
 
     def test_penalty(self, rng):
         shape = rng.randint(3, 20), rng.randint(3, 20)
@@ -475,6 +423,7 @@ class TestNonNegativity(MixinTestHardConstraint, BaseTestRowVectorPenalty):
 class TestUnimodality(MixinTestHardConstraint, BaseTestFactorMatrixPenalty):
     PenaltyType = penalties.Unimodality
     penalty_default_kwargs = {}
+    min_rows = 3
 
     def get_stationary_matrix(self, rng, shape):
         matrix = tl.zeros(shape)
@@ -491,20 +440,6 @@ class TestUnimodality(MixinTestHardConstraint, BaseTestFactorMatrixPenalty):
         M = rng.uniform(size=shape)
         M[1, :] = -1  # M is positive, so setting the second element to -1 makes it impossible for it to be unimodal
         return M
-
-    @pytest.fixture
-    def non_stationary_matrix(self, rng):
-        n_columns = rng.randint(1, 10)
-        n_rows = rng.randint(3, 20)
-        shape = (n_rows, n_columns)
-        return self.get_non_stationary_matrix(rng, shape)
-
-    @pytest.fixture
-    def non_stationary_matrices(self, rng):
-        n_rows = rng.randint(3, 20)
-        n_matrices = rng.randint(1, 10)
-        shapes = tuple((n_rows, rng.randint(1, 10)) for k in range(n_matrices))
-        return self.get_non_stationary_matrices(rng, shapes)
 
     @pytest.mark.parametrize("non_negativity", [True, False])
     def test_non_negativity_used(self, non_stationary_matrix, non_negativity):

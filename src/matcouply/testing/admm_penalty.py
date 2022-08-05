@@ -16,8 +16,14 @@ def assert_allclose(actual, desired, *args, **kwargs):
 class BaseTestADMMPenalty:
     PenaltyType = penalties.ADMMPenalty
     penalty_default_kwargs = {}
-    # TODO: Min rows, max rows min rank max rank
+    min_rows = 1
+    max_rows = 10
+    min_columns = 1
+    max_columns = 10
+    min_matrices = 1
+    max_matrices = 10
 
+    # TODO: Fixtures for random_matrix random_ragged_cmf, etc as part of this which uses the min_rows, etc...
     atol = 1e-10
 
     @property
@@ -398,16 +404,16 @@ class BaseTestFactorMatricesPenalty(BaseTestADMMPenalty):  # e.g. PARAFAC2
 
     @pytest.fixture
     def stationary_matrices(self, rng):
-        n_rows = rng.randint(1, 10)
-        n_matrices = rng.randint(1, 10)
-        shapes = tuple((n_rows, rng.randint(1, 10)) for k in range(n_matrices))
+        n_rows = rng.randint(self.min_rows, self.max_rows + 1)
+        n_matrices = rng.randint(self.min_matrices, self.max_matrices + 1)
+        shapes = tuple((n_rows, rng.randint(self.min_columns, self.max_columns + 1)) for k in range(n_matrices))
         return self.get_stationary_matrices(rng, shapes)
 
     @pytest.fixture
     def non_stationary_matrices(self, rng):
-        n_rows = rng.randint(1, 10)
-        n_matrices = rng.randint(1, 10)
-        shapes = tuple((n_rows, rng.randint(1, 10)) for k in range(n_matrices))
+        n_rows = rng.randint(self.min_rows, self.max_rows + 1)
+        n_matrices = rng.randint(self.min_matrices, self.max_matrices + 1)
+        shapes = tuple((n_rows, rng.randint(self.min_columns, self.max_columns + 1)) for k in range(n_matrices))
         return self.get_non_stationary_matrices(rng, shapes)
 
     def test_factor_matrices_update_stationary_point(self, stationary_matrices):
@@ -452,15 +458,15 @@ class BaseTestFactorMatrixPenalty(BaseTestFactorMatricesPenalty):
 
     @pytest.fixture
     def stationary_matrix(self, rng):
-        n_columns = rng.randint(1, 10)
-        n_rows = rng.randint(1, 10)
+        n_columns = rng.randint(self.min_columns, self.max_columns + 1)
+        n_rows = rng.randint(self.min_rows, self.max_rows + 1)
         shape = (n_rows, n_columns)
         return self.get_stationary_matrix(rng, shape)
 
     @pytest.fixture
     def non_stationary_matrix(self, rng):
-        n_columns = rng.randint(1, 10)
-        n_rows = rng.randint(1, 10)
+        n_columns = rng.randint(self.min_columns, self.max_columns + 1)
+        n_rows = rng.randint(self.min_rows, self.max_rows + 1)
         shape = (n_rows, n_columns)
         return self.get_non_stationary_matrix(rng, shape)
 
@@ -499,13 +505,13 @@ class BaseTestRowVectorPenalty(BaseTestFactorMatrixPenalty):  # e.g. non-negativ
 
     @pytest.fixture
     def stationary_row(self, rng):
-        n_columns = rng.randint(1, 10)
+        n_columns = rng.randint(self.min_columns, self.max_columns + 1)
         return self.get_stationary_row(rng, n_columns)
 
     @pytest.fixture
     def non_stationary_row(self, rng):
-        rank = rng.randint(1, 10)
-        return self.get_non_stationary_row(rng, rank)
+        n_columns = rng.randint(self.min_columns, self.max_columns + 1)
+        return self.get_non_stationary_row(rng, n_columns)
 
     def test_row_update_stationary_point(self, stationary_row):
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
@@ -525,8 +531,3 @@ class BaseTestRowVectorPenalty(BaseTestFactorMatrixPenalty):  # e.g. non-negativ
         initial_penalty = penalty.penalty(random_row)
         out = penalty.factor_matrix_row_update(random_row, 10, None)
         assert penalty.penalty(out) <= initial_penalty
-
-
-# TODO CHECK: Import the base test classes in the tests file
-# TODO CHECK: Figure out if we can import fixtures
-# TODO CHECK: If we cannot import fixture-functions, then create a copy of the fixture-functions so they are defined in the ADMMPenalty base class
