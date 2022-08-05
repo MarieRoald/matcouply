@@ -1,5 +1,3 @@
-from abc import ABC, abstractmethod
-
 import numpy as np
 import pytest
 import tensorly as tl
