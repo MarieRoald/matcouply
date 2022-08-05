@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
-        with: 
+        with:
           python-version: '3.8'
       - name: install dependencies
         run: |
@@ -21,8 +21,16 @@ jobs:
           python -m pip install numba==0.53.1
           python -m pip install numpy==1.22.1
           python -m pip install -e .[gpl,devel]
-      - name: run tests
-        run: python3 -m pytest --cov=matcouply --cov-report=xml
+      - name: run all tests
+        if: ${{ matrix.backend == 'numpy' }}
+        run: |
+          python3 -m pytest --cov=matcouply --cov-report=xml
+        env:
+          TENSORLY_BACKEND: ${{ matrix.backend }}
+      - name: run tests (no doctests)
+        if: ${{ matrix.backend != 'numpy' }}
+        run: |
+          python3 -m pytest tests
         env:
           TENSORLY_BACKEND: ${{ matrix.backend }}
       - name: upload coverage to Codecov
