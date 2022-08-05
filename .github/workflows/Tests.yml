@@ -20,7 +20,7 @@ jobs:
           python -m pip install torch
           python -m pip install numba==0.53.1
           python -m pip install numpy==1.22.1
-          python -m pip install -e .[gpl,devel]
+          python -m pip install -e .[gpl,devel,data]
       - name: run all tests
         if: ${{ matrix.backend == 'numpy' }}
         run: |
