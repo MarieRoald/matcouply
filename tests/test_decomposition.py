@@ -1153,7 +1153,6 @@ def test_check_inner_convergence_returns_true_with_all_same_aux(random_ragged_cm
     assert decomposition._check_inner_convergence(factor, factor, cmf, regs, aux_list, mode, 1e-5)
 
 
-# TODO: A test like the one below for B and C
 # TODO: A test like the one below where it won't converge
 def test_admm_update_A_checks_convergence(rng, random_ragged_cmf):
     cmf, shapes, rank = random_ragged_cmf  # Random ragged cmf is non-negative
@@ -1179,11 +1178,82 @@ def test_admm_update_A_checks_convergence(rng, random_ragged_cmf):
             cmf=cmf,
             A_aux_list=auxes,
             A_dual_list=duals,
-            l2_penalty=1,
-            inner_n_iter_max=1000,
+            l2_penalty=0,
+            inner_n_iter_max=5,
             inner_tol=1,
             feasibility_penalty_scale=1,
             constant_feasibility_penalty=False,
+            svd_fun=get_svd("truncated_svd"),
+        )
+    assert num_iters == 1
+
+
+# TODO: A test like the one below where it won't converge
+def test_admm_update_B_checks_convergence(rng, random_ragged_cmf):
+    cmf, shapes, rank = random_ragged_cmf  # Random ragged cmf is non-negative
+    weights, (A, B_is, C) = cmf
+
+    auxes = [[tl.copy(B_i) for B_i in B_is]]
+    duals = [[tl.zeros_like(B_i) for B_i in B_is]]
+    regs = [penalties.NonNegativity()]
+    X = cmf.to_matrices()
+
+    num_iters = 0
+
+    def mocked_range(*args, **kwargs):
+        nonlocal num_iters
+        if num_iters > 0:
+            assert False
+        for i in range(*args, **kwargs):
+            num_iters += 1
+            yield i
+
+    with patch("matcouply.decomposition.range", return_value=mocked_range(5)):
+        decomposition.admm_update_B(
+            matrices=X,
+            reg=regs,
+            cmf=cmf,
+            B_is_aux_list=auxes,
+            B_is_dual_list=duals,
+            l2_penalty=0,
+            inner_n_iter_max=5,
+            inner_tol=1,
+            feasibility_penalty_scale=1,
+            constant_feasibility_penalty=False,
+            svd_fun=get_svd("truncated_svd"),
+        )
+    assert num_iters == 1
+
+
+# TODO: A test like the one below where it won't converge
+def test_admm_update_C_checks_convergence(rng, random_ragged_cmf):
+    cmf, shapes, rank = random_ragged_cmf  # Random ragged cmf is non-negative
+    weights, (A, B_is, C) = cmf
+
+    auxes = [tl.copy(C)]
+    duals = [tl.zeros_like(C)]
+    regs = [penalties.NonNegativity()]
+    X = cmf.to_matrices()
+
+    num_iters = 0
+
+    def mocked_range(*args, **kwargs):
+        nonlocal num_iters
+        for i in range(*args, **kwargs):
+            num_iters += 1
+            yield i
+
+    with patch("matcouply.decomposition.range", return_value=mocked_range(5)):
+        decomposition.admm_update_C(
+            matrices=X,
+            reg=regs,
+            cmf=cmf,
+            C_aux_list=auxes,
+            C_dual_list=duals,
+            l2_penalty=0,
+            inner_n_iter_max=5,
+            inner_tol=1,
+            feasibility_penalty_scale=1,
             svd_fun=get_svd("truncated_svd"),
         )
     assert num_iters == 1
