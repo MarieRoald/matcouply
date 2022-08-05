@@ -28,7 +28,7 @@ class BaseTestADMMPenalty:
 
     @property
     def rtol(self):
-        if tl.get_backend() != "numpy":
+        if tl.get_backend() == "numpy":
             return 1e-6
         return 500 * 1e-6  # Single precision backends need less strict tests
 
