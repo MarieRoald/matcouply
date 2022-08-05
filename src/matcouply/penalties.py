@@ -259,8 +259,7 @@ class ADMMPenalty(ABC, metaclass=InheritableDocstrings):
 
     @abstractmethod
     def penalty(self, x):  # pragma: nocover
-        """Compute the penalty for the given factor matrix or list of factor matrices.
-        """
+        """Compute the penalty for the given factor matrix or list of factor matrices."""
         raise NotImplementedError
 
     def subtract_from_auxes(self, auxes, duals):
@@ -365,8 +364,7 @@ class ADMMPenalty(ABC, metaclass=InheritableDocstrings):
 
 
 class MatricesPenalty(ADMMPenalty):
-    """Base class for penalties that are applied to a list of factor matrices simultaneously.
-    """
+    """Base class for penalties that are applied to a list of factor matrices simultaneously."""
 
     @abstractmethod
     def factor_matrices_update(self, factor_matrices, feasibility_penalties, auxes):  # pragma: nocover
@@ -386,8 +384,7 @@ class MatricesPenalty(ADMMPenalty):
 
 
 class MatrixPenalty(MatricesPenalty):
-    """Base class for penalties that can be applied to a single factor matrix at a time.
-    """
+    """Base class for penalties that can be applied to a single factor matrix at a time."""
 
     def factor_matrices_update(self, factor_matrices, feasibility_penalties, auxes):
         """Update all factor matrices in given list according to this penalty.
@@ -424,8 +421,7 @@ class MatrixPenalty(MatricesPenalty):
 
 
 class RowVectorPenalty(MatrixPenalty):
-    """Base class for penalties that can be applied to one row of a factor matrix at a time.
-    """
+    """Base class for penalties that can be applied to one row of a factor matrix at a time."""
 
     def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
         """Update a factor matrix according to this penalty.
@@ -465,8 +461,7 @@ class RowVectorPenalty(MatrixPenalty):
 
 
 class HardConstraintMixin(metaclass=InheritableDocstrings):
-    """Mixin for hard constraints.
-    """
+    """Mixin for hard constraints."""
 
     def penalty(self, x):
         """Returns 0 as there is no penalty for hard constraints.
@@ -705,7 +700,12 @@ class GeneralizedL2Penalty(MatrixPenalty):
     """
 
     def __init__(
-        self, norm_matrix, svd="truncated_svd", aux_init="random_uniform", dual_init="random_uniform", validate=True,
+        self,
+        norm_matrix,
+        svd="truncated_svd",
+        aux_init="random_uniform",
+        dual_init="random_uniform",
+        validate=True,
     ):
         super().__init__(aux_init, dual_init)
         self.norm_matrix = norm_matrix
@@ -804,7 +804,11 @@ class TotalVariationPenalty(MatrixPenalty):
     """
 
     def __init__(
-        self, reg_strength, l1_strength=0, aux_init="random_uniform", dual_init="random_uniform",
+        self,
+        reg_strength,
+        l1_strength=0,
+        aux_init="random_uniform",
+        dual_init="random_uniform",
     ):
         if not HAS_TV:
             raise ModuleNotFoundError(
@@ -922,7 +926,7 @@ class L2Ball(HardConstraintMixin, MatrixPenalty):
     def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
         if self.non_negativity:
             factor_matrix = tl.clip(factor_matrix, 0, float("inf"))
-        column_norms = tl.sqrt(tl.sum(factor_matrix ** 2, axis=0))
+        column_norms = tl.sqrt(tl.sum(factor_matrix**2, axis=0))
         column_norms = tl.clip(column_norms, self.norm_bound, float("inf"))
         return factor_matrix * self.norm_bound / column_norms
 
@@ -1246,8 +1250,7 @@ class Parafac2(MatricesPenalty):
         return basis_matrices, coordinate_matrix
 
     def subtract_from_aux(self, aux, dual):
-        """Raises TypeError since the PARAFAC2 constraint only works with mode=1.
-        """
+        """Raises TypeError since the PARAFAC2 constraint only works with mode=1."""
         raise TypeError("The PARAFAC2 constraint cannot shift a single factor matrix.")
 
     def subtract_from_auxes(self, auxes, duals):
@@ -1278,8 +1281,7 @@ class Parafac2(MatricesPenalty):
         return [tl.dot(P_i, coord_mat) - dual for P_i, dual in zip(P_is, duals)]
 
     def aux_as_matrix(self, aux):
-        """Raises TypeError since the PARAFAC2 constraint only works with mode=1.
-        """
+        """Raises TypeError since the PARAFAC2 constraint only works with mode=1."""
         raise TypeError("The PARAFAC2 constraint cannot convert a single aux to a matrix")
 
     def auxes_as_matrices(self, auxes):

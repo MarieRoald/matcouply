@@ -236,7 +236,6 @@ def admm_update_B(
 
     old_B_is = [tl.copy(B_i) for B_i in B_is]
     for inner_it in range(inner_n_iter_max):
-
         old_B_is, B_is = B_is, old_B_is
         shifted_auxes_B_is = [
             single_reg.subtract_from_auxes(B_is_aux, B_is_dual)
@@ -265,6 +264,7 @@ def admm_update_B(
             ]
 
         cmf = weights, (A, B_is, C)
+
         if _check_inner_convergence(B_is, old_B_is, cmf, reg, B_is_aux_list, mode=1, inner_tol=inner_tol):
             break
 

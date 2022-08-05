@@ -19,7 +19,8 @@ def _merge_intervals_inplace(merge_target, merger, sum_weighted_y, sum_weighted_
 
 
 @jit(
-    nopython=True, cache=True,
+    nopython=True,
+    cache=True,
 )
 def prefix_isotonic_regression(y, weights=None, non_negativity=False):
     if weights is None:
@@ -133,6 +134,7 @@ def unimodal_regression(y, non_negativity=False):
         y2 = np.ascontiguousarray(y)
         y2 = y2.reshape(y2.shape[0], -1)
         unfolded_output = np.stack(
-            [_unimodal_regression(y2[:, r], non_negativity=non_negativity)[0] for r in range(y2.shape[1])], axis=1,
+            [_unimodal_regression(y2[:, r], non_negativity=non_negativity)[0] for r in range(y2.shape[1])],
+            axis=1,
         )
         return unfolded_output.reshape(y.shape)

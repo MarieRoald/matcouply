@@ -109,7 +109,7 @@ class CoupledMatrixFactorization(FactorizedTensor):
         CoupledMatrixFactorization
             A coupled matrix factorization that represents the same tensor
             as ``cp_tensor``.
-        
+
         Raises
         ------
         ValueError
@@ -193,7 +193,7 @@ class CoupledMatrixFactorization(FactorizedTensor):
 
     def to_tensor(self):
         """Convert to a dense tensor (pad uneven slices by zeros).
-        
+
         See also
         --------
         cmf_to_tensor
@@ -202,7 +202,7 @@ class CoupledMatrixFactorization(FactorizedTensor):
 
     def to_vec(self, pad=True):
         """Convert to a vector by first converting to a dense tensor and unraveling.
-        
+
         See also
         --------
         cmf_to_vec
@@ -211,7 +211,7 @@ class CoupledMatrixFactorization(FactorizedTensor):
 
     def to_unfolded(self, mode, pad=True):
         """Convert to a matrix by first converting to a dense tensor and unfolding.
-        
+
         See also
         --------
         cmf_to_unfolded
@@ -220,7 +220,7 @@ class CoupledMatrixFactorization(FactorizedTensor):
 
     def to_matrices(self):
         """Convert to a list of matrices.
-        
+
         See also
         --------
         cmf_to_matrices
@@ -229,7 +229,7 @@ class CoupledMatrixFactorization(FactorizedTensor):
 
     def to_matrix(self, matrix_idx):
         """Construct a single dense matrix from the decomposition.
-        
+
         See also
         --------
         cmf_to_matrix
@@ -255,7 +255,7 @@ def _validate_cmf(cmf):
     Returns
     -------
     shapes : tuple of tuple of ints
-        A tuple containing the shape of each matrix represented by the 
+        A tuple containing the shape of each matrix represented by the
         coupled matrix factorization
     rank : int
         The rank of the factorization
@@ -399,10 +399,10 @@ def cmf_to_matrix(cmf, matrix_idx, validate=True):
     ndarray
         Dense tensor of shape ``[B_is[matrix_idx].shape[0], C.shape[0]]``, where
         ``B`` is a list containing all the :math:`\mathbf{B}^{(i)}`-factor matrices.
-    
+
     Examples
     --------
-    An example where we calculate one of the matrices described by 
+    An example where we calculate one of the matrices described by
     a coupled matrix factorization
 
     >>> from matcouply.random import random_coupled_matrices
@@ -445,7 +445,7 @@ def cmf_to_matrices(cmf, validate=True):
 
         \mathbf{X}^{(i)} = \mathbf{B}^{(i)} \text{diag}(\mathbf{a}_i) \mathbf{C}^T,
 
-    where :math:`\text{diag}(\mathbf{a}_i)` is the diagonal matrix whose nonzero entries are 
+    where :math:`\text{diag}(\mathbf{a}_i)` is the diagonal matrix whose nonzero entries are
     equal to the :math:`i`-th row of the :math:`I \times R` factor matrix :math:`\mathbf{A}`,
     :math:`\mathbf{B}^{(i)}` is a :math:`J_i \times R` factor matrix, and :math:`\mathbf{C}`
     is a :math:`K \times R` factor matrix.
@@ -472,7 +472,7 @@ def cmf_to_matrices(cmf, validate=True):
         List of all :math:`\mathbf{X}^{(i)}`-matrices, where the ``i``-th element of the list
         has shape ``[B_is[i].shape[0], C.shape[0]]``, where ``B_is`` is a list containing all
         the :math:`\mathbf{B}^{(i)}`-factor matrices.
-    
+
     Examples
     --------
     We can convert a coupled matrix factorization to a list of matrices
@@ -596,7 +596,7 @@ def cmf_to_tensor(cmf, validate=True):
 def cmf_to_unfolded(cmf, mode, pad=True, validate=True):
     r"""Generate the unfolded tensor represented by the coupled matrix factorization.
 
-    
+
     By default the function is an alias for first constructing a tensor (``cmf_to_tensor``) and
     then vectorizing that tensor. Note that if the matrices have a different number of
     rows, then they will be padded when the tensor is constructed, and thus, there will
@@ -631,7 +631,7 @@ def cmf_to_unfolded(cmf, mode, pad=True, validate=True):
     -------
     ndarray
         Matrix of an appropriate shape (see ``cmf_to_tensor`` and ``tensorly.unfold``).
-    
+
     Raises
     ------
     ValueError
@@ -719,7 +719,7 @@ def cmf_to_vec(cmf, pad=True, validate=True):
     rows, then they will be padded when the tensor is constructed, and thus, there will
     be zeros in the vectorized tensor too.
 
-    If the zero-padding is unwanted, then setting the ``pad`` parameter to ``False`` will instead construct and 
+    If the zero-padding is unwanted, then setting the ``pad`` parameter to ``False`` will instead construct and
     vectorize each matrix described by the decomposition and then concatenate these vectors forming
     one vector with no padded zero values.
 
@@ -737,9 +737,9 @@ def cmf_to_vec(cmf, pad=True, validate=True):
             represents :math:`\mathbf{C}`
 
     pad: bool (default=True)
-        If true then if the matrices described by the decomposition have a different number of rows, 
+        If true then if the matrices described by the decomposition have a different number of rows,
         then they will be padded by zeros to construct a tensor which are vectorized, and there will
-        be zeros in the vectorized tensor too. If false, the matrices will not be padded. 
+        be zeros in the vectorized tensor too. If false, the matrices will not be padded.
     validate : bool (default=True)
         If true, then the decomposition is validated before the matrix is constructed
         (see ``CoupledMatrixFactorization``).
@@ -764,7 +764,7 @@ def cmf_to_vec(cmf, pad=True, validate=True):
 
     We can also vectorize a coupled matrix factorization where the matrices
     have a varying number of rows
-    
+
     >>> shapes = ((5, 10), (3, 10), (2, 10), (4, 10))
     >>> cmf = random_coupled_matrices(shapes, rank=3)
     >>> vector = cmf_to_vec(cmf)
@@ -777,7 +777,7 @@ def cmf_to_vec(cmf, pad=True, validate=True):
 
     We can see the padding by counting the number of zeros. The number of
     zeros should be :math:`((5 - 5) + (5 - 3) + (5 - 2) + (5 - 4)) \times 10 = 60`.
-    
+
     >>> tl.sum(vector == 0)
     60
 
