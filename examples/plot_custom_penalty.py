@@ -31,7 +31,7 @@ rng = np.random.default_rng(0)
 
 
 def normalize(x):
-    return x / tl.sqrt(tl.sum(x ** 2, axis=0, keepdims=True))
+    return x / tl.sqrt(tl.sum(x**2, axis=0, keepdims=True))
 
 
 ###############################################################################
@@ -128,7 +128,7 @@ for init in range(4):
         regs=[[NonNegativity()], [Unimodality(non_negativity=True)], [NonNegativity()]],
         return_errors=True,
         random_state=init,
-        verbose=True,
+        verbose=50,  # Only print every 50 iteration
     )
     if out[1].regularized_loss[-1] < lowest_error and out[1].satisfied_stopping_condition:
         out_cmf, diagnostics = out
@@ -217,7 +217,7 @@ from matcouply._unimodal_regression import unimodal_regression  # The unimodal r
 from matcouply.penalties import HardConstraintMixin, MatrixPenalty
 
 
-class CustomUnimodality(HardConstraintMixin, MatrixPenalty):
+class UnimodalAllExceptLast(HardConstraintMixin, MatrixPenalty):
     def __init__(self, non_negativity=False, aux_init="random_uniform", dual_init="random_uniform"):
         super().__init__(aux_init, dual_init)
         self.non_negativity = non_negativity
@@ -243,10 +243,10 @@ for init in range(4):
         noisy_matrices,
         rank,
         n_iter_max=1000,
-        regs=[[NonNegativity()], [CustomUnimodality(non_negativity=True)], [NonNegativity()]],
+        regs=[[NonNegativity()], [UnimodalAllExceptLast(non_negativity=True)], [NonNegativity()]],
         return_errors=True,
         random_state=init,
-        verbose=True,
+        verbose=50,  # Only print every 50 iteration
     )
     if out[1].regularized_loss[-1] < lowest_error and out[1].satisfied_stopping_condition:
         out_cmf, diagnostics = out
@@ -305,3 +305,56 @@ plt.show()
 # We see that the model finds much more sensible component vectors. The :math:`\mathbf{A}`- and
 # :math:`\mathbf{C}`-component vectors no longer seem correlated, and the peaks of the :math:`\mathbf{B}^{(i)}`-component
 # vectors no longer jump around.
+
+
+###############################################################################
+# Automated unit test creation with MatCoupLy
+# ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#
+# Matcouply can autogenerate unit tests for new penalty types. Simply create a test class that inherits from
+# ``matcouply.testing.BaseTestFactorMatrixPenalty`` (or ``matcouply.testing.BaseTestFactorMatricesPenalty``
+# or ``matcouply.testing.BaseTestRowPenalty`` if your penalty type is either a row-wise penalty or a multi matrix
+# penalty), overload the ``get_invariant_matrix`` and ``get_non_invariant_matrix`` methods (without changing the
+# signature) and MatCoupLy will generate a set of useful unit tests. The ``get_invariant_matrix`` method should
+# generate a matrix that is not modified by the proximal operator and the ``get_non_invariant_matrix`` should generate
+# a matrix that will be modified by the proximal operator.
+#
+# Note that to use this functionality in your own project, you need to add the MatCoupLy test fixtures to your test
+# suite. You can do this by adding the line ``pytest_plugins = ["matcouply.testing.fixtures"]`` to your
+# `conftest.py <https://docs.pytest.org/en/6.2.x/fixture.html#conftest-py-sharing-fixtures-across-multiple-files>`_
+# file.
+
+from matcouply.testing import MixinTestHardConstraint, BaseTestFactorMatrixPenalty
+
+class TestUnimodalAllExceptLast(
+    MixinTestHardConstraint, BaseTestFactorMatrixPenalty
+):
+    PenaltyType = UnimodalAllExceptLast
+    penalty_default_kwargs = {}
+    min_rows = 3
+    min_columns = 2
+
+    def get_invariant_matrix(self, rng, shape):
+        matrix = tl.zeros(shape)
+        I, J = shape
+        t = np.linspace(-10, 10, I)
+        for j in range(J-1):
+            sigma = rng.uniform(0.5, 1)
+            mu = rng.uniform(-5, 5)
+            matrix[:, j] = stats.norm.pdf(t, loc=mu, scale=sigma)
+        matrix[:, J-1] = rng.uniform(size=I)
+        return matrix
+
+    def get_non_invariant_matrix(self, rng, shape):
+        # There are at least 3 rows
+        M = rng.uniform(size=shape)
+        M[1, :-1] = -1  # M is positive, so setting the second element to -1 makes it impossible for it to be unimodal
+        return M
+
+print("""
+Auto generated unit tests:
+==========================\
+""")
+for name in dir(TestUnimodalAllExceptLast):
+    if "test" in name:
+        print(f" * {name}")
