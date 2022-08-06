@@ -879,9 +879,9 @@ def cmf_aoadmm(
     A_gaps, B_gaps, C_gaps = compute_feasibility_gaps(cmf, regs, A_aux_list, B_is_aux_list, C_aux_list)
     feasibility_gaps.append((A_gaps, B_gaps, C_gaps))
     if verbose and verbose > 0:
-        print("Duality gaps for A: {}".format(A_gaps))
-        print("Duality gaps for the Bi-matrices: {}".format(B_gaps))
-        print("Duality gaps for C: {}".format(C_gaps))
+        print("Feasibility gaps for A: {}".format(A_gaps))
+        print("Feasibility gaps for the Bi-matrices: {}".format(B_gaps))
+        print("Feasibility gaps for C: {}".format(C_gaps))
 
     # Default values for diagnostics
     satisfied_stopping_condition = False
@@ -957,9 +957,9 @@ def cmf_aoadmm(
                             + "regularized loss=NOT COMPUTED, "
                             + "regularized loss variation=NOT COMPUTED."
                         )
-                        print("Duality gaps for A: {}".format(A_gaps))
-                        print("Duality gaps for the Bi-matrices: {}".format(B_gaps))
-                        print("Duality gaps for C: {}".format(C_gaps))
+                        print("Feasibility gaps for A: {}".format(A_gaps))
+                        print("Feasibility gaps for the Bi-matrices: {}".format(B_gaps))
+                        print("Feasibility gaps for C: {}".format(C_gaps))
 
                     continue
 
@@ -976,15 +976,16 @@ def cmf_aoadmm(
             losses.append(0.5 * rec_error**2 + l2_reg + reg_penalty)
 
             if verbose and it % verbose == 0 and verbose > 0:
+                A_gaps, B_gaps, C_gaps = curr_feasibility_gaps
                 print(
                     "Coupled matrix factorization iteration={}, ".format(it)
                     + "reconstruction error={}, ".format(rec_errors[-1])
                     + "regularized loss={} ".format(losses[-1])
                     + "regularized loss variation={}.".format(abs(losses[-2] - losses[-1]) / losses[-2])
                 )
-                print("Duality gaps for A: {}".format(A_gaps))
-                print("Duality gaps for the Bi-matrices: {}".format(B_gaps))
-                print("Duality gaps for C: {}".format(C_gaps))
+                print("Feasibility gaps for A: {}".format(A_gaps))
+                print("Feasibility gaps for the Bi-matrices: {}".format(B_gaps))
+                print("Feasibility gaps for C: {}".format(C_gaps))
 
             if tol:
                 # Compute rest of stopping criterions
