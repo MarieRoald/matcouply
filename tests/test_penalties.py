@@ -14,6 +14,7 @@ from matcouply.testing import (
     BaseTestFactorMatricesPenalty,
     BaseTestFactorMatrixPenalty,
     BaseTestRowVectorPenalty,
+    MixinTestHardConstraint,
     assert_allclose,
 )
 
@@ -57,16 +58,6 @@ def test_matrix_penalty_forwards_updates_correctly(rng, random_matrices):
     for factor_matrix in updated_factor_matrices:
         assert tl.all(factor_matrix >= 0)
         assert tl.all(factor_matrix <= 1)
-
-
-class MixinTestHardConstraint:
-    def test_penalty(self, random_ragged_cmf):
-        cmf, shapes, rank = random_ragged_cmf
-        weights, (A, B_is, C) = cmf
-        penalty = self.PenaltyType(**self.penalty_default_kwargs)
-        assert penalty.penalty(A) == 0
-        assert penalty.penalty(B_is) == 0
-        assert penalty.penalty(C) == 0
 
 
 class TestL1Penalty(BaseTestRowVectorPenalty):
@@ -466,7 +457,7 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
     def test_factor_matrices_update_invariant_point(self, rng):
         svd = get_svd("truncated_svd")
 
-        # Construct stationary matrices in NumPy for double precision
+        # Construct invariant matrices in NumPy for double precision
         def random_orthogonal(size):
             X = rng.standard_normal(size)
             return np.linalg.qr(X)[0]
