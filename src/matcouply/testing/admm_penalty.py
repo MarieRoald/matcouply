@@ -547,3 +547,13 @@ class BaseTestRowVectorPenalty(BaseTestFactorMatrixPenalty):  # e.g. non-negativ
         initial_penalty = penalty.penalty(random_row)
         out = penalty.factor_matrix_row_update(random_row, 10, None)
         assert penalty.penalty(out) <= initial_penalty
+
+
+class MixinTestHardConstraint:
+    def test_penalty(self, random_ragged_cmf):
+        cmf, shapes, rank = random_ragged_cmf
+        weights, (A, B_is, C) = cmf
+        penalty = self.PenaltyType(**self.penalty_default_kwargs)
+        assert penalty.penalty(A) == 0
+        assert penalty.penalty(B_is) == 0
+        assert penalty.penalty(C) == 0
