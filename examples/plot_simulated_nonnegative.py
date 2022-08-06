@@ -28,7 +28,7 @@ def truncated_normal(size):
 
 
 def normalize(x):
-    return x / tl.sqrt(tl.sum(x ** 2, axis=0, keepdims=True))
+    return x / tl.sqrt(tl.sum(x**2, axis=0, keepdims=True))
 
 
 ###############################################################################

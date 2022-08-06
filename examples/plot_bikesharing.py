@@ -177,7 +177,9 @@ fig = px.density_mapbox(
     hover_data=["Arrival station name"],
     title="Oslo",
 )
-fig.update_layout(mapbox_style="carto-positron",)
+fig.update_layout(
+    mapbox_style="carto-positron",
+)
 fig
 
 ###############################################################################
@@ -212,7 +214,9 @@ fig = px.density_mapbox(
     hover_data=["Arrival station name"],
     title="Bergen",
 )
-fig.update_layout(mapbox_style="carto-positron",)
+fig.update_layout(
+    mapbox_style="carto-positron",
+)
 fig
 
 ###############################################################################
@@ -246,7 +250,9 @@ fig = px.density_mapbox(
     hover_data=["Arrival station name"],
     title="Trondheim",
 )
-fig.update_layout(mapbox_style="carto-positron",)
+fig.update_layout(
+    mapbox_style="carto-positron",
+)
 fig
 
 ###############################################################################
