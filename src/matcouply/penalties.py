@@ -961,9 +961,15 @@ class UnitSimplex(HardConstraintMixin, MatrixPenalty):
         # But using bisection instead of Newton's method, since Newton's method requires a C2 function,
         # and this is only a C0 function.
         # 0 = ∑_i[x_i] − 1 = ∑_i[min((yi−μ), 0)] - 1
-
         min_val = tl.min(factor_matrix_column) - 1
         max_val = tl.max(factor_matrix_column)
+
+        # Add a little buffer to the tolerance to account for floating point errors
+        min_val -= 1e-5
+        min_val = min(0.9 * min_val, 1.1 * min_val)
+
+        max_val += 1e-5
+        max_val = max(0.9 * max_val, 1.1 * max_val)
 
         def f(multiplier):
             return tl.sum(tl.clip(factor_matrix_column - multiplier, 0, None)) - 1
