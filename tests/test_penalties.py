@@ -74,31 +74,31 @@ class TestL1Penalty(BaseTestRowVectorPenalty):
     penalty_default_kwargs = {"reg_strength": 1}
 
     @pytest.mark.parametrize("non_negativity", [True, False])
-    def test_row_update_stationary_point(self, non_negativity):
-        stationary_matrix_row = tl.zeros((1, 4))
+    def test_row_update_invariant_point(self, non_negativity):
+        invariant_matrix_row = tl.zeros((1, 4))
         l1_penalty = penalties.L1Penalty(0.1, non_negativity=non_negativity)
 
-        out = l1_penalty.factor_matrix_row_update(stationary_matrix_row, 10, None)
-        assert_allclose(stationary_matrix_row, out)
+        out = l1_penalty.factor_matrix_row_update(invariant_matrix_row, 10, None)
+        assert_allclose(invariant_matrix_row, out)
 
     @pytest.mark.parametrize("non_negativity", [True, False])
-    def test_factor_matrix_update_stationary_point(self, non_negativity):
-        stationary_matrix = tl.zeros((10, 3))
+    def test_factor_matrix_update_invariant_point(self, non_negativity):
+        invariant_matrix = tl.zeros((10, 3))
         l1_penalty = penalties.L1Penalty(0.1, non_negativity=non_negativity)
 
-        out = l1_penalty.factor_matrix_update(stationary_matrix, 10, None)
-        assert_allclose(stationary_matrix, out)
+        out = l1_penalty.factor_matrix_update(invariant_matrix, 10, None)
+        assert_allclose(invariant_matrix, out)
 
     @pytest.mark.parametrize("non_negativity", [True, False])
-    def test_factor_matrices_update_stationary_point(self, non_negativity):
-        stationary_matrices = [tl.zeros((10, 3)) for i in range(5)]
-        feasibility_penalties = [10] * len(stationary_matrices)
-        auxes = [None] * len(stationary_matrices)
+    def test_factor_matrices_update_invariant_point(self, non_negativity):
+        invariant_matrices = [tl.zeros((10, 3)) for i in range(5)]
+        feasibility_penalties = [10] * len(invariant_matrices)
+        auxes = [None] * len(invariant_matrices)
         l1_penalty = penalties.L1Penalty(0.1, non_negativity=non_negativity)
 
-        out = l1_penalty.factor_matrices_update(stationary_matrices, feasibility_penalties, auxes)
-        for stationary_matrix, out_matrix in zip(stationary_matrices, out):
-            assert_allclose(stationary_matrix, out_matrix)
+        out = l1_penalty.factor_matrices_update(invariant_matrices, feasibility_penalties, auxes)
+        for invariant_matrix, out_matrix in zip(invariant_matrices, out):
+            assert_allclose(invariant_matrix, out_matrix)
 
     @pytest.mark.parametrize("non_negativity", [True, False])
     def test_row_update_reduces_penalty(self, random_row, non_negativity):
@@ -194,11 +194,11 @@ class TestBoxConstraint(MixinTestHardConstraint, BaseTestRowVectorPenalty):
     PenaltyType = penalties.BoxConstraint
     penalty_default_kwargs = {"min_val": 0, "max_val": 1}
 
-    def get_stationary_row(self, rng, n_columns):
-        stationary_row = tl.tensor(rng.uniform(size=(1, n_columns), low=0, high=1))
-        return stationary_row
+    def get_invariant_row(self, rng, n_columns):
+        invariant_row = tl.tensor(rng.uniform(size=(1, n_columns), low=0, high=1))
+        return invariant_row
 
-    def get_non_stationary_row(self, rng, n_columns):
+    def get_non_invariant_row(self, rng, n_columns):
         random_row = tl.tensor(rng.uniform(size=(1, n_columns)))
         random_row[0] += 100
         return random_row
@@ -208,11 +208,11 @@ class TestL2BallConstraint(MixinTestHardConstraint, BaseTestFactorMatrixPenalty)
     PenaltyType = penalties.L2Ball
     penalty_default_kwargs = {"norm_bound": 1}
 
-    def get_stationary_matrix(self, rng, shape):
+    def get_invariant_matrix(self, rng, shape):
         random_matrix = tl.tensor(rng.random_sample(shape))
         return random_matrix / math.sqrt(shape[0])
 
-    def get_non_stationary_matrix(self, rng, shape):
+    def get_non_invariant_matrix(self, rng, shape):
         random_matrix = tl.tensor(rng.random_sample(shape) + 10)
         return 10 + random_matrix / math.sqrt(shape[0])
 
@@ -239,12 +239,12 @@ class TestUnitSimplex(MixinTestHardConstraint, BaseTestFactorMatrixPenalty):
     rtol = 1e-5 * RTOL_SCALE
     atol = 1e-8
 
-    def get_stationary_matrix(self, rng, shape):
+    def get_invariant_matrix(self, rng, shape):
         random_matrix = tl.tensor(rng.uniform(size=shape))
         col_sum = tl.sum(random_matrix, axis=0)
         return random_matrix / col_sum
 
-    def get_non_stationary_matrix(self, rng, shape):
+    def get_non_invariant_matrix(self, rng, shape):
         random_matrix = tl.tensor(rng.uniform(size=shape))
         col_sum = tl.sum(random_matrix, axis=0)
         return 10 + random_matrix / col_sum
@@ -274,12 +274,12 @@ class TestGeneralizedL2Penalty(BaseTestFactorMatrixPenalty):
     # fmt: on
     penalty_default_kwargs = {"norm_matrix": norm_matrix}
 
-    def get_stationary_matrix(self, rng, shape):
+    def get_invariant_matrix(self, rng, shape):
         if shape[0] != self.n_rows:
             raise ValueError("Shape must align with the norm matrix")
         return tl.ones(shape)
 
-    def get_non_stationary_matrix(self, rng, shape):
+    def get_non_invariant_matrix(self, rng, shape):
         return tl.tensor(rng.random_sample(size=shape))
 
     def test_penalty(self, random_matrices):
@@ -309,10 +309,10 @@ class TestTotalVariationPenalty(BaseTestFactorMatrixPenalty):
     penalty_default_kwargs = {"reg_strength": 1, "l1_strength": 0}
     min_rows = 3
 
-    def get_stationary_matrix(self, rng, shape):
+    def get_invariant_matrix(self, rng, shape):
         return tl.zeros(shape)
 
-    def get_non_stationary_matrix(self, rng, shape):
+    def get_non_invariant_matrix(self, rng, shape):
         return tl.tensor(rng.uniform(size=shape))
 
     def test_penalty(self, rng):
@@ -367,24 +367,24 @@ class TestTotalVariationPenalty(BaseTestFactorMatrixPenalty):
 
     def test_l1_is_applied(self):
         shape = (10, 3)
-        normally_stationary_matrix = tl.ones(shape)
+        normally_invariant_matrix = tl.ones(shape)
         penalty_without_l1 = self.PenaltyType(reg_strength=1, l1_strength=0)
         assert_allclose(
-            normally_stationary_matrix, penalty_without_l1.factor_matrix_update(normally_stationary_matrix, 1, None)
+            normally_invariant_matrix, penalty_without_l1.factor_matrix_update(normally_invariant_matrix, 1, None)
         )
 
         penalty_with_l1 = self.PenaltyType(reg_strength=1, l1_strength=1000)
-        assert_allclose(tl.zeros(shape), penalty_with_l1.factor_matrix_update(normally_stationary_matrix, 1, None))
+        assert_allclose(tl.zeros(shape), penalty_with_l1.factor_matrix_update(normally_invariant_matrix, 1, None))
 
 
 class TestNonNegativity(MixinTestHardConstraint, BaseTestRowVectorPenalty):
     PenaltyType = penalties.NonNegativity
 
-    def get_stationary_row(self, rng, n_columns):
+    def get_invariant_row(self, rng, n_columns):
         random_row = tl.tensor(rng.uniform(size=(1, n_columns)))
         return random_row
 
-    def get_non_stationary_row(self, rng, n_columns):
+    def get_non_invariant_row(self, rng, n_columns):
         random_row = tl.tensor(rng.uniform(size=(1, n_columns)))
         random_row[0] = -1
         return random_row
@@ -402,7 +402,7 @@ class TestUnimodality(MixinTestHardConstraint, BaseTestFactorMatrixPenalty):
     penalty_default_kwargs = {}
     min_rows = 3
 
-    def get_stationary_matrix(self, rng, shape):
+    def get_invariant_matrix(self, rng, shape):
         matrix = tl.zeros(shape)
         I, J = shape
         t = np.linspace(-10, 10, I)
@@ -412,19 +412,19 @@ class TestUnimodality(MixinTestHardConstraint, BaseTestFactorMatrixPenalty):
             matrix[:, j] = stats.norm.pdf(t, loc=mu, scale=sigma)
         return matrix
 
-    def get_non_stationary_matrix(self, rng, shape):
+    def get_non_invariant_matrix(self, rng, shape):
         # There are at least 3 rows
         M = rng.uniform(size=shape)
         M[1, :] = -1  # M is positive, so setting the second element to -1 makes it impossible for it to be unimodal
         return M
 
     @pytest.mark.parametrize("non_negativity", [True, False])
-    def test_non_negativity_used(self, non_stationary_matrix, non_negativity):
+    def test_non_negativity_used(self, non_invariant_matrix, non_negativity):
         # Check that non_negativity is used
         with patch("matcouply.penalties.unimodal_regression") as mock:
             unimodality_constaint = self.PenaltyType(non_negativity=non_negativity)
-            unimodality_constaint.factor_matrix_update(non_stationary_matrix, 1, None)
-            mock.assert_called_once_with(non_stationary_matrix, non_negativity=non_negativity)
+            unimodality_constaint.factor_matrix_update(non_invariant_matrix, 1, None)
+            mock.assert_called_once_with(non_invariant_matrix, non_negativity=non_negativity)
 
 
 def test_unimodality_skipped():
@@ -463,7 +463,7 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
 
         assert error_5it < error_1it
 
-    def test_factor_matrices_update_stationary_point(self, rng):
+    def test_factor_matrices_update_invariant_point(self, rng):
         svd = get_svd("truncated_svd")
 
         # Construct stationary matrices in NumPy for double precision
@@ -473,17 +473,17 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
 
         deltaB = rng.standard_normal((3, 3))
         P_is = [random_orthogonal((10, 3)) for _ in range(5)]
-        stationary_matrices = [P_i @ deltaB for P_i in P_is]
+        invariant_matrices = [P_i @ deltaB for P_i in P_is]
 
         deltaB = tl.tensor(deltaB)
         P_is = [tl.tensor(P_i) for P_i in P_is]
-        stationary_matrices = [tl.tensor(B_i) for B_i in stationary_matrices]
+        invariant_matrices = [tl.tensor(B_i) for B_i in invariant_matrices]
         auxes = P_is, deltaB
 
-        feasibility_penalties = [10] * len(stationary_matrices)
+        feasibility_penalties = [10] * len(invariant_matrices)
         pf2_penalty = penalties.Parafac2()
 
-        out = pf2_penalty.factor_matrices_update(stationary_matrices, feasibility_penalties, auxes)
+        out = pf2_penalty.factor_matrices_update(invariant_matrices, feasibility_penalties, auxes)
         assert_allclose(deltaB, out[1], rtol=1e-6 * RTOL_SCALE)
         for P_i, out_matrix in zip(P_is, out[0]):
             if tl.get_backend() == "numpy":

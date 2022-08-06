@@ -412,43 +412,43 @@ class BaseTestADMMPenalty:
 
 
 class BaseTestFactorMatricesPenalty(BaseTestADMMPenalty):  # e.g. PARAFAC2
-    def get_stationary_matrices(self, rng, shape):
+    def get_invariant_matrices(self, rng, shape):
         return NotImplementedError
 
-    def get_non_stationary_matrices(self, rng, shape):
+    def get_non_invariant_matrices(self, rng, shape):
         return NotImplementedError
 
     @pytest.fixture
-    def stationary_matrices(self, rng):
+    def invariant_matrices(self, rng):
         n_rows = rng.randint(self.min_rows, self.max_rows + 1)
         n_matrices = rng.randint(self.min_matrices, self.max_matrices + 1)
         shapes = tuple((n_rows, rng.randint(self.min_columns, self.max_columns + 1)) for k in range(n_matrices))
-        return self.get_stationary_matrices(rng, shapes)
+        return self.get_invariant_matrices(rng, shapes)
 
     @pytest.fixture
-    def non_stationary_matrices(self, rng):
+    def non_invariant_matrices(self, rng):
         n_rows = rng.randint(self.min_rows, self.max_rows + 1)
         n_matrices = rng.randint(self.min_matrices, self.max_matrices + 1)
         shapes = tuple((n_rows, rng.randint(self.min_columns, self.max_columns + 1)) for k in range(n_matrices))
-        return self.get_non_stationary_matrices(rng, shapes)
+        return self.get_non_invariant_matrices(rng, shapes)
 
-    def test_factor_matrices_update_stationary_point(self, stationary_matrices):
-        feasibility_penalties = [10] * len(stationary_matrices)
-        auxes = [None] * len(stationary_matrices)
+    def test_factor_matrices_update_invariant_point(self, invariant_matrices):
+        feasibility_penalties = [10] * len(invariant_matrices)
+        auxes = [None] * len(invariant_matrices)
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
 
-        out = penalty.factor_matrices_update(stationary_matrices, feasibility_penalties, auxes)
-        for stationary_matrix, out_matrix in zip(stationary_matrices, out):
-            assert_allclose(stationary_matrix, out_matrix, rtol=self.rtol, atol=self.atol)
+        out = penalty.factor_matrices_update(invariant_matrices, feasibility_penalties, auxes)
+        for invariant_matrix, out_matrix in zip(invariant_matrices, out):
+            assert_allclose(invariant_matrix, out_matrix, rtol=self.rtol, atol=self.atol)
 
-    def test_factor_matrices_update_changes_input(self, non_stationary_matrices):
-        feasibility_penalties = [10] * len(non_stationary_matrices)
-        auxes = [None] * len(non_stationary_matrices)
+    def test_factor_matrices_update_changes_input(self, non_invariant_matrices):
+        feasibility_penalties = [10] * len(non_invariant_matrices)
+        auxes = [None] * len(non_invariant_matrices)
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
 
-        out = penalty.factor_matrices_update(non_stationary_matrices, feasibility_penalties, auxes)
-        for non_stationary_matrix, out_matrix in zip(non_stationary_matrices, out):
-            assert not np.allclose(out_matrix, non_stationary_matrix, rtol=self.rtol, atol=self.atol)
+        out = penalty.factor_matrices_update(non_invariant_matrices, feasibility_penalties, auxes)
+        for non_invariant_matrix, out_matrix in zip(non_invariant_matrices, out):
+            assert not np.allclose(out_matrix, non_invariant_matrix, rtol=self.rtol, atol=self.atol)
 
     def test_factor_matrices_update_reduces_penalty(self, random_matrices):
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
@@ -460,43 +460,43 @@ class BaseTestFactorMatricesPenalty(BaseTestADMMPenalty):  # e.g. PARAFAC2
 
 
 class BaseTestFactorMatrixPenalty(BaseTestFactorMatricesPenalty):
-    def get_stationary_matrix(self, rng, shape):
+    def get_invariant_matrix(self, rng, shape):
         raise NotImplementedError
 
-    def get_stationary_matrices(self, rng, shapes):
-        return [self.get_stationary_matrix(rng, shape) for shape in shapes]
+    def get_invariant_matrices(self, rng, shapes):
+        return [self.get_invariant_matrix(rng, shape) for shape in shapes]
 
-    def get_non_stationary_matrix(self, rng, shape):
+    def get_non_invariant_matrix(self, rng, shape):
         raise NotImplementedError
 
-    def get_non_stationary_matrices(self, rng, shapes):
-        return [self.get_non_stationary_matrix(rng, shape) for shape in shapes]
+    def get_non_invariant_matrices(self, rng, shapes):
+        return [self.get_non_invariant_matrix(rng, shape) for shape in shapes]
 
     @pytest.fixture
-    def stationary_matrix(self, rng):
+    def invariant_matrix(self, rng):
         n_columns = rng.randint(self.min_columns, self.max_columns + 1)
         n_rows = rng.randint(self.min_rows, self.max_rows + 1)
         shape = (n_rows, n_columns)
-        return self.get_stationary_matrix(rng, shape)
+        return self.get_invariant_matrix(rng, shape)
 
     @pytest.fixture
-    def non_stationary_matrix(self, rng):
+    def non_invariant_matrix(self, rng):
         n_columns = rng.randint(self.min_columns, self.max_columns + 1)
         n_rows = rng.randint(self.min_rows, self.max_rows + 1)
         shape = (n_rows, n_columns)
-        return self.get_non_stationary_matrix(rng, shape)
+        return self.get_non_invariant_matrix(rng, shape)
 
-    def test_factor_matrix_update_stationary_point(self, stationary_matrix):
+    def test_factor_matrix_update_invariant_point(self, invariant_matrix):
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
 
-        out = penalty.factor_matrix_update(stationary_matrix, 10, None)
-        assert_allclose(stationary_matrix, out, rtol=self.rtol, atol=self.atol)
+        out = penalty.factor_matrix_update(invariant_matrix, 10, None)
+        assert_allclose(invariant_matrix, out, rtol=self.rtol, atol=self.atol)
 
-    def test_factor_matrix_update_changes_input(self, non_stationary_matrix):
+    def test_factor_matrix_update_changes_input(self, non_invariant_matrix):
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
 
-        out = penalty.factor_matrix_update(non_stationary_matrix, 10, None)
-        assert not np.allclose(out, non_stationary_matrix, rtol=self.rtol, atol=self.atol)
+        out = penalty.factor_matrix_update(non_invariant_matrix, 10, None)
+        assert not np.allclose(out, non_invariant_matrix, rtol=self.rtol, atol=self.atol)
 
     def test_factor_matrix_update_reduces_penalty(self, random_matrix):
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
@@ -507,39 +507,39 @@ class BaseTestFactorMatrixPenalty(BaseTestFactorMatricesPenalty):
 
 
 class BaseTestRowVectorPenalty(BaseTestFactorMatrixPenalty):  # e.g. non-negativity
-    def get_stationary_row(self, rng, n_columns):
+    def get_invariant_row(self, rng, n_columns):
         raise NotImplementedError
 
-    def get_stationary_matrix(self, rng, shape):
-        return tl.stack([self.get_stationary_row(rng, shape[1]) for _ in range(shape[0])], axis=0)
+    def get_invariant_matrix(self, rng, shape):
+        return tl.stack([self.get_invariant_row(rng, shape[1]) for _ in range(shape[0])], axis=0)
 
-    def get_non_stationary_row(self, rng, n_columns):
+    def get_non_invariant_row(self, rng, n_columns):
         raise NotImplementedError
 
-    def get_non_stationary_matrix(self, rng, shape):
-        return tl.stack([self.get_non_stationary_row(rng, shape[1]) for _ in range(shape[0])], axis=0)
+    def get_non_invariant_matrix(self, rng, shape):
+        return tl.stack([self.get_non_invariant_row(rng, shape[1]) for _ in range(shape[0])], axis=0)
 
     @pytest.fixture
-    def stationary_row(self, rng):
+    def invariant_row(self, rng):
         n_columns = rng.randint(self.min_columns, self.max_columns + 1)
-        return self.get_stationary_row(rng, n_columns)
+        return self.get_invariant_row(rng, n_columns)
 
     @pytest.fixture
-    def non_stationary_row(self, rng):
+    def non_invariant_row(self, rng):
         n_columns = rng.randint(self.min_columns, self.max_columns + 1)
-        return self.get_non_stationary_row(rng, n_columns)
+        return self.get_non_invariant_row(rng, n_columns)
 
-    def test_row_update_stationary_point(self, stationary_row):
+    def test_row_update_invariant_point(self, invariant_row):
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
 
-        out = penalty.factor_matrix_row_update(stationary_row, 10, None)
-        assert_allclose(stationary_row, out, rtol=self.rtol, atol=self.atol)
+        out = penalty.factor_matrix_row_update(invariant_row, 10, None)
+        assert_allclose(invariant_row, out, rtol=self.rtol, atol=self.atol)
 
-    def test_row_update_changes_input(self, non_stationary_row):
+    def test_row_update_changes_input(self, non_invariant_row):
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
 
-        out = penalty.factor_matrix_row_update(non_stationary_row, 10, None)
-        assert not np.allclose(out, non_stationary_row, rtol=self.rtol, atol=self.atol)
+        out = penalty.factor_matrix_row_update(non_invariant_row, 10, None)
+        assert not np.allclose(out, non_invariant_row, rtol=self.rtol, atol=self.atol)
 
     def test_row_update_reduces_penalty(self, random_row):
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
