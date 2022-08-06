@@ -6,12 +6,10 @@ import numpy as np
 import pytest
 import scipy.stats as stats
 import tensorly as tl
-from pytest import fixture
 from tensorly.testing import assert_array_equal
 
 from matcouply import penalties
 from matcouply._utils import get_svd
-from matcouply.random import random_coupled_matrices
 from matcouply.testing import (
     BaseTestFactorMatricesPenalty,
     BaseTestFactorMatrixPenalty,
@@ -284,34 +282,13 @@ class TestGeneralizedL2Penalty(BaseTestFactorMatrixPenalty):
     def get_non_stationary_matrix(self, rng, shape):
         return tl.tensor(rng.random_sample(size=shape))
 
-    @pytest.fixture
-    def random_regular_cmf(self, rng):
-        n_matrices = rng.randint(4, 10)
-        n_columns = rng.randint(4, 10)
-        rank = rng.randint(1, min(n_matrices, n_columns))
-        shapes = [[self.n_rows, n_columns] for _ in range(n_matrices)]
-        cmf = random_coupled_matrices(shapes, rank, random_state=rng)
-        return cmf, shapes, rank
-
-    @pytest.fixture
-    def random_matrix(self, rng):
-        shape = self.n_rows, rng.randint(1, 10)
-        return tl.tensor(rng.random_sample(size=shape))
-
-    @pytest.fixture
-    def random_matrices(self, rng):
-        shape = self.n_rows, rng.randint(1, 10)
-        return [tl.tensor(rng.random_sample(size=shape)) for _ in range(rng.randint(2, 10))]
-
-    def test_penalty(self, random_regular_cmf):
-        cmf, shapes, rank = random_regular_cmf
-        weights, (A, B_is, C) = cmf
-        B01 = B_is[0][: self.n_rows // 2]
-        B02 = B_is[0][self.n_rows // 2 :]
+    def test_penalty(self, random_matrices):
+        B01 = random_matrices[0][: self.n_rows // 2]
+        B02 = random_matrices[0][self.n_rows // 2 :]
         penalty_manual = tl.sum((B01[1:] - B01[:-1]) ** 2) + tl.sum((B02[1:] - B02[:-1]) ** 2)
 
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
-        assert penalty.penalty(B_is[0]) == pytest.approx(penalty_manual)
+        assert penalty.penalty(random_matrices[0]) == pytest.approx(penalty_manual)
 
     def test_update_is_correct_on_example(self, rng):
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
@@ -416,7 +393,7 @@ class TestNonNegativity(MixinTestHardConstraint, BaseTestRowVectorPenalty):
 @pytest.mark.skipif(
     tl.get_backend() != "numpy",
     reason=(
-        "The generalized unimodality constraint is only supported with the Numpy backend due"
+        "The unimodality constraint is only supported with the Numpy backend due"
         " to the serial nature of the unimodal regression algorithm and the implementation's use of Numba"
     ),
 )
@@ -461,6 +438,10 @@ def test_unimodality_skipped():
 
 class TestParafac2(BaseTestFactorMatricesPenalty):
     PenaltyType = penalties.Parafac2
+    min_matrices = 2  # PARAFAC2 constraint does not make sense for only one matrix
+    # The factor matrix needs at least as many rows as columns for PARAFAC2
+    max_columns = 5
+    min_rows = 5
 
     def test_projection_improves_with_num_iterations(self, random_rank5_ragged_cmf, rng):
         cmf, shapes, rank = random_rank5_ragged_cmf
@@ -546,8 +527,11 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
 
     def test_factor_matrices_update_reduces_penalty(self, rng, random_matrices):
         svd = get_svd("truncated_svd")
-        deltaB = tl.tensor(rng.standard_normal((3, 3)))
-        P_is = [svd(tl.tensor(rng.standard_normal(size=(10, 3))), n_eigenvecs=3)[0] for _ in range(5)]
+
+        shapes = [tl.shape(matrix) for matrix in random_matrices]
+        rank = shapes[0][1]
+        deltaB = tl.tensor(rng.standard_normal((rank, rank)))
+        P_is = [svd(tl.tensor(rng.standard_normal(size=shape)), n_eigenvecs=rank)[0] for shape in shapes]
         auxes = P_is, deltaB
 
         feasibility_penalties = [10] * len(random_matrices)
@@ -559,8 +543,11 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
 
     def test_factor_matrices_update_changes_input(self, random_matrices, rng):
         svd = get_svd("truncated_svd")
-        deltaB = tl.tensor(rng.standard_normal((3, 3)))
-        P_is = [svd(tl.tensor(rng.standard_normal(size=(10, 3))), n_eigenvecs=3)[0] for _ in range(5)]
+
+        shapes = [tl.shape(matrix) for matrix in random_matrices]
+        rank = shapes[0][1]
+        deltaB = tl.tensor(rng.standard_normal((rank, rank)))
+        P_is = [svd(tl.tensor(rng.standard_normal(size=shape)), n_eigenvecs=rank)[0] for shape in shapes]
         auxes = P_is, deltaB
 
         feasibility_penalties = [10] * len(random_matrices)

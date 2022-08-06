@@ -30,6 +30,24 @@ class BaseTestADMMPenalty:
             return 1e-6
         return 500 * 1e-6  # Single precision backends need less strict tests
 
+    @pytest.fixture
+    def random_row(self, rng):
+        n_columns = rng.randint(self.min_columns, self.max_columns + 1)
+        return tl.tensor(rng.standard_normal(n_columns))
+
+    @pytest.fixture
+    def random_matrix(self, rng):
+        n_rows = rng.randint(self.min_rows, self.max_rows + 1)
+        n_columns = rng.randint(self.min_columns, self.max_columns + 1)
+        return tl.tensor(rng.standard_normal((n_rows, n_columns)))
+
+    @pytest.fixture
+    def random_matrices(self, rng):
+        n_rows = rng.randint(self.min_rows, self.max_rows + 1)
+        n_columns = rng.randint(self.min_columns, self.max_columns + 1)
+        n_matrices = rng.randint(self.min_matrices, self.max_matrices + 1)
+        return [tl.tensor(rng.standard_normal((n_rows, n_columns))) for i in range(n_matrices)]
+
     @pytest.mark.parametrize("dual_init", ["random_uniform", "random_standard_normal", "zeros"])
     def test_uniform_init_aux(self, rng, random_ragged_cmf, dual_init):
         cmf, shapes, rank = random_ragged_cmf
