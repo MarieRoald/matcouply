@@ -14,7 +14,7 @@ MatCoupLy
 .. image:: https://readthedocs.org/projects/matcouply/badge/?version=latest
         :target: https://matcouply.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
-    
+
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
     :target: https://github.com/psf/black
 
@@ -30,7 +30,7 @@ To install MatCoupLy and all MIT-compatible dependencies from PyPI, you can run
 .. code::
 
         pip install matcouply
-        
+
 If you also want to enable total variation regularization, you need to install all components, which comes with a GPL-v3 lisence
 
 .. code::
@@ -43,7 +43,7 @@ About
 .. image:: docs/figures/CMF_multiblock.svg
     :alt: Illustration of a coupled matrix factorization
 
-MatCoupLy is a Python library that adds support for coupled matrix factorization in 
+MatCoupLy is a Python library that adds support for coupled matrix factorization in
 `TensorLy <https://github.com/tensorly/tensorly/>`_. For optimization, MatCoupLy uses
 alternating updates with the alternating direction method of multipliers (AO-ADMM),
 which allows you to fit coupled matrix factorization (and PARAFAC2) models with flexible
@@ -123,11 +123,11 @@ in the `online documentation <https://matcouply.readthedocs.io/en/latest/index.h
 
     All regularization penalties (including regs list):
     * Mode 0:
-       - <'matcouply.penalties.L2Ball' with aux_init='random_uniform', dual_init='random_uniform', norm_bound=1, non_negativity=True)>  
+       - <'matcouply.penalties.L2Ball' with aux_init='random_uniform', dual_init='random_uniform', norm_bound=1, non_negativity=True)>
     * Mode 1:
        - <'matcouply.penalties.Parafac2' with svd='truncated_svd', aux_init='random_uniform', dual_init='random_uniform', update_basis_matrices=True, update_coordinate_matrix=True, n_iter=1)>
        - <'matcouply.penalties.Unimodality' with aux_init='random_uniform', dual_init='random_uniform', non_negativity=True)>
-       - <'matcouply.penalties.L2Ball' with aux_init='random_uniform', dual_init='random_uniform', norm_bound=1, non_negativity=True)>  
+       - <'matcouply.penalties.L2Ball' with aux_init='random_uniform', dual_init='random_uniform', norm_bound=1, non_negativity=True)>
     * Mode 2:
        - <'matcouply.penalties.L1Penalty' with aux_init='random_uniform', dual_init='random_uniform', reg_strength=0.1, non_negativity=True)>
     converged in 218 iterations: FEASIBILITY GAP CRITERION AND RELATIVE LOSS CRITERION SATISFIED
@@ -138,5 +138,5 @@ in the `online documentation <https://matcouply.readthedocs.io/en/latest/index.h
 References
 ----------
 
- * [1]: Roald M, Schenker C, Cohen JE, Acar E. PARAFAC2 AO-ADMM: Constraints in all modes. EUSIPCO (2021).
- * [2]: Roald M, Schenker C, Bro R, Cohen JE, Acar E. An AO-ADMM approach to constraining PARAFAC2 on all modes (2021). arXiv preprint arXiv:2110.01278.
+ * [1]: Roald M, Schenker C, Cohen JE, Acar E PARAFAC2 AO-ADMM: Constraints in all modes. EUSIPCO (2021).
+ * [2]: Roald M, Schenker C, Calhoun VD, Adali T, Bro R, Cohen JE, Acar E An AO-ADMM approach to constraining PARAFAC2 on all modes (2022). Accepted for publication in SIAM Journal on Mathematics of Data Science, arXiv preprint arXiv:2110.01278.
