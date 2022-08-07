@@ -1491,7 +1491,7 @@ def test_cmf_aoadmm(rng, random_ragged_cmf):
     )
     assert len(out) == 3
     assert isinstance(out[0], CoupledMatrixFactorization)
-    assert isinstance(out[1], decomposition.AdmmVars)
+    assert isinstance(out[1], decomposition.ADMMVars)
     assert isinstance(out[2], decomposition.DiagnosticMetrics)
 
     # Check that we don't get errors but do get ADMM-vars when we ask for it.
@@ -1501,7 +1501,7 @@ def test_cmf_aoadmm(rng, random_ragged_cmf):
     )
     assert len(out) == 2
     assert isinstance(out[0], CoupledMatrixFactorization)
-    assert isinstance(out[1], decomposition.AdmmVars)
+    assert isinstance(out[1], decomposition.ADMMVars)
 
     # Check that we don't get errors out if we don't ask for it
     out = decomposition.cmf_aoadmm(matrices, rank, return_errors=False, return_admm_vars=False)

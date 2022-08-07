@@ -9,7 +9,7 @@ from . import penalties
 from ._utils import create_padded_tensor, get_shapes, get_svd, is_iterable
 from .coupled_matrices import CoupledMatrixFactorization, cmf_to_matrices
 
-__all__ = ["compute_feasibility_gaps", "AdmmVars", "DiagnosticMetrics", "cmf_aoadmm", "parafac2_aoadmm"]
+__all__ = ["compute_feasibility_gaps", "ADMMVars", "DiagnosticMetrics", "cmf_aoadmm", "parafac2_aoadmm"]
 
 
 def initialize_cmf(matrices, rank, init, svd_fun, random_state=None, init_params=None):
@@ -589,7 +589,7 @@ def _check_feasibility(feasibility_gaps, feasibility_tol):
     return max_feasibility_gap < feasibility_tol
 
 
-class AdmmVars(NamedTuple):
+class ADMMVars(NamedTuple):
     auxes: tuple  #: Length three tuple containing a list of auxiliary factor matrices for each mode
     duals: tuple  #: Length three tuple containing a list of dual variables for each mode
 
@@ -1028,7 +1028,7 @@ def cmf_aoadmm(
 
     out = [cmf]
     if return_admm_vars:
-        admm_vars = AdmmVars(
+        admm_vars = ADMMVars(
             auxes=(A_aux_list, B_is_aux_list, C_aux_list), duals=(A_dual_list, B_is_dual_list, C_dual_list)
         )
         out.append(admm_vars)
