@@ -1,4 +1,5 @@
-import scipy.linalg as sla
+# MIT License: Copyright (c) 2022, Marie Roald.
+# See the LICENSE file in the root directory for full license text.
 import tensorly as tl
 
 

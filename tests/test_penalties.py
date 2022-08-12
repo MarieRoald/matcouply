@@ -1,3 +1,6 @@
+# MIT License: Copyright (c) 2022, Marie Roald.
+# See the LICENSE file in the root directory for full license text.
+
 import math
 from copy import copy
 from unittest.mock import patch

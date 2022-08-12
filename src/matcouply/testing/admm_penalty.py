@@ -1,3 +1,6 @@
+# MIT License: Copyright (c) 2022, Marie Roald.
+# See the LICENSE file in the root directory for full license text.
+
 import numpy as np
 import pytest
 import tensorly as tl
