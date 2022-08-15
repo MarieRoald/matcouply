@@ -141,5 +141,5 @@ in the `online documentation <https://matcouply.readthedocs.io/en/latest/index.h
 References
 ----------
 
- * [1]: Roald M, Schenker C, Cohen JE, Acar E PARAFAC2 AO-ADMM: Constraints in all modes. EUSIPCO (2021).
- * [2]: Roald M, Schenker C, Calhoun VD, Adali T, Bro R, Cohen JE, Acar E An AO-ADMM approach to constraining PARAFAC2 on all modes (2022). Accepted for publication in SIAM Journal on Mathematics of Data Science, arXiv preprint arXiv:2110.01278.
+* [1]: Roald M, Schenker C, Cohen JE, Acar E PARAFAC2 AO-ADMM: Constraints in all modes. EUSIPCO (2021).
+* [2]: Roald M, Schenker C, Calhoun VD, Adali T, Bro R, Cohen JE, Acar E An AO-ADMM approach to constraining PARAFAC2 on all modes (2022). Accepted for publication in SIAM Journal on Mathematics of Data Science, arXiv preprint arXiv:2110.01278.
