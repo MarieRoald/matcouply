@@ -15,6 +15,9 @@ MatCoupLy
         :target: https://matcouply.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
 
+.. image:: https://zenodo.org/badge/402865945.svg
+   :target: https://zenodo.org/badge/latestdoi/402865945
+
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
     :target: https://github.com/psf/black
 
