@@ -1,0 +1,31 @@
+authors:
+  - family-names: Roald
+    given-names: Marie
+    orcid: https://orcid.org/0000-0002-9571-8829
+cff-version: 1.2.0
+message: "If you use this software, please cite both the article that introduces the algorithm and the software itself."
+references:
+  authors:
+    - family-names: Roald
+      given-names: Marie
+    - family-names: Schenker
+      given-names: Carla
+    - family-names: Calhoun
+      given-names: Vince D.
+    - family-names: Adali
+      given-names: Tülay
+    - family-names: Bro
+      given-names: Rasmus
+    - family-names: Cohen
+      given-names: Jeremy E.
+    - family-names: Acar
+      given-names: Evrim
+  title: "An AO-ADMM approach to constraining PARAFAC2 on all modes"
+  type: article
+  scope: "The article that introduces the PARFAC2 AO-ADMM algorithm"
+  journal: "Accepted for publication in SIAM Journal on Mathematics of Data Science (SIMODS)"
+title: "MatCoupLy: Learning coupled matrix factorizations with Python"
+version: 0.1.3
+doi: 10.5281/zenodo.6993910
+type: software
+date-released: 2022-08-14
