@@ -76,13 +76,6 @@ def random_regular_cmf(
 
 
 @pytest.fixture
-def random_row(rng):
-    import tensorly as tl
-
-    return tl.tensor(rng.standard_normal(3))
-
-
-@pytest.fixture
 def random_matrix(rng):
     import tensorly as tl
 
