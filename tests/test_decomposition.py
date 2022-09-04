@@ -1958,3 +1958,41 @@ def test_regs_list_is_not_modified(random_ragged_cmf, regs):
     )
 
     assert regs == regs_unmodified
+
+
+
+@pytest.mark.parametrize("constant_feasibility_penalty", ["", "AB", "C"])
+def test_constant_feasibility_penalty_fails_with_invalid(random_ragged_cmf, constant_feasibility_penalty):
+
+    cmf, shapes, rank = random_ragged_cmf
+    matrices = cmf.to_matrices()
+
+    # Check that we get correct output when none of the conditions are met
+    with pytest.raises(ValueError):
+        decomposition.cmf_aoadmm(
+            matrices,
+            rank,
+            n_iter_max=0,
+            return_errors=True,
+            verbose=False,
+            non_negative=True,
+            parafac2=True,
+            constant_feasibility_penalty=constant_feasibility_penalty
+        )
+
+
+@pytest.mark.parametrize("constant_feasibility_penalty", ["A", "B", True, False, None])
+def test_constant_feasibility_penalty_works_with_valid(random_ragged_cmf, constant_feasibility_penalty):
+    cmf, shapes, rank = random_ragged_cmf
+    matrices = cmf.to_matrices()
+
+    decomposition.cmf_aoadmm(
+        matrices,
+        rank,
+        n_iter_max=0,
+        return_errors=True,
+        verbose=False,
+        non_negative=True,
+        parafac2=True,
+        constant_feasibility_penalty=constant_feasibility_penalty
+    )

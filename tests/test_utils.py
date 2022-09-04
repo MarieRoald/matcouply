@@ -1,5 +1,6 @@
 # MIT License: Copyright (c) 2022, Marie Roald.
 # See the LICENSE file in the root directory for full license text.
+from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -60,6 +61,14 @@ def test_get_svd(rng, svd):
     Vh1Vh2T = Vh1Vh2T[:10, :10]
     assert allclose(U1TU2, Vh1Vh2T, atol=1e-6)  # low tolerance due to roundoff errors
     assert allclose(U1TU2 * Vh1Vh2T, np.eye(U1TU2.shape[0]))
+
+
+def test_get_svd_works_with_old_tensorly():
+    svds = {"TEST": "SVD"}
+    with patch("matcouply._utils.tl.SVD_FUNS", svds) as mock:
+        svd = utils.get_svd("TEST")
+
+    assert svd == svds["TEST"]
 
 
 def test_get_svd_fails_with_invalid_svd_name():
