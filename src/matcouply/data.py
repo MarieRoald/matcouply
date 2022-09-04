@@ -8,12 +8,15 @@ from pathlib import Path
 from zipfile import ZipFile
 
 import numpy as np
-import pandas as pd
-import requests
 import scipy.stats as stats
 import tensorly as tl
 from scipy.io import loadmat
-from tqdm import tqdm
+try:
+    import pandas as pd
+    import requests
+    from tqdm import tqdm
+except ModuleNotFoundError:
+    pass
 
 from matcouply.coupled_matrices import CoupledMatrixFactorization
 
