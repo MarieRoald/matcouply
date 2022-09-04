@@ -327,7 +327,7 @@ def admm_update_C(
 
 
 def _root_sum_squared_list(x_list):
-    return tl.sqrt(sum(tl.sum(x**2) for x in x_list))
+    return tl.sqrt(sum(tl.sum(x ** 2) for x in x_list))
 
 
 def compute_feasibility_gaps(cmf, regs, A_aux_list, B_aux_list, C_aux_list):
@@ -570,11 +570,11 @@ def _compute_l2_penalty(cmf, l2_parameters):
     weights, (A, B_is, C) = cmf
     l2reg = 0
     if l2_parameters[0]:
-        l2reg += 0.5 * l2_parameters[0] * tl.sum(A**2)
+        l2reg += 0.5 * l2_parameters[0] * tl.sum(A ** 2)
     if l2_parameters[1]:
-        l2reg += 0.5 * l2_parameters[1] * sum(tl.sum(B_i**2) for B_i in B_is)
+        l2reg += 0.5 * l2_parameters[1] * sum(tl.sum(B_i ** 2) for B_i in B_is)
     if l2_parameters[2]:
-        l2reg += 0.5 * l2_parameters[2] * tl.sum(C**2)
+        l2reg += 0.5 * l2_parameters[2] * tl.sum(C ** 2)
 
     return l2reg
 
@@ -853,16 +853,8 @@ def cmf_aoadmm(
         regs[2] = []
 
     # TODO  (Improvement): Include cmf to initialize functions in case other init schemes require that?
-    (
-        A_aux_list,
-        B_is_aux_list,
-        C_aux_list,
-    ) = initialize_aux(matrices, rank, regs, random_state=random_state)
-    (
-        A_dual_list,
-        B_is_dual_list,
-        C_dual_list,
-    ) = initialize_dual(matrices, rank, regs, random_state=random_state)
+    (A_aux_list, B_is_aux_list, C_aux_list,) = initialize_aux(matrices, rank, regs, random_state=random_state)
+    (A_dual_list, B_is_dual_list, C_dual_list,) = initialize_dual(matrices, rank, regs, random_state=random_state)
     norm_matrices = _root_sum_squared_list(matrices)
     rec_errors = []
     feasibility_gaps = []
@@ -877,7 +869,7 @@ def cmf_aoadmm(
         + sum(C_reg.penalty(cmf[1][2]) for C_reg in regs[2])
     )
     l2_reg = _compute_l2_penalty(cmf, l2_penalty)
-    losses.append(0.5 * rec_error**2 + l2_reg + reg_penalty)
+    losses.append(0.5 * rec_error ** 2 + l2_reg + reg_penalty)
 
     A_gaps, B_gaps, C_gaps = compute_feasibility_gaps(cmf, regs, A_aux_list, B_is_aux_list, C_aux_list)
     feasibility_gaps.append((A_gaps, B_gaps, C_gaps))
@@ -976,7 +968,7 @@ def cmf_aoadmm(
             )
 
             l2_reg = _compute_l2_penalty(cmf, l2_penalty)
-            losses.append(0.5 * rec_error**2 + l2_reg + reg_penalty)
+            losses.append(0.5 * rec_error ** 2 + l2_reg + reg_penalty)
 
             if verbose and it % verbose == 0 and verbose > 0:
                 A_gaps, B_gaps, C_gaps = curr_feasibility_gaps

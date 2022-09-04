@@ -295,8 +295,7 @@ class TestGeneralizedL2Penalty(BaseTestFactorMatrixPenalty):
 
 
 @pytest.mark.skipif(
-    tl.get_backend() != "numpy",
-    reason="The TV penalty is only supported with the Numpy backend due to C dependencies",
+    tl.get_backend() != "numpy", reason="The TV penalty is only supported with the Numpy backend due to C dependencies",
 )
 class TestTotalVariationPenalty(BaseTestFactorMatrixPenalty):
     PenaltyType = penalties.TotalVariationPenalty
@@ -452,8 +451,8 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
         proj_1it = pf2_1it.factor_matrices_update(B_is, feasibility_penalties, auxes_1it)
         proj_5it = pf2_5it.factor_matrices_update(B_is, feasibility_penalties, auxes_5it)
 
-        error_1it = sum(tl.sum(err**2) for err in pf2_1it.subtract_from_auxes(proj_1it, B_is))
-        error_5it = sum(tl.sum(err**2) for err in pf2_5it.subtract_from_auxes(proj_5it, B_is))
+        error_1it = sum(tl.sum(err ** 2) for err in pf2_1it.subtract_from_auxes(proj_1it, B_is))
+        error_5it = sum(tl.sum(err ** 2) for err in pf2_5it.subtract_from_auxes(proj_5it, B_is))
 
         assert error_5it < error_1it
 
@@ -553,8 +552,7 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
             assert not np.allclose(random_matrix, out_matrix)
 
     @pytest.mark.parametrize(
-        "dual_init",
-        ["random_uniform", "random_standard_normal", "zeros"],
+        "dual_init", ["random_uniform", "random_standard_normal", "zeros"],
     )
     @pytest.mark.parametrize("aux_init", ["random_uniform", "random_standard_normal", "zeros"])
     def test_rank_and_mode_validation_for_init_aux(self, rng, random_ragged_cmf, dual_init, aux_init):
@@ -711,9 +709,7 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
             with pytest.raises(ValueError):
                 penalty.init_aux(matrices, rank, mode=mode, random_state=None)
 
-    def test_subtract_from_aux(
-        self,
-    ):
+    def test_subtract_from_aux(self,):
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
         with pytest.raises(TypeError):
             penalty.subtract_from_aux(None, None)

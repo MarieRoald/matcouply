@@ -40,8 +40,7 @@ def random_regular_shapes(rng):
 
 @pytest.fixture
 def random_ragged_cmf(
-    rng,
-    random_ragged_shapes,
+    rng, random_ragged_shapes,
 ):
     from matcouply.random import random_coupled_matrices
 
@@ -65,8 +64,7 @@ def random_rank5_ragged_cmf(rng):
 
 @pytest.fixture
 def random_regular_cmf(
-    rng,
-    random_regular_shapes,
+    rng, random_regular_shapes,
 ):
     from matcouply.random import random_coupled_matrices
 

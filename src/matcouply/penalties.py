@@ -703,12 +703,7 @@ class GeneralizedL2Penalty(MatrixPenalty):
     """
 
     def __init__(
-        self,
-        norm_matrix,
-        svd="truncated_svd",
-        aux_init="random_uniform",
-        dual_init="random_uniform",
-        validate=True,
+        self, norm_matrix, svd="truncated_svd", aux_init="random_uniform", dual_init="random_uniform", validate=True,
     ):
         super().__init__(aux_init, dual_init)
         self.norm_matrix = norm_matrix
@@ -807,11 +802,7 @@ class TotalVariationPenalty(MatrixPenalty):
     """
 
     def __init__(
-        self,
-        reg_strength,
-        l1_strength=0,
-        aux_init="random_uniform",
-        dual_init="random_uniform",
+        self, reg_strength, l1_strength=0, aux_init="random_uniform", dual_init="random_uniform",
     ):
         if not HAS_TV:
             raise ModuleNotFoundError(
@@ -929,7 +920,7 @@ class L2Ball(HardConstraintMixin, MatrixPenalty):
     def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
         if self.non_negativity:
             factor_matrix = tl.clip(factor_matrix, 0, float("inf"))
-        column_norms = tl.sqrt(tl.sum(factor_matrix**2, axis=0))
+        column_norms = tl.sqrt(tl.sum(factor_matrix ** 2, axis=0))
         column_norms = tl.clip(column_norms, self.norm_bound, float("inf"))
         return factor_matrix * self.norm_bound / column_norms
 

@@ -345,8 +345,7 @@ class BaseTestADMMPenalty:
             penalty.init_dual(matrices, rank, 1, random_state=rng)
 
     @pytest.mark.parametrize(
-        "dual_init,",
-        ["random_uniform", "random_standard_normal", "zeros"],
+        "dual_init,", ["random_uniform", "random_standard_normal", "zeros"],
     )
     @pytest.mark.parametrize("aux_init", ["random_uniform", "random_standard_normal", "zeros"])
     def test_rank_and_mode_validation_for_init_dual(self, rng, random_ragged_cmf, dual_init, aux_init):
