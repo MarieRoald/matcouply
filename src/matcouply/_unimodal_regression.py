@@ -11,7 +11,7 @@ except ImportError:  # pragma: no cover
         return lambda x: x
 
 
-@jit(nopython=True, cache=True, parallel=True)
+@jit(nopython=True, cache=True)
 def _merge_intervals_inplace(merge_target, merger, sum_weighted_y, sum_weighted_y_sq, sum_weights, level_set):
     sum_weighted_y[merge_target] += sum_weighted_y[merger]
     sum_weighted_y_sq[merge_target] += sum_weighted_y_sq[merger]
