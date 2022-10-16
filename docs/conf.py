@@ -40,6 +40,7 @@ extensions = [
     "sphinxcontrib.bibtex",
     "autodocsumm",
     "sphinx_gallery.gen_gallery",
+    "nbsphinx",
 ]
 
 sphinx_gallery_conf = {

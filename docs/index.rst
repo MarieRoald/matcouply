@@ -15,6 +15,7 @@ Welcome to MatCoupLy's documentation!
    coupled_matrix_factorization
    optimization
    auto_examples/index
+   notebooks/index
    api
    contributing
    references
