@@ -41,6 +41,7 @@ extensions = [
     "autodocsumm",
     "sphinx_gallery.gen_gallery",
     "nbsphinx",
+    'IPython.sphinxext.ipython_console_highlighting',
 ]
 
 sphinx_gallery_conf = {
