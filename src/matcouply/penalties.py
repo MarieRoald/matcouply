@@ -508,7 +508,7 @@ class NonNegativity(HardConstraintMixin, RowVectorPenalty):
         return tl.clip(factor_matrix, 0, float("inf"))
 
 
-class BoxConstraint(HardConstraintMixin, RowVectorPenalty):
+class Box(HardConstraintMixin, RowVectorPenalty):
     r"""Set minimum and maximum value for the factor.
 
     A box constraint works element-wise, constraining the elements of a factor

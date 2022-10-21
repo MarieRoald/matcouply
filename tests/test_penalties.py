@@ -184,8 +184,8 @@ class TestL1Penalty(BaseTestRowVectorPenalty):
             l1_penalty = self.PenaltyType(reg_strength=-1)
 
 
-class TestBoxConstraint(MixinTestHardConstraint, BaseTestRowVectorPenalty):
-    PenaltyType = penalties.BoxConstraint
+class TestBox(MixinTestHardConstraint, BaseTestRowVectorPenalty):
+    PenaltyType = penalties.Box
     penalty_default_kwargs = {"min_val": 0, "max_val": 1}
 
     def get_invariant_row(self, rng, n_columns):

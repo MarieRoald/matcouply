@@ -15,7 +15,7 @@ import matcouply
 from matcouply import coupled_matrices, decomposition, penalties
 from matcouply._utils import get_svd
 from matcouply.coupled_matrices import CoupledMatrixFactorization
-from matcouply.penalties import BoxConstraint, L2Ball, NonNegativity
+from matcouply.penalties import Box, L2Ball, NonNegativity
 from matcouply.testing import assert_allclose
 
 from .utils import RTOL_SCALE
@@ -584,7 +584,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
         aux_init=aux_init,
     )
     assert len(out) == 1
-    assert isinstance(out[0], penalties.BoxConstraint)
+    assert isinstance(out[0], penalties.Box)
     assert out[0].min_val == 5
 
     out = decomposition._parse_mode_penalties(
@@ -602,7 +602,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
         aux_init=aux_init,
     )
     assert len(out) == 1
-    assert isinstance(out[0], penalties.BoxConstraint)
+    assert isinstance(out[0], penalties.Box)
     assert out[0].min_val == 0
 
     # NN + upper bound
@@ -621,7 +621,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
         aux_init=aux_init,
     )
     assert len(out) == 1
-    assert isinstance(out[0], penalties.BoxConstraint)
+    assert isinstance(out[0], penalties.Box)
     assert out[0].max_val == 5
     assert out[0].min_val == 0
 
@@ -641,7 +641,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
         aux_init=aux_init,
     )
     assert len(out) == 1
-    assert isinstance(out[0], penalties.BoxConstraint)
+    assert isinstance(out[0], penalties.Box)
     assert out[0].max_val == 5
     assert out[0].min_val == 0
 
@@ -681,12 +681,12 @@ def test_parse_mode_penalties(dual_init, aux_init):
         aux_init=aux_init,
     )
     assert len(out) == 2
-    if isinstance(out[0], penalties.BoxConstraint):
+    if isinstance(out[0], penalties.Box):
         box, l1 = out
     else:
         l1, box = out
 
-    assert isinstance(box, penalties.BoxConstraint)
+    assert isinstance(box, penalties.Box)
     assert box.min_val == 0
 
     assert isinstance(l1, penalties.L1Penalty)
@@ -812,7 +812,7 @@ def test_parse_mode_penalties(dual_init, aux_init):
     else:
         box, l1 = out
     assert isinstance(l1, penalties.L1Penalty)
-    assert isinstance(box, penalties.BoxConstraint)
+    assert isinstance(box, penalties.Box)
     assert box.max_val == 10
 
     # Test parsing of TV
@@ -1539,7 +1539,7 @@ def test_cmf_aoadmm(rng, random_ragged_cmf):
         )
 
     # Test that we get correct amount of auxes and duals with only one constraint on B
-    regs = [[NonNegativity()], [NonNegativity(), L2Ball(1)], [NonNegativity(), L2Ball(1), BoxConstraint(0, 1)]]
+    regs = [[NonNegativity()], [NonNegativity(), L2Ball(1)], [NonNegativity(), L2Ball(1), Box(0, 1)]]
     out_cmf, (aux, dual), diagnostics = decomposition.cmf_aoadmm(
         matrices, rank, n_iter_max=10, return_errors=True, return_admm_vars=True, regs=regs
     )

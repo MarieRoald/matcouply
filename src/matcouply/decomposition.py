@@ -557,7 +557,7 @@ def _parse_mode_penalties(
             lower_bound = -float("inf")
         if non_negative:
             lower_bound = max(lower_bound, 0)
-        regs.append(penalties.BoxConstraint(lower_bound, upper_bound, aux_init=aux_init, dual_init=dual_init))
+        regs.append(penalties.Box(lower_bound, upper_bound, aux_init=aux_init, dual_init=dual_init))
         skip_non_negative = True
 
     if non_negative and not skip_non_negative:
