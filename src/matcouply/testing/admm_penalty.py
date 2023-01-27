@@ -414,24 +414,24 @@ class BaseTestADMMPenalty:
 
 
 class BaseTestFactorMatricesPenalty(BaseTestADMMPenalty):  # e.g. PARAFAC2
-    def get_invariant_matrices(self, rng, shape):
+    def get_invariant_matrices(self, rng, shapes):
         return NotImplementedError
 
-    def get_non_invariant_matrices(self, rng, shape):
+    def get_non_invariant_matrices(self, rng, shapes):
         return NotImplementedError
 
     @pytest.fixture
     def invariant_matrices(self, rng):
-        n_rows = rng.randint(self.min_rows, self.max_rows + 1)
+        n_columns = rng.randint(self.min_columns, self.max_columns + 1)
         n_matrices = rng.randint(self.min_matrices, self.max_matrices + 1)
-        shapes = tuple((n_rows, rng.randint(self.min_columns, self.max_columns + 1)) for k in range(n_matrices))
+        shapes = tuple((rng.randint(self.min_rows, self.max_rows + 1), n_columns) for k in range(n_matrices))
         return self.get_invariant_matrices(rng, shapes)
 
     @pytest.fixture
     def non_invariant_matrices(self, rng):
-        n_rows = rng.randint(self.min_rows, self.max_rows + 1)
+        n_columns = rng.randint(self.min_columns, self.max_columns + 1)
         n_matrices = rng.randint(self.min_matrices, self.max_matrices + 1)
-        shapes = tuple((n_rows, rng.randint(self.min_columns, self.max_columns + 1)) for k in range(n_matrices))
+        shapes = tuple((rng.randint(self.min_rows, self.max_rows + 1), n_columns) for k in range(n_matrices))
         return self.get_non_invariant_matrices(rng, shapes)
 
     def test_factor_matrices_update_invariant_point(self, invariant_matrices):
