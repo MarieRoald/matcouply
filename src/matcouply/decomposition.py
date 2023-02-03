@@ -345,7 +345,7 @@ def admm_update_C(
 
 
 def _root_sum_squared_list(x_list):
-    return tl.sqrt(sum(tl.sum(x ** 2) for x in x_list))
+    return np.sqrt(tl.to_numpy(sum(tl.sum(x ** 2) for x in x_list)))
 
 
 def compute_feasibility_gaps(cmf, regs, A_aux_list, B_aux_list, C_aux_list):
@@ -449,7 +449,7 @@ def _cmf_reconstruction_error(matrices, cmf, norm_matrices=None, intermediate_A_
         norm_cmf_sq = sum(tl.sum(tl.diag(ai) @ cross_products[i] @ tl.diag(ai)) for i, ai in enumerate(A))
 
     # Threshold to handle roundoff errors with very small error
-    return tl.sqrt(max(0, norm_X_sq - 2 * inner_product + norm_cmf_sq))
+    return np.sqrt(tl.to_numpy(max(0, norm_X_sq - 2 * inner_product + norm_cmf_sq)))
 
 
 def _listify(input_value, param_name):
