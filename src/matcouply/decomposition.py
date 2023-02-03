@@ -132,28 +132,46 @@ def admm_update_A(
 ):
     weights, (A, B_is, C) = cmf
 
-    # Compute lhs and rhs
-    lhses = []
+    # Compute cross products (B_i^T B_i * C^T C) and RHS
+    cross_products = []
     rhses = []
     CtC = tl.dot(tl.transpose(C), C)
+    
     for matrix, B_i in zip(matrices, B_is):
-        BtX = tl.dot(tl.transpose(B_i), matrix)
-        rhses.append(tl.diag(tl.dot(BtX, C)))
-        lhses.append(tl.dot(tl.transpose(B_i), B_i) * CtC)
+        # Multiply three matrices (B_i X_i C) in the most efficient order:
+        # (B_i X_i) C has complexity O((K J_i R) + (K R^2))
+        # B_i (X_i C) has complexity O((J_i R^2) + (K J_i R))
+        # By checking I and J_i, we can compute the product in the most efficient order
+        J_i = tl.shape(B_i)[0]
+        I = tl.shape(C)[0]
+        if J_i > I:
+            tmp = tl.dot(tl.transpose(B_i), matrix)
+            BtXC_i = tl.dot(tmp, C)
+        else:
+            tmp = tl.dot(matrix, C)
+            BtXC_i = tl.dot(tl.transpose(B_i), tmp)
+
+        # Store cross products for efficient SSE computation
+        cross_products.append(tl.dot(tl.transpose(B_i), B_i) * CtC)
+
+        # Construct RHS
+        rhses.append(tl.diag(BtXC_i))
 
     # Multiply with 0.5 since this function minimizes 0.5||Ax - b||^2
     # while in the PARAFAC2 AO-ADMM paper ||Ax - b||^2 is minimzed
-    feasibility_penalties = [0.5 * tl.trace(lhs) * feasibility_penalty_scale for lhs in lhses]
+    feasibility_penalties = [0.5 * tl.trace(lhs) * feasibility_penalty_scale for lhs in cross_products]
     if constant_feasibility_penalty:
         max_feasibility_penalty = max(feasibility_penalties)
         feasibility_penalties = [max_feasibility_penalty for _ in feasibility_penalties]
 
+    # Construct LHS and compute its SVD for efficiently solving for it
     lhses = [
         lhs + tl.eye(tl.shape(A)[1]) * (feasibility_penalty * len(reg) + l2_penalty)
-        for lhs, feasibility_penalty in zip(lhses, feasibility_penalties)
+        for lhs, feasibility_penalty in zip(cross_products, feasibility_penalties)
     ]
     svds = [svd_fun(lhs) for lhs in lhses]
 
+    # Inner ADMM loop for updating A
     old_A = tl.copy(A)
     for inner_it in range(inner_n_iter_max):
         old_A, A = A, old_A
@@ -198,7 +216,7 @@ def admm_update_A(
         if _check_inner_convergence(A, old_A, cmf, reg, A_aux_list, mode=0, inner_tol=inner_tol):
             break
 
-    return (None, [A, B_is, C]), A_aux_list, A_dual_list
+    return (None, [A, B_is, C]), A_aux_list, A_dual_list, (rhses, cross_products)
 
 
 def admm_update_B(
@@ -399,9 +417,39 @@ def compute_feasibility_gaps(cmf, regs, A_aux_list, B_aux_list, C_aux_list):
     return A_gaps, B_gaps, C_gaps
 
 
-def _cmf_reconstruction_error(matrices, cmf):
-    estimated_matrices = cmf_to_matrices(cmf, validate=False)
-    return _root_sum_squared_list([X - Xhat for X, Xhat in zip(matrices, estimated_matrices)])
+def _cmf_reconstruction_error(matrices, cmf, norm_matrices=None, intermediate_A_calculations=None):
+    if norm_matrices is None:
+        norm_X_sq = sum(tl.sum(matrix**2) for matrix in matrices)
+    else:
+        norm_X_sq = norm_matrices**2
+
+    weights, (A, B_is, C) = cmf
+    if weights is not None:
+        A = A * weights
+
+    if intermediate_A_calculations is None:
+        norm_cmf_sq = 0
+        inner_product = 0
+        CtC = tl.dot(tl.transpose(C), C)
+
+        for i, B_i in enumerate(B_is):
+            B_i = B_i * A[i]
+            if tl.shape(B_i)[0] > tl.shape(C)[0]:
+                tmp = tl.dot(tl.transpose(B_i), matrices[i])
+                inner_product += tl.trace(tl.dot(tmp, C))
+            else:
+                tmp = tl.dot(matrices[i], C)
+                inner_product += tl.trace(tl.dot(tl.transpose(B_i), tmp))
+
+            norm_cmf_sq += tl.sum((B_i.T @ B_i) * CtC)
+    else:
+        A_rhses, cross_products = intermediate_A_calculations
+
+        inner_product = sum(tl.sum(A_rhs_i * ai) for A_rhs_i, ai in zip(A_rhses, A))
+        norm_cmf_sq = sum(tl.sum(tl.diag(ai) @ cross_products[i] @ tl.diag(ai)) for i, ai in enumerate(A))
+
+    # Threshold to handle roundoff errors with very small error
+    return tl.sqrt(max(0, norm_X_sq - 2 * inner_product + norm_cmf_sq))
 
 
 def _listify(input_value, param_name):
@@ -859,7 +907,8 @@ def cmf_aoadmm(
     rec_errors = []
     feasibility_gaps = []
 
-    rec_error = _cmf_reconstruction_error(matrices, cmf)
+    
+    rec_error = _cmf_reconstruction_error(matrices, cmf, norm_matrices, intermediate_A_calculations=None)
     rec_error /= norm_matrices
     rec_errors.append(rec_error)
     losses = []
@@ -894,6 +943,8 @@ def cmf_aoadmm(
 
     it = -1  # Needed if n_iter_max <= 0
     for it in range(n_iter_max):
+        intermediate_A_calculations = None
+
         if update_B_is:
             cmf, B_is_aux_list, B_is_dual_list = admm_update_B(
                 matrices=matrices,
@@ -906,20 +957,6 @@ def cmf_aoadmm(
                 inner_tol=inner_tol,
                 feasibility_penalty_scale=feasibility_penalty_scale,
                 constant_feasibility_penalty=constant_B_feasibility,
-                svd_fun=svd_fun,
-            )
-        if update_A:
-            cmf, A_aux_list, A_dual_list = admm_update_A(
-                matrices=matrices,
-                reg=regs[0],
-                cmf=cmf,
-                A_aux_list=A_aux_list,
-                A_dual_list=A_dual_list,
-                l2_penalty=l2_penalty[0],
-                inner_n_iter_max=inner_n_iter_max,
-                inner_tol=inner_tol,
-                feasibility_penalty_scale=feasibility_penalty_scale,
-                constant_feasibility_penalty=constant_A_feasibility,
                 svd_fun=svd_fun,
             )
         if update_C:
@@ -935,6 +972,20 @@ def cmf_aoadmm(
                 feasibility_penalty_scale=feasibility_penalty_scale,
                 svd_fun=svd_fun,
             )
+        if update_A:
+            cmf, A_aux_list, A_dual_list, intermediate_A_calculations = admm_update_A(
+                matrices=matrices,
+                reg=regs[0],
+                cmf=cmf,
+                A_aux_list=A_aux_list,
+                A_dual_list=A_dual_list,
+                l2_penalty=l2_penalty[0],
+                inner_n_iter_max=inner_n_iter_max,
+                inner_tol=inner_tol,
+                feasibility_penalty_scale=feasibility_penalty_scale,
+                constant_feasibility_penalty=constant_A_feasibility,
+                svd_fun=svd_fun,
+            )
 
         if tol or absolute_tol or return_errors:
             curr_feasibility_gaps = compute_feasibility_gaps(cmf, regs, A_aux_list, B_is_aux_list, C_aux_list)
@@ -945,6 +996,7 @@ def cmf_aoadmm(
                 feasibility_criterion = feasibility_tol and _check_feasibility(curr_feasibility_gaps, feasibility_tol)
 
                 if not feasibility_criterion and not return_errors:
+                    A_gaps, B_gaps, C_gaps = curr_feasibility_gaps
                     if verbose and it % verbose == 0 and verbose > 0:
                         print(
                             "Coupled matrix factorization iteration={}, ".format(it)
@@ -958,7 +1010,7 @@ def cmf_aoadmm(
 
                     continue
 
-            rec_error = _cmf_reconstruction_error(matrices, cmf)
+            rec_error = _cmf_reconstruction_error(matrices, cmf, norm_matrices, intermediate_A_calculations)
             rec_error /= norm_matrices
             rec_errors.append(rec_error)
             reg_penalty = (

@@ -1039,7 +1039,7 @@ def test_admm_update_A(rng, random_ragged_cmf, feasibility_penalty_scale, consta
         constant_feasibility_penalty=constant_feasibility_penalty,
         svd_fun=get_svd("truncated_svd"),
     )
-    out_cmf, out_A_auxes, out_A_duals = out
+    out_cmf, out_A_auxes, out_A_duals, intermediate_calculations = out
     out_A_normalized = normalize(out_cmf[1][0])
     A_normalized = normalize(A)
     assert_allclose(out_A_normalized, A_normalized, rtol=1e-6 * RTOL_SCALE)
@@ -1069,7 +1069,7 @@ def test_admm_update_A(rng, random_ragged_cmf, feasibility_penalty_scale, consta
         constant_feasibility_penalty=constant_feasibility_penalty,
         svd_fun=get_svd("truncated_svd"),
     )
-    out_nn_cmf, out_nn_A_auxes, out_nn_A_duals = out
+    out_nn_cmf, out_nn_A_auxes, out_nn_A_duals, intermediate_calculations = out
     out_nn_A_normalized = normalize(out_nn_cmf[1][0])
     nn_A_normalized = normalize(nn_A)
     assert_allclose(out_nn_A_normalized, nn_A_normalized, rtol=1e-5 * RTOL_SCALE)
@@ -1092,7 +1092,7 @@ def test_admm_update_A(rng, random_ragged_cmf, feasibility_penalty_scale, consta
         constant_feasibility_penalty=constant_feasibility_penalty,
         svd_fun=get_svd("truncated_svd"),
     )
-    out_cmf, out_A_auxes, out_A_duals = out
+    out_cmf, out_A_auxes, out_A_duals, intermediate_calculations = out
     out_A = out_cmf[1][0]
     for a_i, X_i, B_i in zip(out_A, X, B_is):
         lhs = tl.dot(tl.transpose(B_i), B_i) * tl.dot(tl.transpose(C), C) + tl.eye(rank)
@@ -1957,3 +1957,45 @@ def test_constant_feasibility_penalty_works_with_valid(random_ragged_cmf, consta
         parafac2=True,
         constant_feasibility_penalty=constant_feasibility_penalty,
     )
+
+
+def test_cmf_reconstruction_error_coincides_with_naive_implementation(seed, random_ragged_cmf, monkeypatch):
+    cmf, shapes, rank = random_ragged_cmf
+    weights, (A, B_is, C) = cmf
+
+    # Ensure that the components are non-negative
+    A = tl.clip(A, 0, None)
+    B_is = [tl.clip(B_i, 0, None) for B_i in B_is]
+    C = tl.clip(C, 0, None)
+    nn_cmf = coupled_matrices.CoupledMatrixFactorization((weights, (A, B_is, C)))
+
+    # Construct matrices 
+    matrices = nn_cmf.to_matrices()
+
+    # Decompose matrices with cmf_aoadmm with no constraints
+    out_cmf, (aux, dual), diagnostics = decomposition.cmf_aoadmm(
+        matrices,
+        rank,
+        n_iter_max=5_000,
+        return_errors=True,
+        return_admm_vars=True,
+        random_state=seed + 2  # To use different seed than the rng which generated the factor matrices
+    )
+
+    # Replace the efficient error computation with a direct (naive) implementation
+    def _cmf_reconstruction_error(matrices, cmf, *args, **kwargs):
+        estimated_matrices = coupled_matrices.cmf_to_matrices(cmf, validate=False)
+        return decomposition._root_sum_squared_list(
+            [X - Xhat for X, Xhat in zip(matrices, estimated_matrices)]
+        )
+    monkeypatch.setattr(decomposition, "_cmf_reconstruction_error", _cmf_reconstruction_error)
+    
+    out_cmf2, (aux2, dual2), diagnostics2 = decomposition.cmf_aoadmm(
+        matrices,
+        rank,
+        n_iter_max=5_000,
+        return_errors=True,
+        return_admm_vars=True,
+        random_state=seed + 2  # To use different seed than the rng which generated the factor matrices
+    )
+    assert np.allclose(diagnostics2.rec_errors, diagnostics.rec_errors, atol=1e-7)
