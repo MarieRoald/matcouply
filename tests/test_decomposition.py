@@ -1511,9 +1511,8 @@ def test_cmf_aoadmm(rng, random_ragged_cmf):
         matrices, rank, n_iter_max=10, return_errors=True, return_admm_vars=True, regs=regs
     )
     # Check that final reconstruction error is the same as when we compute it with the returned decomposition and auxes
-    assert decomposition._cmf_reconstruction_error(matrices, out_cmf) / norm_matrices == pytest.approx(
-        diagnostics.rec_errors[-1]
-    )
+    rec_error = decomposition._cmf_reconstruction_error(matrices, out_cmf) / norm_matrices
+    assert rec_error == pytest.approx(diagnostics.rec_errors[-1], rel=1e-6*RTOL_SCALE)
 
     # Check that feasibility gaps are the same as when we compute it with the returned decomposition and auxes
     A_gap_list, B_gap_list, C_gap_list = decomposition.compute_feasibility_gaps(out_cmf, regs, *aux)
@@ -1959,7 +1958,7 @@ def test_constant_feasibility_penalty_works_with_valid(random_ragged_cmf, consta
     )
 
 
-def test_cmf_reconstruction_error_coincides_with_naive_implementation(seed, random_ragged_cmf, monkeypatch):
+def test_cmf_reconstruction_error_coincides_with_naive_implementation(rng, seed, random_ragged_cmf, monkeypatch):
     cmf, shapes, rank = random_ragged_cmf
     weights, (A, B_is, C) = cmf
 
@@ -1972,13 +1971,20 @@ def test_cmf_reconstruction_error_coincides_with_naive_implementation(seed, rand
     # Construct matrices 
     matrices = nn_cmf.to_matrices()
 
+    # Add random noise
+    noise = [tl.tensor(rng.standard_normal(size=shape)) for shape in shapes]
+    noisy_matrices = [matrix + 0.2*n for matrix, n in zip(matrices, noise)]
+
     # Decompose matrices with cmf_aoadmm with no constraints
     out_cmf, (aux, dual), diagnostics = decomposition.cmf_aoadmm(
-        matrices,
+        noisy_matrices,
         rank,
-        n_iter_max=5_000,
+        n_iter_max=100,
         return_errors=True,
         return_admm_vars=True,
+        absolute_tol=None,
+        tol=None,
+        non_negative=True,
         random_state=seed + 2  # To use different seed than the rng which generated the factor matrices
     )
 
@@ -1991,11 +1997,14 @@ def test_cmf_reconstruction_error_coincides_with_naive_implementation(seed, rand
     monkeypatch.setattr(decomposition, "_cmf_reconstruction_error", _cmf_reconstruction_error)
     
     out_cmf2, (aux2, dual2), diagnostics2 = decomposition.cmf_aoadmm(
-        matrices,
+        noisy_matrices,
         rank,
-        n_iter_max=5_000,
+        n_iter_max=100,
         return_errors=True,
         return_admm_vars=True,
+        absolute_tol=None,
+        tol=None,
+        non_negative=True,
         random_state=seed + 2  # To use different seed than the rng which generated the factor matrices
     )
-    assert np.allclose(diagnostics2.rec_errors, diagnostics.rec_errors, atol=1e-7)
+    assert np.allclose(diagnostics2.rec_errors, diagnostics.rec_errors, atol=1e-7, rtol=1e-5*RTOL_SCALE)

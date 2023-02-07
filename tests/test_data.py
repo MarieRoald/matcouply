@@ -11,7 +11,8 @@ from tensorly.testing import assert_array_equal
 from matcouply import data
 from matcouply.coupled_matrices import CoupledMatrixFactorization
 from matcouply.decomposition import _cmf_reconstruction_error
-from matcouply.testing import assert_allclose
+
+from .utils import RTOL_SCALE
 
 
 def test_get_simple_simulated_data():
@@ -42,7 +43,7 @@ def test_get_simple_simulated_data():
     simulated_data_noise_02, cmf_noise_02 = data.get_simple_simulated_data(noise_level=0.2, random_state=2)
     data_strength = tl.norm(cmf_noise_02.to_tensor())
     error = _cmf_reconstruction_error(simulated_data_noise_02, cmf_noise_02) / data_strength
-    assert error == pytest.approx(0.2)
+    assert error == pytest.approx(0.2, rel=1e-6*RTOL_SCALE)
 
 
 def test_get_bike_data():
