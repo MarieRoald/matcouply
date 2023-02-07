@@ -4,7 +4,7 @@
 
 __author__ = """Marie Roald"""
 __email__ = "roald.marie@gmail.com"
-__version__ = "0.1.5"
+__version__ = "0.1.6"
 
 
 from . import coupled_matrices, data, decomposition, penalties, random
