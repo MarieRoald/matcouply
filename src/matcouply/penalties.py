@@ -1375,7 +1375,7 @@ class TemporalSmoothnessPenalty(MatricesPenalty):
         I = len(factor_matrices)  # noqa: E741
         rhos = feasibility_penalties
 
-        rhs = [rhos[i] * factor_matrices[i] for i in range(len(B_is))]
+        rhs = [rhos[i] * factor_matrices[i] for i in range(I)]
 
         # Construct matrix A to peform thomas algorithm on
 
