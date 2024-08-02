@@ -1402,7 +1402,7 @@ class TemporalSmoothnessPenalty(MatricesPenalty):
 
         # Back-substitution
 
-        new_ZBks = [np.empty_like(B_is[i]) for i in range(len(B_is))]
+        new_ZBks = [np.empty_like(B_is[i]) for i in range(I)]
 
         new_ZBks[-1] = rhs[-1] / A[-1, -1]
         q = new_ZBks[-1]
