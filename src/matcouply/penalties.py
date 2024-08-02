@@ -1372,6 +1372,7 @@ class TemporalSmoothnessPenalty(MatricesPenalty):
     def factor_matrices_update(self, factor_matrices, feasibility_penalties, auxes):
 
         B_is = factor_matrices
+        I = len(factor_matrices)  # noqa: E741
         rhos = feasibility_penalties
 
         rhs = [rhos[i] * factor_matrices[i] for i in range(len(B_is))]
