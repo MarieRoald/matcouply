@@ -1377,11 +1377,11 @@ class TemporalSmoothnessPenalty(MatricesPenalty):
         super().__init__(aux_init=aux_init, dual_init=dual_init)
         self.smoothness_l = smoothness_l
 
-    def _get_laplace_coef(i, I, smoothness_l):
+    def _get_laplace_coef(self,i, I):
         if i == 0 or i == I - 1:
-            return 2 * smoothness_l
+            return 2 * self.smoothness_l
         else:
-            return 4 * smoothness_l
+            return 4 * self.smoothness_l
 
     @copy_ancestor_docstring
     def factor_matrices_update(self, factor_matrices, feasibility_penalties, auxes):
@@ -1394,12 +1394,10 @@ class TemporalSmoothnessPenalty(MatricesPenalty):
 
         # Construct matrix A to peform thomas algorithm on
 
-        K = len(B_is[0])
-
         A = (
-            np.diag([self._get_laplace_coef(i, K, self.smoothness_l) + rhos[i] for i, rho in enumerate(rhos)], k=0)
-            - np.diag(np.ones(K - 1) * 2 * self.smoothness_l, k=1)
-            - np.diag(np.ones(K - 1) * 2 * self.smoothness_l, k=-1)
+            np.diag([self._get_laplace_coef(i, I) + rhos[i] for i, rho in enumerate(rhos)], k=0)
+            - np.diag(np.ones(I - 1) * 2 * self.smoothness_l, k=1)
+            - np.diag(np.ones(I - 1) * 2 * self.smoothness_l, k=-1)
         )
 
         # Peform GE

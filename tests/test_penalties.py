@@ -804,3 +804,38 @@ class TestTemporalSmoothness(BaseTestFactorMatricesPenalty):
 
         non_invariant_matrices = [rng.random_sample(shapes[k]) for k in range(K)]
         return non_invariant_matrices
+
+    def test_A_assembly(self, random_regular_cmf,rng):
+        # Ensure A is assembled correctly by comparing the efficent method (A1) with the manual assembly (A2).
+
+        penalty = self.PenaltyType(**self.penalty_default_kwargs)
+        cmf, random_ragged_shapes, rank = random_regular_cmf
+        weights, (A, B_is, C) = cmf
+
+        I = len(B_is)
+
+        rhos = rng.random_sample(I)
+
+        A1 = (
+            np.diag(
+                [penalty._get_laplace_coef( i, I) + rhos[i] for i, rho in enumerate(rhos)], k=0
+            )
+            - np.diag(np.ones(I - 1) * 2 * penalty.smoothness_l, k=1)
+            - np.diag(np.ones(I - 1) * 2 * penalty.smoothness_l, k=-1)
+        )
+
+        A2 = np.zeros((len(B_is), len(B_is)))
+
+        for i in range(len(B_is)):
+            for j in range(len(B_is)):
+                if i == j:
+                    A2[i, j] = 4 * penalty.smoothness_l + rhos[i]
+                elif (i == j - 1) or (i == j + 1):
+                    A2[i, j] = -2 * penalty.smoothness_l
+                else:
+                    pass
+
+        A2[0, 0] -= 2 * penalty.smoothness_l
+        A2[len(B_is) - 1, len(B_is) - 1] -= 2 * penalty.smoothness_l
+
+        assert_allclose(A1, A2)
