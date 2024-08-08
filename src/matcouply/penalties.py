@@ -703,7 +703,12 @@ class GeneralizedL2Penalty(MatrixPenalty):
     """
 
     def __init__(
-        self, norm_matrix, svd="truncated_svd", aux_init="random_uniform", dual_init="random_uniform", validate=True,
+        self,
+        norm_matrix,
+        svd="truncated_svd",
+        aux_init="random_uniform",
+        dual_init="random_uniform",
+        validate=True,
     ):
         super().__init__(aux_init, dual_init)
         self.norm_matrix = norm_matrix
@@ -802,7 +807,11 @@ class TotalVariationPenalty(MatrixPenalty):
     """
 
     def __init__(
-        self, reg_strength, l1_strength=0, aux_init="random_uniform", dual_init="random_uniform",
+        self,
+        reg_strength,
+        l1_strength=0,
+        aux_init="random_uniform",
+        dual_init="random_uniform",
     ):
         if not HAS_TV:
             raise ModuleNotFoundError(
@@ -920,7 +929,7 @@ class L2Ball(HardConstraintMixin, MatrixPenalty):
     def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
         if self.non_negativity:
             factor_matrix = tl.clip(factor_matrix, 0, float("inf"))
-        column_norms = tl.sqrt(tl.sum(factor_matrix ** 2, axis=0))
+        column_norms = tl.sqrt(tl.sum(factor_matrix**2, axis=0))
         column_norms = tl.clip(column_norms, self.norm_bound, float("inf"))
         return factor_matrix * self.norm_bound / column_norms
 
@@ -1368,6 +1377,12 @@ class TemporalSmoothnessPenalty(MatricesPenalty):
         super().__init__(aux_init=aux_init, dual_init=dual_init)
         self.smoothness_l = smoothness_l
 
+    def _get_laplace_coef(i, I, smoothness_l):
+        if i == 0 or i == I - 1:
+            return 2 * smoothness_l
+        else:
+            return 4 * smoothness_l
+
     @copy_ancestor_docstring
     def factor_matrices_update(self, factor_matrices, feasibility_penalties, auxes):
 
@@ -1379,25 +1394,17 @@ class TemporalSmoothnessPenalty(MatricesPenalty):
 
         # Construct matrix A to peform thomas algorithm on
 
-        A = np.zeros((len(B_is) , len(B_is)))
-
-        for i in range(len(B_is)):
-            for j in range(len(B_is)):
-                if i == j:
-                    A[i , j] = 4 * self.smoothness_l + rhos[i]
-                elif (i == j - 1) or (i == j + 1):
-                    A[i , j] = - 2 * self.smoothness_l
-                else:
-                    pass
-
-        A[0, 0] -= 2 * self.smoothness_l
-        A[len(B_is) - 1 , len(B_is) - 1] -= 2 * self.smoothness_l
+        A = (
+            np.diag([self._get_laplace_coef(i, 6, self.smoothness_l) + rhos[i] for i, rho in enumerate(rhos)], k=0)
+            - np.diag(np.ones(6 - 1) * 2 * self.smoothness_l, k=1)
+            - np.diag(np.ones(6 - 1) * 2 * self.smoothness_l, k=-1)
+        )
 
         # Peform GE
 
-        for k in range(1 , A.shape[-1]):
-            m = A[k , k - 1] / A[k - 1 , k - 1]
-            A[k , :] = A[k , :] - m * A[k - 1 , :]
+        for k in range(1, A.shape[-1]):
+            m = A[k, k - 1] / A[k - 1, k - 1]
+            A[k, :] = A[k, :] - m * A[k - 1, :]
             rhs[k] = rhs[k] - m * rhs[k - 1]  # Also update the respective rhs!
 
         # Back-substitution
@@ -1416,5 +1423,5 @@ class TemporalSmoothnessPenalty(MatricesPenalty):
     def penalty(self, x):
         penalty = 0
         for x1, x2 in zip(x[:-1], x[1:]):
-            penalty += np.sum((x1 - x2)**2)
+            penalty += np.sum((x1 - x2) ** 2)
         return self.smoothness_l * penalty
