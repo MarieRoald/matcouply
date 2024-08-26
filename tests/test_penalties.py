@@ -802,7 +802,7 @@ class TestTemporalSmoothness(BaseTestFactorMatricesPenalty):
 
         K = len(shapes)
 
-        non_invariant_matrices = [rng.random_sample(shapes[k]) for k in range(K)]
+        non_invariant_matrices = [tl.tensor(rng.random_sample(shapes[k])) for k in range(K)]
         return non_invariant_matrices
 
     def test_A_assembly(self, random_regular_cmf,rng):
