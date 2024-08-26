@@ -786,7 +786,7 @@ class TestTemporalSmoothness(BaseTestFactorMatricesPenalty):
         for k in range(1, K):
             penalty_term += tl.norm(B_is[k] - B_is[k - 1]) ** 2
 
-        assert np.isclose(penalty.penalty(B_is), penalty_term)
+        assert_allclose(penalty.penalty(B_is), penalty_term)
 
     def get_invariant_matrices(self, rng, shapes):
         # Generate a list of invariant matrices that will not be changed by the proximal operator.
