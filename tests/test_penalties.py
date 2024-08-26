@@ -784,7 +784,7 @@ class TestTemporalSmoothness(BaseTestFactorMatricesPenalty):
 
         penalty_term = 0
         for k in range(1, K):
-            penalty_term += tl.norm(B_is[k] - B_is[k - 1]) ** 2
+            penalty_term += tl.sum((B_is[k] - B_is[k - 1]) ** 2)
 
         assert_allclose(penalty.penalty(B_is), penalty_term)
 
