@@ -1395,9 +1395,9 @@ class TemporalSmoothnessPenalty(MatricesPenalty):
         # Construct matrix A to peform thomas algorithm on
 
         A = (
-            np.diag([self._get_laplace_coef(i, I) + rhos[i] for i, rho in enumerate(rhos)], k=0)
-            - np.diag(np.ones(I - 1) * 2 * self.smoothness_l, k=1)
-            - np.diag(np.ones(I - 1) * 2 * self.smoothness_l, k=-1)
+            tl.diag([self._get_laplace_coef(i, I) + rhos[i] for i, rho in enumerate(rhos)], k=0)
+            - tl.diag(np.ones(I - 1) * 2 * self.smoothness_l, k=1)
+            - tl.diag(np.ones(I - 1) * 2 * self.smoothness_l, k=-1)
         )
 
         # Peform GE
