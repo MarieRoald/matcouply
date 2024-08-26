@@ -794,7 +794,7 @@ class TestTemporalSmoothness(BaseTestFactorMatricesPenalty):
         K = len(shapes)
 
         invariant_matrix = np.array(rng.random_sample(shapes[0]))
-        invariant_matrices = [np.copy(invariant_matrix) for _ in range(K)]
+        invariant_matrices = [tl.tensor(invariant_matrix.copy()) for _ in range(K)]
         return invariant_matrices
 
     def get_non_invariant_matrices(self, rng, shapes):
