@@ -817,14 +817,14 @@ class TestTemporalSmoothness(BaseTestFactorMatricesPenalty):
         rhos = rng.random_sample(I)
 
         A1 = (
-            np.diag(
-                [penalty._get_laplace_coef( i, I) + rhos[i] for i, rho in enumerate(rhos)], k=0
+            tl.diag(
+                tl.tensor([penalty._get_laplace_coef( i, I) + rho for i, rho in enumerate(rhos)]), k=0
             )
-            - np.diag(np.ones(I - 1) * 2 * penalty.smoothness_l, k=1)
-            - np.diag(np.ones(I - 1) * 2 * penalty.smoothness_l, k=-1)
+            - tl.diag(tl.ones(I - 1) * 2 * penalty.smoothness_l, k=1)
+            - tl.diag(tl.ones(I - 1) * 2 * penalty.smoothness_l, k=-1)
         )
 
-        A2 = np.zeros((len(B_is), len(B_is)))
+        A2 = tl.zeros((len(B_is), len(B_is)))
 
         for i in range(len(B_is)):
             for j in range(len(B_is)):
@@ -838,4 +838,7 @@ class TestTemporalSmoothness(BaseTestFactorMatricesPenalty):
         A2[0, 0] -= 2 * penalty.smoothness_l
         A2[len(B_is) - 1, len(B_is) - 1] -= 2 * penalty.smoothness_l
 
-        assert_allclose(A1, A2)
+        if tl.get_backend() == "numpy":
+            assert_allclose(A1, A2)
+        else: # pytorch is slightly less accurate here, so we relax the tolerance
+            assert_allclose(A1, A2, rtol=1e-5)

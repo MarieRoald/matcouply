@@ -1395,9 +1395,9 @@ class TemporalSmoothnessPenalty(MatricesPenalty):
         # Construct matrix A to peform thomas algorithm on
 
         A = (
-            tl.diag([self._get_laplace_coef(i, I) + rhos[i] for i, rho in enumerate(rhos)], k=0)
-            - tl.diag(np.ones(I - 1) * 2 * self.smoothness_l, k=1)
-            - tl.diag(np.ones(I - 1) * 2 * self.smoothness_l, k=-1)
+            tl.diag(tl.tensor([self._get_laplace_coef(i, I) + rhos[i] for i, rho in enumerate(rhos)]), k=0)
+            - tl.diag(tl.ones(I - 1) * 2 * self.smoothness_l, k=1)
+            - tl.diag(tl.ones(I - 1) * 2 * self.smoothness_l, k=-1)
         )
 
         # Peform GE
@@ -1409,7 +1409,7 @@ class TemporalSmoothnessPenalty(MatricesPenalty):
 
         # Back-substitution
 
-        new_ZBks = [np.empty_like(B_is[i]) for i in range(I)]
+        new_ZBks = [tl.zeros(B_is[i].shape) for i in range(I)]
 
         new_ZBks[-1] = rhs[-1] / A[-1, -1]
         q = new_ZBks[-1]
@@ -1423,5 +1423,5 @@ class TemporalSmoothnessPenalty(MatricesPenalty):
     def penalty(self, x):
         penalty = 0
         for x1, x2 in zip(x[:-1], x[1:]):
-            penalty += np.sum((x1 - x2) ** 2)
+            penalty += tl.sum((x1 - x2) ** 2)
         return self.smoothness_l * penalty
