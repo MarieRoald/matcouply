@@ -703,7 +703,12 @@ class GeneralizedL2Penalty(MatrixPenalty):
     """
 
     def __init__(
-        self, norm_matrix, svd="truncated_svd", aux_init="random_uniform", dual_init="random_uniform", validate=True,
+        self,
+        norm_matrix,
+        svd="truncated_svd",
+        aux_init="random_uniform",
+        dual_init="random_uniform",
+        validate=True,
     ):
         super().__init__(aux_init, dual_init)
         self.norm_matrix = norm_matrix
@@ -802,7 +807,11 @@ class TotalVariationPenalty(MatrixPenalty):
     """
 
     def __init__(
-        self, reg_strength, l1_strength=0, aux_init="random_uniform", dual_init="random_uniform",
+        self,
+        reg_strength,
+        l1_strength=0,
+        aux_init="random_uniform",
+        dual_init="random_uniform",
     ):
         if not HAS_TV:
             raise ModuleNotFoundError(
@@ -920,7 +929,7 @@ class L2Ball(HardConstraintMixin, MatrixPenalty):
     def factor_matrix_update(self, factor_matrix, feasibility_penalty, aux):
         if self.non_negativity:
             factor_matrix = tl.clip(factor_matrix, 0, float("inf"))
-        column_norms = tl.sqrt(tl.sum(factor_matrix ** 2, axis=0))
+        column_norms = tl.sqrt(tl.sum(factor_matrix**2, axis=0))
         column_norms = tl.clip(column_norms, self.norm_bound, float("inf"))
         return factor_matrix * self.norm_bound / column_norms
 
@@ -1322,3 +1331,97 @@ class Parafac2(MatricesPenalty):
         if not isinstance(x, list):
             raise TypeError("Cannot compute PARAFAC2 penalty of other types than a list of tensors")
         return 0
+
+
+class TemporalSmoothnessPenalty(MatricesPenalty):
+    r"""Impose temporal smoothness on the uncoupled factor matrices. Formally, this means adding 
+    the following penalty term:
+
+    .. math::
+
+    \lambda_B \sum_{k=2}^K \lVert \M{B}_k - \M{B}_{k-1} \rVert^2_F .
+
+    More information as well as experiments can be found in :cite:p:`chatzis2023timeaware`.
+
+    **The proximal operator**
+
+    Taking the partial derivative of the objective function with respect to each auxiliary
+    variable results in a tridiagonal system of equations. More specifically:
+
+    .. math::
+
+    \begin{flalign}
+        & \bigl( 2\lambda_{\M{B}} + \rho_{\M{B}_1}\bigr) \M{Z}_{\M{B}_1} -2\lambda_{\M{B}}\M{Z}_{\M{B}_2} = \rho_{\M{B}_1} \bigr( \M{B}_1 + \M{\mu}_{\M{B}_1} \bigl) \notag \\
+        & \bigl(4\lambda_{\M{B}}+\rho_{\M{B}_k}\bigr)\M{Z}_{\M{B}_k}-2\lambda_{\M{B}} \bigl(\M{Z}_{\M{B}_{k-1}}+\M{Z}_{\M{B}_{k+1}} \bigr) =\rho_{\M{B}_k} \bigr(\M{B}_k+\M{\mu}_{\M{B}_k}\bigl), \qquad k = 2,\ldots,K-1 \notag \\
+        & \vdots \notag \\
+        & \bigl( 2\lambda_{\M{B}} + \rho_{\M{B}_K}\bigr) \M{Z}_{\M{B}_K} -2\lambda_{\M{B}}\M{Z}_{\M{B}_{K-1}} = \rho_{\M{B}_K} \bigr( \M{B}_K + \,{\mu}_{\M{B}_K} \bigl) \notag
+    \end{flalign}
+
+    We then form a tridiagonal matrix :math:`\M{A}` and solve the system of equations using Thomas algorithm.
+
+    Keep in mind that once we apply a norm-based penalty in the factor matrices, we need to also penalize the
+    norm of all other factor matrices :cite:p:`roald2021parafac2` to overcome the scaling ambiguity of PARAFAC2.
+    This can be done, for example, by adding ridge penalties on the norms of the other two factor matrices.
+
+    Parameters
+    ----------
+    smoothness_l : float
+        Hyperparemeter controlling the strength of the smoothness penalty.
+    aux_init : {"random_uniform", "random_standard_normal", "zeros", tl.tensor(ndim=2), list of tl.tensor(ndim=2)}
+        Initialisation method for the auxiliary variables
+    dual_init : {"random_uniform", "random_standard_normal", "zeros", tl.tensor(ndim=2), list of tl.tensor(ndim=2)}
+        Initialisation method for the auxiliary variables
+    """
+
+    def __init__(self, smoothness_l, aux_init="random_uniform", dual_init="random_uniform"):
+        super().__init__(aux_init=aux_init, dual_init=dual_init)
+        self.smoothness_l = smoothness_l
+
+    def _get_laplace_coef(self,i, I):
+        if i == 0 or i == I - 1:
+            return 2 * self.smoothness_l
+        else:
+            return 4 * self.smoothness_l
+
+    @copy_ancestor_docstring
+    def factor_matrices_update(self, factor_matrices, feasibility_penalties, auxes):
+
+        B_is = factor_matrices
+        I = len(factor_matrices)  # noqa: E741
+        rhos = feasibility_penalties
+
+        rhs = [rhos[i] * factor_matrices[i] for i in range(I)]
+
+        # Construct matrix A to peform thomas algorithm on
+
+        A = (
+            tl.diag(tl.tensor([self._get_laplace_coef(i, I) + rhos[i] for i, rho in enumerate(rhos)]), k=0)
+            - tl.diag(tl.ones(I - 1) * 2 * self.smoothness_l, k=1)
+            - tl.diag(tl.ones(I - 1) * 2 * self.smoothness_l, k=-1)
+        )
+
+        # Peform GE
+
+        for k in range(1, A.shape[-1]):
+            m = A[k, k - 1] / A[k - 1, k - 1]
+            A[k, :] = A[k, :] - m * A[k - 1, :]
+            rhs[k] = rhs[k] - m * rhs[k - 1]  # Also update the respective rhs!
+
+        # Back-substitution
+
+        new_ZBks = [tl.zeros(B_is[i].shape) for i in range(I)]
+
+        new_ZBks[-1] = rhs[-1] / A[-1, -1]
+        q = new_ZBks[-1]
+
+        for i in range(A.shape[-1] - 2, -1, -1):
+            q = (rhs[i] - A[i, i + 1] * q) / A[i, i]
+            new_ZBks[i] = q
+
+        return new_ZBks
+
+    def penalty(self, x):
+        penalty = 0
+        for x1, x2 in zip(x[:-1], x[1:]):
+            penalty += tl.sum((x1 - x2) ** 2)
+        return self.smoothness_l * penalty

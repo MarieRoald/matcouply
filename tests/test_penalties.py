@@ -295,7 +295,8 @@ class TestGeneralizedL2Penalty(BaseTestFactorMatrixPenalty):
 
 
 @pytest.mark.skipif(
-    tl.get_backend() != "numpy", reason="The TV penalty is only supported with the Numpy backend due to C dependencies",
+    tl.get_backend() != "numpy",
+    reason="The TV penalty is only supported with the Numpy backend due to C dependencies",
 )
 class TestTotalVariationPenalty(BaseTestFactorMatrixPenalty):
     PenaltyType = penalties.TotalVariationPenalty
@@ -451,8 +452,8 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
         proj_1it = pf2_1it.factor_matrices_update(B_is, feasibility_penalties, auxes_1it)
         proj_5it = pf2_5it.factor_matrices_update(B_is, feasibility_penalties, auxes_5it)
 
-        error_1it = sum(tl.sum(err ** 2) for err in pf2_1it.subtract_from_auxes(proj_1it, B_is))
-        error_5it = sum(tl.sum(err ** 2) for err in pf2_5it.subtract_from_auxes(proj_5it, B_is))
+        error_1it = sum(tl.sum(err**2) for err in pf2_1it.subtract_from_auxes(proj_1it, B_is))
+        error_5it = sum(tl.sum(err**2) for err in pf2_5it.subtract_from_auxes(proj_5it, B_is))
 
         assert error_5it < error_1it
 
@@ -552,7 +553,8 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
             assert not np.allclose(random_matrix, out_matrix)
 
     @pytest.mark.parametrize(
-        "dual_init", ["random_uniform", "random_standard_normal", "zeros"],
+        "dual_init",
+        ["random_uniform", "random_standard_normal", "zeros"],
     )
     @pytest.mark.parametrize("aux_init", ["random_uniform", "random_standard_normal", "zeros"])
     def test_rank_and_mode_validation_for_init_aux(self, rng, random_ragged_cmf, dual_init, aux_init):
@@ -709,7 +711,9 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
             with pytest.raises(ValueError):
                 penalty.init_aux(matrices, rank, mode=mode, random_state=None)
 
-    def test_subtract_from_aux(self,):
+    def test_subtract_from_aux(
+        self,
+    ):
         penalty = self.PenaltyType(**self.penalty_default_kwargs)
         with pytest.raises(TypeError):
             penalty.subtract_from_aux(None, None)
@@ -759,3 +763,82 @@ class TestParafac2(BaseTestFactorMatricesPenalty):
 
         with pytest.raises(TypeError):
             penalty.penalty(A)
+
+
+class TestTemporalSmoothness(BaseTestFactorMatricesPenalty):
+    PenaltyType = penalties.TemporalSmoothnessPenalty
+    penalty_default_kwargs = {"smoothness_l": 1}
+
+    n_rows = 10
+    min_rows = n_rows
+    max_rows = n_rows
+
+    def test_penalty(self, random_regular_cmf):
+        # Check that the penalty term is computed correctly.
+
+        penalty = self.PenaltyType(**self.penalty_default_kwargs)
+        cmf, random_ragged_shapes, rank = random_regular_cmf
+        weights, (A, B_is, C) = cmf
+
+        K = len(B_is)
+
+        penalty_term = 0
+        for k in range(1, K):
+            penalty_term += tl.sum((B_is[k] - B_is[k - 1]) ** 2)
+
+        assert_allclose(penalty.penalty(B_is), penalty_term)
+
+    def get_invariant_matrices(self, rng, shapes):
+        # Generate a list of invariant matrices that will not be changed by the proximal operator.
+
+        K = len(shapes)
+
+        invariant_matrix = np.array(rng.random_sample(shapes[0]))
+        invariant_matrices = [tl.tensor(invariant_matrix.copy()) for _ in range(K)]
+        return invariant_matrices
+
+    def get_non_invariant_matrices(self, rng, shapes):
+        # Generate a list of invariant matrices that will be changed by the proximal operator.
+
+        K = len(shapes)
+
+        non_invariant_matrices = [tl.tensor(rng.random_sample(shapes[k])) for k in range(K)]
+        return non_invariant_matrices
+
+    def test_A_assembly(self, random_regular_cmf,rng):
+        # Ensure A is assembled correctly by comparing the efficent method (A1) with the manual assembly (A2).
+
+        penalty = self.PenaltyType(**self.penalty_default_kwargs)
+        cmf, random_ragged_shapes, rank = random_regular_cmf
+        weights, (A, B_is, C) = cmf
+
+        I = len(B_is)
+
+        rhos = rng.random_sample(I)
+
+        A1 = (
+            tl.diag(
+                tl.tensor([penalty._get_laplace_coef( i, I) + rho for i, rho in enumerate(rhos)]), k=0
+            )
+            - tl.diag(tl.ones(I - 1) * 2 * penalty.smoothness_l, k=1)
+            - tl.diag(tl.ones(I - 1) * 2 * penalty.smoothness_l, k=-1)
+        )
+
+        A2 = tl.zeros((len(B_is), len(B_is)))
+
+        for i in range(len(B_is)):
+            for j in range(len(B_is)):
+                if i == j:
+                    A2[i, j] = 4 * penalty.smoothness_l + rhos[i]
+                elif (i == j - 1) or (i == j + 1):
+                    A2[i, j] = -2 * penalty.smoothness_l
+                else:
+                    pass
+
+        A2[0, 0] -= 2 * penalty.smoothness_l
+        A2[len(B_is) - 1, len(B_is) - 1] -= 2 * penalty.smoothness_l
+
+        if tl.get_backend() == "numpy":
+            assert_allclose(A1, A2)
+        else: # pytorch is slightly less accurate here, so we relax the tolerance
+            assert_allclose(A1, A2, rtol=1e-5)
