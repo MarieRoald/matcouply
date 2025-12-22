@@ -852,7 +852,7 @@ def cmf_aoadmm(
     False
 
     >>> diagnostics.satisfied_feasibility_condition
-    True
+    np.True_
 
     >>> len(diagnostics.regularized_loss)
     5

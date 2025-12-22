@@ -583,7 +583,7 @@ def cmf_to_tensor(cmf, validate=True):
 
     >>> num_zeros = (tensor == 0).sum()
     >>> num_zeros
-    20
+    np.int64(20)
     """
     _, (A, B_is, C) = cmf
     matrices = cmf_to_matrices(cmf, validate=validate)
@@ -694,7 +694,7 @@ def cmf_to_unfolded(cmf, mode, pad=True, validate=True):
     >>> nonzeros_1 = tl.sum(matrix_1 == 0)
     >>> nonzeros_2 = tl.sum(matrix_2 == 0)
     >>> nonzeros_0, nonzeros_1, nonzeros_2
-    (60, 60, 60)
+    (np.int64(60), np.int64(60), np.int64(60))
 
     If we want to unfold with ``mode=2`` without padding with zeros, then we can use the ``pad`` argument
 
@@ -782,7 +782,7 @@ def cmf_to_vec(cmf, pad=True, validate=True):
     zeros should be :math:`((5 - 5) + (5 - 3) + (5 - 2) + (5 - 4)) \times 10 = 60`.
 
     >>> tl.sum(vector == 0)
-    60
+    np.int64(60)
 
     If we want to vectorize without padding with zeros, we can use the ``pad`` argument
 
