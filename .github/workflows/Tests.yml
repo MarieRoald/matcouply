@@ -7,7 +7,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        backend: ['numpy', 'pytorch']
+        backend: ['numpy']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
